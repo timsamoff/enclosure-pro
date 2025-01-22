@@ -1,6 +1,7 @@
 {
   "name": "enclosure-pro",
   "version": "1.0.0",
+  "productName": "Enclosure Pro",
   "main": "src/main.js",
   "scripts": {
     "start": "electron ."
@@ -10,9 +11,11 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "electron": "^34.0.0"
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8"
   },
   "dependencies": {
-    "interactjs": "^1.10.27"
+    "interactjs": "^1.10.27",
+    "jspdf": "^2.5.2"
   }
 }

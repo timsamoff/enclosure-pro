@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings</title>
+</head>
+<body>
+  <h2>Settings</h2>
+  <div>
+    <label for="grid-size">Grid Size: </label>
+    <input type="number" id="grid-size" min="10" max="100" value="50" />
+  </div>
+  <div>
+    <label for="grid-color">Grid Color: </label>
+    <input type="color" id="grid-color" value="#dddddd" />
+  </div>
+  <button id="save">Save</button>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    // Request the current grid settings when the settings window loads
+    ipcRenderer.send('get-grid-settings');
+
+    ipcRenderer.on('send-grid-settings', (event, settings) => {
+      // Set current grid settings in input fields
+      document.getElementById('grid-size').value = settings.gridSize;
+      document.getElementById('grid-color').value = settings.gridColor;
+    });
+
+    // Save new grid settings
+    document.getElementById('save').addEventListener('click', () => {
+      const gridSize = document.getElementById('grid-size').value;
+      const gridColor = document.getElementById('grid-color').value;
+
+      ipcRenderer.send('update-grid-settings', { gridSize, gridColor }); // Send to main process
+      window.close(); // Close the settings window
+    });
+  </script>
+</body>
+</html>
