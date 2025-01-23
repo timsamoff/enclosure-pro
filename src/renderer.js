@@ -1,63 +1,70 @@
-const { electron } = window;
+const { ipcRenderer } = require('electron');
 
-let gridSize = 50;
-let gridColor = '#D3D3D3';  // Default light gray color
+const canvas = document.getElementById('designCanvas');  // Keep consistent with the ID in your HTML
+const ctx = canvas.getContext('2d');
+
+// Default state for grid visibility and size
 let showGrid = false;
+let gridSize = 50; // Default grid size
 
-// Load current grid settings
-electron.sendGridSettings();
-
-// Grid settings updates
-electron.onGridSettingsReceived((event, settings) => {
-  gridSize = settings.gridSize;
-  gridColor = settings.gridColor;
-  updateGridSettings();
-});
-
-// Grid toggle events
-electron.onToggleGrid((event, isChecked) => {
-  showGrid = isChecked;
-  drawCanvas();
-});
-
-// Draw the canvas with or without the grid
-function drawCanvas() {
-  const canvas = document.getElementById('designCanvas');
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);  // Clear canvas
-
-  if (showGrid) {
-    drawGrid(ctx);
-  }
+// Resize canvas and redraw
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  drawCanvas();  // Redraw content after resizing
 }
 
-// Draw grid
-function drawGrid(ctx) {
-  const gridSpacing = gridSize;
-  ctx.strokeStyle = gridColor;
+// Initial canvas drawing function
+function drawCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);  // Clear the canvas first
+
+  console.log("Drawing Canvas...");
+
+  // Draw the grid if showGrid is true
+  if (showGrid) {
+    drawGrid();
+  }
+
+  // Example: Additional drawing code can go here (like adding text, etc.)
+  ctx.fillStyle = 'lightgray';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'black';
+  ctx.font = '30px Arial';
+  ctx.fillText('Enclosure Pro', 50, 50);
+}
+
+// Function to draw grid lines
+function drawGrid() {
+  console.log("Drawing Grid...");
+  ctx.strokeStyle = '#ddd';  // Light gray color for the grid lines
   ctx.lineWidth = 0.5;
 
-  // Horizontal grid lines
-  for (let x = 0; x < canvas.width; x += gridSpacing) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvas.height);
-    ctx.stroke();
-  }
-
-  // Vertical grid lines
-  for (let y = 0; y < canvas.height; y += gridSpacing) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvas.width, y);
-    ctx.stroke();
+  for (let x = 0; x < canvas.width; x += gridSize) {
+    for (let y = 0; y < canvas.height; y += gridSize) {
+      ctx.strokeRect(x, y, gridSize, gridSize);
+    }
   }
 }
 
-// Update display of grid settings
-function updateGridSettings() {
-  const gridSizeDisplay = document.getElementById('grid-size-display');
-  gridSizeDisplay.textContent = `Grid Size: ${gridSize}`;
-  const gridColorDisplay = document.getElementById('grid-color-display');
-  gridColorDisplay.textContent = `Grid Color: ${gridColor}`;
-}
+// When the main process sends the current grid size to the renderer
+ipcRenderer.on('send-grid-size', (event, size) => {
+  document.getElementById('grid-size').value = size;  // Update the grid size field in Settings
+});
+
+// Handle grid size change from Settings window
+ipcRenderer.on('update-grid-size', (event, newGridSize) => {
+  gridSize = newGridSize;
+  drawCanvas();  // Redraw the canvas with the new grid size
+});
+
+// Handle grid visibility toggle from the main process
+ipcRenderer.on('toggle-grid', (event, isChecked) => {
+  showGrid = isChecked;
+  drawCanvas();  // Redraw the canvas whenever the grid state changes
+});
+
+// Initial canvas size setup and drawing
+resizeCanvas();
+
+// Resize event listener
+window.addEventListener('resize', resizeCanvas);

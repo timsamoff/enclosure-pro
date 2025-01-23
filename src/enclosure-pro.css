@@ -1,22 +1,9 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-#designCanvas {
-  width: 100%;
-  height: 100%;
-}
-
-canvas {
-  display: block;  /* Removes scrollbars */
-  width: 100vw;
-  height: 100vh;
-}
+body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      background-color: lightgray;

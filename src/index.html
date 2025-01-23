@@ -3,13 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Enclosure Pro</title>
+  <title>Untitled Project</title>
   <link rel="stylesheet" href="enclosure-pro.css">
 </head>
 <body>
-  <canvas id="designCanvas" width="1200" height="800"></canvas>
+  <canvas id="designCanvas"></canvas>
 
-  <script src="app.js"></script>
-  <script src="renderer.js"></script>
+  <script>
+    const canvas = document.getElementById('designCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Resize canvas to fill the entire window
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    // Call resizeCanvas initially and whenever the window is resized
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Listen for clearing canvas (when creating a new project)
+    window.electronAPI.on('clear-canvas', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    // Listen for loading project data into the canvas
+    window.electronAPI.on('load-canvas', (projectData) => {
+      console.log('Loaded project data:', projectData);
+      // Here you can load your saved canvas state (for now just clearing)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+  </script>
 </body>
 </html>

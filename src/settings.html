@@ -20,21 +20,19 @@
   <script>
     const { ipcRenderer } = require('electron');
 
-    // Request the current grid settings when the settings window loads
-    ipcRenderer.send('get-grid-settings');
+    // When the Settings window loads, request the current grid size
+    ipcRenderer.send('get-grid-size');
 
-    ipcRenderer.on('send-grid-settings', (event, settings) => {
-      // Set current grid settings in input fields
-      document.getElementById('grid-size').value = settings.gridSize;
-      document.getElementById('grid-color').value = settings.gridColor;
+    ipcRenderer.on('send-grid-size', (event, gridSize) => {
+      document.getElementById('grid-size').value = gridSize;  // Set current grid size
     });
 
-    // Save new grid settings
+    // Handle save button click
     document.getElementById('save').addEventListener('click', () => {
       const gridSize = document.getElementById('grid-size').value;
       const gridColor = document.getElementById('grid-color').value;
-
-      ipcRenderer.send('update-grid-settings', { gridSize, gridColor }); // Send to main process
+      ipcRenderer.send('update-grid-size', gridSize); // Send new grid size
+      ipcRenderer.send('update-grid-color', gridColor); // Send new grid color
       window.close(); // Close the settings window
     });
   </script>
