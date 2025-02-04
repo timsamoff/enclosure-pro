@@ -50,8 +50,16 @@ module.exports.createMenu = ({
           click: handlePdfExport
         },
         { type: 'separator' },
-        { role: 'pageSetup', label: 'Page Setup...' },
-        { role: 'print', label: 'Print...', accelerator: 'CmdOrCtrl+P' },
+        {
+          label: 'Page Setup...',
+          role: 'pageSetup', // Use Electron's built-in role
+          accelerator: 'CmdOrCtrl+Shift+P'
+        },
+        {
+          label: 'Print...',
+          role: 'print', // Use Electron's built-in role
+          accelerator: 'CmdOrCtrl+P'
+        },
         { type: 'separator' },
         { 
           role: 'quit', 
@@ -150,7 +158,7 @@ module.exports.createMenu = ({
           click: () => dialog.showMessageBox({
             title: 'About Enclosure Pro',
             message: 'Enclosure Pro v1.0.0',
-            detail: '© 2023 Your Company Name'
+            detail: '© 2025 Tim Samoff (Circuitous FX)'
           })
         }
       ]

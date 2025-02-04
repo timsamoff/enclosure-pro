@@ -44,7 +44,7 @@ function addToRecentFiles(filePath) {
 // Window management
 function createWindow(projectPath = null) {
   if (mainWindow) {
-    focusExistingWindow();
+    mainWindow.focus();
     return;
   }
 
@@ -58,6 +58,17 @@ function createWindow(projectPath = null) {
     }
   });
 
+  mainWindow.webContents.on('did-finish-load', () => {
+    // Initialize print capabilities
+    mainWindow.webContents.printToPDF({}).catch(() => {});
+    
+    // Enable menu items
+    const menu = Menu.getApplicationMenu();
+    menu.getMenuItemById('pageSetup').enabled = true;
+    menu.getMenuItemById('print').enabled = true;
+  });
+
+  // Rest of your window setup
   loadProject(projectPath);
   setupWindowListeners();
 }
