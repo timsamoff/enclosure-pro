@@ -1,192 +1,181 @@
-const { app, BrowserWindow, Menu, dialog } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
-let windowCount = 0;
+let mainWindow = null;
+let recentFiles = [];
+const recentFilesPath = path.join(app.getPath('userData'), 'recentFiles.json');
 const untitledBaseName = 'Untitled';
 const projectExtension = '.epp';
 
-function createWindow(projectPath = null) {
-  const win = new BrowserWindow({
-    width: 800,
-    height: 600,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-    },
-  });
-
-  windowCount++;
-  const untitledName = `${untitledBaseName} ${windowCount}`;
-  win.projectPath = projectPath;
-  win.isSaved = projectPath ? true : false;
-
-  if (projectPath) {
-    win.setTitle(path.basename(projectPath));
-    loadProjectData(win, projectPath);
-  } else {
-    win.setTitle(`${untitledName}*`);
-  }
-
-  positionNewWindow(win);
-
-  win.on('close', (e) => {
-    if (!win.isSaved) {
-      const choice = dialog.showMessageBoxSync(win, {
-        type: 'question',
-        buttons: ['Save', 'Don’t Save', 'Cancel'],
-        title: 'Unsaved Changes',
-        message: `Do you want to save changes to ${win.getTitle().replace('*', '')}?`,
-      });
-      if (choice === 0) {
-        saveProject(win);
-      } else if (choice === 2) {
-        e.preventDefault();
-      }
-    }
-  });
-
-  win.webContents.on('did-finish-load', () => {
-    // Mark as saved when the project is loaded
-    if (projectPath) {
-      win.isSaved = true;
-      win.setTitle(path.basename(projectPath));
-      updateSaveMenu(win);
-    }
-  });
-
-  win.loadFile('index.html');
+// Initialize application
+function initialize() {
+  loadRecentFiles();
+  createWindow();
+  initializeIpcHandlers();
 }
 
-function positionNewWindow(win) {
-  const allWindows = BrowserWindow.getAllWindows();
-  if (allWindows.length > 1) {
-    const prevBounds = allWindows[allWindows.length - 2].getBounds();
-    win.setBounds({
-      x: prevBounds.x + 10,
-      y: prevBounds.y + 10,
-      width: prevBounds.width,
-      height: prevBounds.height,
-    });
-  } else {
-    win.center();
+// Recent files management
+function loadRecentFiles() {
+  try {
+    if (fs.existsSync(recentFilesPath)) {
+      recentFiles = JSON.parse(fs.readFileSync(recentFilesPath, 'utf8'));
+    }
+  } catch (error) {
+    console.error('Error loading recent files:', error);
   }
+}
+
+function saveRecentFiles() {
+  try {
+    fs.writeFileSync(recentFilesPath, JSON.stringify(recentFiles), 'utf8');
+  } catch (error) {
+    console.error('Error saving recent files:', error);
+  }
+}
+
+function addToRecentFiles(filePath) {
+  recentFiles = recentFiles.filter(file => file !== filePath);
+  recentFiles.unshift(filePath);
+  if (recentFiles.length > 5) recentFiles.pop();
+  saveRecentFiles();
+}
+
+// Window management
+function createWindow(projectPath = null) {
+  if (mainWindow) {
+    focusExistingWindow();
+    return;
+  }
+
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+
+  loadProject(projectPath);
+  setupWindowListeners();
+}
+
+function setupWindowListeners() {
+  mainWindow.on('closed', () => mainWindow = null);
+  mainWindow.on('close', handleWindowClose);
+}
+
+function handleWindowClose(e) {
+  if (mainWindow && !mainWindow.isSaved) {
+    e.preventDefault();
+    showUnsavedChangesDialog();
+  }
+}
+
+function showUnsavedChangesDialog() {
+  dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    buttons: ['Save', "Don't Save", 'Cancel'],
+    title: 'Unsaved Changes',
+    message: 'Do you want to save your changes?'
+  }).then(({ response }) => {
+    if (response === 0) saveProject(mainWindow);
+    if (response !== 2) mainWindow.destroy();
+  }).catch(console.error);
+}
+
+// Project management
+function loadProject(projectPath) {
+  if (!projectPath) {
+    createNewProject();
+    return;
+  }
+
+  try {
+    const data = fs.readFileSync(projectPath, 'utf8');
+    mainWindow.projectPath = projectPath;
+    mainWindow.isSaved = true;
+    mainWindow.setTitle(path.basename(projectPath));
+    mainWindow.webContents.send('load-project', JSON.parse(data));
+    addToRecentFiles(projectPath);
+  } catch (error) {
+    console.error('Error loading project:', error);
+    dialog.showErrorBox('Load Error', `Failed to load project: ${error.message}`);
+    createNewProject();
+  }
+}
+
+function createNewProject() {
+  mainWindow.projectPath = null;
+  mainWindow.isSaved = false;
+  mainWindow.setTitle(`${untitledBaseName}*`);
 }
 
 function saveProject(win) {
   if (!win.projectPath) {
     saveProjectAs(win);
-  } else {
-    saveProjectData(win, win.projectPath);
+    return;
+  }
+
+  try {
+    const data = JSON.stringify({ /* Your project data */ });
+    fs.writeFileSync(win.projectPath, data, 'utf8');
+    win.isSaved = true;
+    win.setTitle(path.basename(win.projectPath));
+  } catch (error) {
+    console.error('Save error:', error);
+    dialog.showErrorBox('Save Error', 'Failed to save project');
   }
 }
 
 function saveProjectAs(win) {
-  const filePath = dialog.showSaveDialogSync(win, {
-    filters: [{ name: 'Enclosure Pro Project', extensions: ['epp'] }],
-    defaultPath: win.projectPath || `${untitledBaseName.toLowerCase()}${projectExtension}`,
+  dialog.showSaveDialog(win, {
+    filters: [{ name: 'Enclosure Pro Projects', extensions: ['epp'] }],
+    defaultPath: win.projectPath || `${untitledBaseName}${projectExtension}`
+  }).then(({ filePath }) => {
+    if (filePath) {
+      win.projectPath = filePath;
+      saveProject(win);
+      addToRecentFiles(filePath);
+    }
+  }).catch(console.error);
+}
+
+// IPC Handlers
+function initializeIpcHandlers() {
+  ipcMain.handle('get-recent-files', () => recentFiles);
+  
+  ipcMain.on('toggle-grid', (_, state) => {
+    mainWindow?.webContents.send('toggle-grid', state);
   });
 
-  if (filePath) {
-    win.projectPath = filePath;
-    saveProjectData(win, filePath);
-  }
+  ipcMain.on('update-save-state', (_, isSaved) => {
+    if (mainWindow) {
+      mainWindow.isSaved = isSaved;
+      updateSaveMenu();
+    }
+  });
 }
 
-function saveProjectData(win, filePath) {
-  const content = JSON.stringify({ data: 'Project Data Here' });
-  fs.writeFileSync(filePath, content, 'utf8');
-  win.isSaved = true;
-  win.setTitle(path.basename(filePath));
-  updateSaveMenu(win);
-}
-
-function loadProjectData(win, filePath) {
-  if (!fs.existsSync(filePath)) return;
-
-  const data = fs.readFileSync(filePath, 'utf8');
-  win.webContents.send('load-project', JSON.parse(data));
-  win.projectPath = filePath;
-
-  // After loading, mark the project as saved
-  win.isSaved = true;
-  win.setTitle(path.basename(filePath));
-  updateSaveMenu(win);
-}
-
-function updateSaveMenu(win) {
+function updateSaveMenu() {
   const menu = Menu.getApplicationMenu();
   const saveItem = menu.getMenuItemById('saveProject');
-  if (saveItem) saveItem.enabled = !win.isSaved;
+  if (saveItem) saveItem.enabled = !mainWindow?.isSaved;
 }
 
-app.on('ready', () => {
-  const template = [
-    {
-      label: app.name,
-      submenu: [
-        { label: `About ${app.name}`, role: 'about' },
-        { type: 'separator' },
-        { label: `Quit ${app.name}`, role: 'quit' },
-      ],
-    },
-    {
-      label: 'File',
-      submenu: [
-        {
-          label: 'New Project',
-          click: () => createWindow(),
-          accelerator: 'CmdOrCtrl+N',
-        },
-        {
-          label: 'Open Project',
-          click: () => {
-            const files = dialog.showOpenDialogSync({
-              filters: [{ name: 'Enclosure Pro Project', extensions: ['epp'] }],
-              properties: ['openFile'],
-            });
-            if (files && files.length > 0) {
-              const existingWindow = BrowserWindow.getAllWindows().find((w) => w.projectPath === files[0]);
-              if (!existingWindow) {
-                createWindow(files[0]);
-              }
-            }
-          },
-          accelerator: 'CmdOrCtrl+O',
-        },
-        {
-          id: 'saveProject',
-          label: 'Save Project',
-          click: () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) saveProject(focusedWindow);
-          },
-          accelerator: 'CmdOrCtrl+S',
-          enabled: false,
-        },
-        {
-          label: 'Save Project As...',
-          click: () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) saveProjectAs(focusedWindow);
-          },
-          accelerator: 'Shift+CmdOrCtrl+S',
-        },
-        {
-          label: 'Close Window',
-          click: () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) focusedWindow.close();
-          },
-          accelerator: 'CmdOrCtrl+W',
-        },
-      ],
-    },
-  ];
-
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
-
-  createWindow();
+// App lifecycle
+app.whenReady().then(() => {
+  const { createMenu } = require('./main_menu');
+  Menu.setApplicationMenu(createMenu({
+    createWindow,
+    saveProject,
+    saveProjectAs,
+    recentFiles,
+    saveRecentFiles
+  }));
+  initialize();
 });
 
 app.on('window-all-closed', () => {
