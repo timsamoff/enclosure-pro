@@ -1,0 +1,872 @@
+import { useState, useEffect } from "react";
+import UnwrappedCanvas from "@/components/UnwrappedCanvas";
+import TopControls from "@/components/TopControls";
+import BottomInfo from "@/components/BottomInfo";
+import ComponentPalette from "@/components/ComponentPalette";
+import EnclosureSelector from "@/components/EnclosureSelector";
+import GridSelector from "@/components/GridSelector";
+import SaveAsDialog from "@/components/SaveAsDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  PlacedComponent,
+  ComponentType,
+  EnclosureSide,
+  MeasurementUnit,
+  EnclosureType,
+  ENCLOSURE_TYPES,
+  COMPONENT_TYPES,
+  ProjectState,
+  getUnwrappedDimensions,
+} from "@/types/schema";
+import jsPDF from "jspdf";
+import { mmToFraction } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+import { snapZoom } from "@/lib/zoom";
+
+export default function Designer() {
+  const { toast } = useToast();
+  const [enclosureType, setEnclosureType] = useState<EnclosureType>("125B");
+  const [components, setComponents] = useState<PlacedComponent[]>([]);
+  const [gridEnabled, setGridEnabled] = useState(true);
+  const [gridSize, setGridSize] = useState(5);
+  const [unit, setUnit] = useState<MeasurementUnit>("metric");
+  const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
+  const [showPalette, setShowPalette] = useState(false);
+  const [showEnclosureSelector, setShowEnclosureSelector] = useState(false);
+  const [showGridSelector, setShowGridSelector] = useState(false);
+  const [showSaveAsDialog, setShowSaveAsDialog] = useState(false);
+  const [showNewConfirmDialog, setShowNewConfirmDialog] = useState(false);
+  const [showQuitConfirmDialog, setShowQuitConfirmDialog] = useState(false);
+  const [showOpenConfirmDialog, setShowOpenConfirmDialog] = useState(false);
+  const [pendingPostSaveAction, setPendingPostSaveAction] = useState<(() => void) | null>(null);
+  
+  const [projectName, setProjectName] = useState("");
+  const [isDirty, setIsDirty] = useState(false);
+  const [zoom, setZoom] = useState<number>(snapZoom(1));
+  const [rotation, setRotation] = useState<number>(0);
+
+  const enclosure = ENCLOSURE_TYPES[enclosureType];
+  
+  const getSideDimensions = (side: EnclosureSide) => {
+    const unwrapped = getUnwrappedDimensions(enclosureType);
+    return unwrapped[side.toLowerCase() as keyof ReturnType<typeof getUnwrappedDimensions>];
+  };
+
+  const markDirty = () => setIsDirty(true);
+  const resetDirty = () => setIsDirty(false);
+
+  const performNewProject = () => {
+    setEnclosureType("125B");
+    setComponents([]);
+    setGridEnabled(true);
+    setGridSize(5);
+    setZoom(snapZoom(1));
+    setRotation(0);
+    setUnit("metric");
+    setSelectedComponent(null);
+    setProjectName("");
+    resetDirty();
+    toast({
+      title: "New Project",
+      description: "Started a new project",
+    });
+  };
+
+  const handleNew = () => {
+    if (isDirty) {
+      setShowNewConfirmDialog(true);
+    } else {
+      performNewProject();
+    }
+  };
+
+  const handleNewConfirmSave = () => {
+    setPendingPostSaveAction(() => performNewProject);
+    setShowNewConfirmDialog(false);
+    setShowSaveAsDialog(true);
+  };
+
+  const handleNewConfirmDiscard = () => {
+    setShowNewConfirmDialog(false);
+    performNewProject();
+  };
+
+  const handleQuit = () => {
+    if (isDirty) {
+      setShowQuitConfirmDialog(true);
+    } else {
+      if (window.electronAPI?.isElectron) {
+        window.close();
+      }
+    }
+  };
+
+  const handleQuitConfirmSave = () => {
+    setPendingPostSaveAction(() => {
+      if (window.electronAPI?.isElectron) {
+        window.close();
+      }
+    });
+    setShowQuitConfirmDialog(false);
+    setShowSaveAsDialog(true);
+  };
+
+  const handleQuitConfirmDiscard = () => {
+    setShowQuitConfirmDialog(false);
+    if (window.electronAPI?.isElectron) {
+      window.close();
+    }
+  };
+
+  const performLoad = async () => {
+    if (window.electronAPI?.isElectron) {
+      try {
+        const result = await window.electronAPI.openFile({
+          filters: [
+            { name: 'Enclosure Project Files', extensions: ['enc'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
+
+        if (result.canceled || !result.filePath) {
+          return;
+        }
+
+        const readResult = await window.electronAPI.readFile({
+          filePath: result.filePath
+        });
+
+        if (!readResult.success || !readResult.content) {
+          throw new Error(readResult.error || 'Failed to read file');
+        }
+
+        const filename = result.filePath.split('/').pop() || 'untitled.enc';
+        processLoadedFile(readResult.content, filename);
+        return;
+      } catch (error) {
+        console.error('Electron load failed:', error);
+      }
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.enc';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const json = event.target?.result as string;
+        processLoadedFile(json, file.name);
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
+  const handleLoad = async () => {
+    if (isDirty) {
+      setShowOpenConfirmDialog(true);
+    } else {
+      await performLoad();
+    }
+  };
+
+  const handleOpenConfirmSave = () => {
+    setPendingPostSaveAction(() => performLoad);
+    setShowOpenConfirmDialog(false);
+    setShowSaveAsDialog(true);
+  };
+
+  const handleOpenConfirmDiscard = async () => {
+    setShowOpenConfirmDialog(false);
+    await performLoad();
+  };
+
+  const handleZoomIn = () => {
+    setZoom(prev => snapZoom(prev + 0.1));
+  };
+
+  const handleZoomOut = () => {
+    setZoom(prev => snapZoom(prev - 0.1));
+  };
+
+  const handleRotate = () => {
+    setRotation(prev => prev === 0 ? 90 : 0);
+  };
+
+  const rotationDirection: 'cw' | 'ccw' = rotation === 0 ? 'cw' : 'ccw';
+
+  const handleComponentMove = (id: string, x: number, y: number, side?: EnclosureSide) => {
+    setComponents(prev =>
+      prev.map(c => (c.id === id ? { ...c, x, y, ...(side && { side }) } : c))
+    );
+    markDirty();
+  };
+
+  const handleComponentDelete = (id: string) => {
+    setComponents(prev => prev.filter(c => c.id !== id));
+    markDirty();
+  };
+
+  const handleComponentSelect = (type: ComponentType) => {
+    let initialX = 0;
+    let initialY = 0;
+    
+    if (gridEnabled && gridSize > 0) {
+      const mmToPixels = 3.7795275591;
+      const gridPixels = gridSize * mmToPixels;
+      initialX = Math.round(initialX / gridPixels) * gridPixels;
+      initialY = Math.round(initialY / gridPixels) * gridPixels;
+    }
+    
+    const newComponent: PlacedComponent = {
+      id: `comp-${Date.now()}-${Math.random()}`,
+      type,
+      x: initialX,
+      y: initialY,
+      side: "Front",
+    };
+    setComponents(prev => [...prev, newComponent]);
+    setSelectedComponent(newComponent.id);
+    setShowPalette(false);
+    markDirty();
+  };
+
+  const generatePDF = () => {
+    const mmToPixels = 3.7795275591;
+    const dimensions = getUnwrappedDimensions(enclosureType);
+
+    const frontW = dimensions.front.width;
+    const frontH = dimensions.front.height;
+    const topW = dimensions.top.width;
+    const topH = dimensions.top.height;
+    const bottomW = dimensions.bottom.width;
+    const bottomH = dimensions.bottom.height;
+    const leftW = dimensions.left.width;
+    const leftH = dimensions.left.height;
+    const rightW = dimensions.right.width;
+    const rightH = dimensions.right.height;
+
+    const totalWidth = leftW + frontW + rightW;
+    const totalHeight = topH + frontH + bottomH;
+
+    const orientation = totalWidth > totalHeight ? "landscape" : "portrait";
+    
+    const requiredWidth = totalWidth + 40;
+    const requiredHeight = totalHeight + 60;
+    
+    let pageFormat: string | number[];
+    let pageWidth: number;
+    let pageHeight: number;
+    let pageName: string;
+    
+    const A5 = { width: 148, height: 210, name: "A5" };
+    const A4 = { width: 210, height: 297, name: "A4" };
+    const A3 = { width: 297, height: 420, name: "A3" };
+    const A2 = { width: 420, height: 594, name: "A2" };
+    
+    if (orientation === "landscape") {
+      if (requiredWidth <= A5.height && requiredHeight <= A5.width) {
+        pageFormat = "a5";
+        pageWidth = A5.height;
+        pageHeight = A5.width;
+        pageName = A5.name;
+      } else if (requiredWidth <= A4.height && requiredHeight <= A4.width) {
+        pageFormat = "a4";
+        pageWidth = A4.height;
+        pageHeight = A4.width;
+        pageName = A4.name;
+      } else if (requiredWidth <= A3.height && requiredHeight <= A3.width) {
+        pageFormat = "a3";
+        pageWidth = A3.height;
+        pageHeight = A3.width;
+        pageName = A3.name;
+      } else if (requiredWidth <= A2.height && requiredHeight <= A2.width) {
+        pageFormat = "a2";
+        pageWidth = A2.height;
+        pageHeight = A2.width;
+        pageName = A2.name;
+      } else {
+        pageWidth = Math.ceil(requiredWidth / 10) * 10;
+        pageHeight = Math.ceil(requiredHeight / 10) * 10;
+        pageFormat = [pageWidth, pageHeight];
+        pageName = "Custom";
+      }
+    } else {
+      if (requiredWidth <= A5.width && requiredHeight <= A5.height) {
+        pageFormat = "a5";
+        pageWidth = A5.width;
+        pageHeight = A5.height;
+        pageName = A5.name;
+      } else if (requiredWidth <= A4.width && requiredHeight <= A4.height) {
+        pageFormat = "a4";
+        pageWidth = A4.width;
+        pageHeight = A4.height;
+        pageName = A4.name;
+      } else if (requiredWidth <= A3.width && requiredHeight <= A3.height) {
+        pageFormat = "a3";
+        pageWidth = A3.width;
+        pageHeight = A3.height;
+        pageName = A3.name;
+      } else if (requiredWidth <= A2.width && requiredHeight <= A2.height) {
+        pageFormat = "a2";
+        pageWidth = A2.width;
+        pageHeight = A2.height;
+        pageName = A2.name;
+      } else {
+        pageWidth = Math.ceil(requiredWidth / 10) * 10;
+        pageHeight = Math.ceil(requiredHeight / 10) * 10;
+        pageFormat = [pageWidth, pageHeight];
+        pageName = "Custom";
+      }
+    }
+    
+    const pdf = new jsPDF({
+      orientation,
+      unit: "mm",
+      format: pageFormat,
+    });
+
+    const topOffsetX = (frontW - topW) / 2;
+    const bottomOffsetX = (frontW - bottomW) / 2;
+    const leftOffsetY = (frontH - leftH) / 2;
+    const rightOffsetY = (frontH - rightH) / 2;
+
+    const layout = {
+      front: { x: leftW, y: topH, width: frontW, height: frontH },
+      top: { x: leftW + topOffsetX, y: 0, width: topW, height: topH },
+      bottom: { x: leftW + bottomOffsetX, y: topH + frontH, width: bottomW, height: bottomH },
+      left: { x: 0, y: topH + leftOffsetY, width: leftW, height: leftH },
+      right: { x: leftW + frontW, y: topH + rightOffsetY, width: rightW, height: rightH },
+    };
+
+    const margin = 20;
+    const scale = 1.0;
+
+    const offsetX = (pageWidth - totalWidth * scale) / 2;
+    const offsetY = 30 + (pageHeight - 30 - totalHeight * scale) / 2;
+
+    pdf.setFontSize(14);
+    const title = projectName ? `${projectName} - Drill Template` : `${enclosureType} - Drill Template`;
+    pdf.text(title, pageWidth / 2, 15, { align: "center" });
+
+    const enc = ENCLOSURE_TYPES[enclosureType];
+    pdf.setFontSize(10);
+    const encInfo = `${enclosureType}: ${enc.width}mm × ${enc.height}mm × ${enc.depth}mm`;
+    pdf.text(encInfo, pageWidth / 2, 22, { align: "center" });
+
+    pdf.setFontSize(8);
+    const pageInfo = pageName === "Custom" 
+      ? `Scale: 100% (Actual Size) | Page: ${Math.round(pageWidth)}×${Math.round(pageHeight)}mm`
+      : `Scale: 100% (Actual Size) | Page: ${pageName}`;
+    pdf.text(pageInfo, pageWidth / 2, 28, { align: "center" });
+
+    const drawSide = (sideKey: keyof typeof layout, label: string) => {
+      const side = layout[sideKey];
+      const x = offsetX + side.x * scale;
+      const y = offsetY + side.y * scale;
+      const w = side.width * scale;
+      const h = side.height * scale;
+
+      pdf.setLineWidth(0.3);
+      pdf.rect(x, y, w, h);
+
+      pdf.setFontSize(8);
+      pdf.text(label, x + w / 2, y + h / 2, { align: "center" });
+
+      const sideComponents = components.filter(c => c.side === label);
+      sideComponents.forEach(component => {
+        const compData = COMPONENT_TYPES[component.type];
+        const radius = compData.drillSize / 2;
+
+        const compX = component.x / mmToPixels;
+        const compY = component.y / mmToPixels;
+
+        const centerX = x + (w / 2 + compX * scale);
+        const centerY = y + (h / 2 + compY * scale);
+
+        pdf.setLineWidth(0.2);
+        pdf.circle(centerX, centerY, radius * scale);
+
+        const crosshairSize = Math.max(radius * scale, 2);
+        pdf.line(centerX - crosshairSize, centerY, centerX + crosshairSize, centerY);
+        pdf.line(centerX, centerY - crosshairSize, centerX, centerY + crosshairSize);
+
+        pdf.setFontSize(6);
+        const drillText = unit === "metric"
+          ? `${compData.drillSize.toFixed(1)}mm`
+          : compData.imperialLabel;
+        pdf.text(drillText, centerX, centerY + radius * scale + 2.5, { align: "center" });
+      });
+    };
+
+    drawSide('front', 'Front');
+    drawSide('top', 'Top');
+    drawSide('bottom', 'Bottom');
+    drawSide('left', 'Left');
+    drawSide('right', 'Right');
+
+    return pdf;
+  };
+
+  const handleExportPDF = async () => {
+    const pdf = generatePDF();
+    const filename = projectName ? `${projectName}.pdf` : `${enclosureType}-drill-template.pdf`;
+    pdf.save(filename);
+  };
+
+  const handlePrint = async () => {
+    const pdf = generatePDF();
+    const pdfBlob = pdf.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    const printWindow = window.open(pdfUrl);
+    if (printWindow) {
+      printWindow.addEventListener('load', () => {
+        printWindow.print();
+      });
+    }
+  };
+
+  const handleSaveWithFilename = async (filename: string): Promise<void> => {
+    const projectState: ProjectState = {
+      enclosureType,
+      components,
+      gridEnabled,
+      gridSize,
+      zoom,
+      unit,
+    };
+
+    const json = JSON.stringify(projectState, null, 2);
+    const fullFilename = filename.endsWith('.enc') ? filename : `${filename}.enc`;
+
+    if (window.electronAPI?.isElectron) {
+      try {
+        const result = await window.electronAPI.saveFile({
+          defaultPath: fullFilename,
+          filters: [
+            { name: 'Enclosure Project Files', extensions: ['enc'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
+
+        if (result.canceled) {
+          throw new Error('User canceled save operation');
+        }
+
+        const writeResult = await window.electronAPI.writeFile({
+          filePath: result.filePath!,
+          content: json
+        });
+
+        if (!writeResult.success) {
+          throw new Error(writeResult.error || 'Failed to write file');
+        }
+
+        const savedFilename = result.filePath!.split('/').pop()?.replace('.enc', '') || filename;
+        setProjectName(savedFilename);
+        resetDirty();
+
+        toast({
+          title: "Project Saved",
+          description: `Saved as ${result.filePath!.split('/').pop()}`,
+        });
+
+        if (pendingPostSaveAction) {
+          const action = pendingPostSaveAction;
+          setPendingPostSaveAction(null);
+          action();
+        }
+        return;
+      } catch (err: any) {
+        console.error('Electron save failed:', err);
+        throw err;
+      }
+    }
+
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: fullFilename,
+          types: [{
+            description: 'Enclosure Project Files',
+            accept: { 'application/json': ['.enc'] }
+          }]
+        });
+        
+        const writable = await handle.createWritable();
+        await writable.write(json);
+        await writable.close();
+        
+        setProjectName(filename.replace('.enc', ''));
+        resetDirty();
+        
+        toast({
+          title: "Project Saved",
+          description: `Saved as ${fullFilename}`,
+        });
+        
+        if (pendingPostSaveAction) {
+          const action = pendingPostSaveAction;
+          setPendingPostSaveAction(null);
+          action();
+        }
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          throw new Error('User canceled save operation');
+        }
+        console.warn('File System Access API failed, falling back to download:', err);
+      }
+    }
+
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fullFilename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setProjectName(filename.replace('.enc', ''));
+    resetDirty();
+
+    toast({
+      title: "Project Saved",
+      description: `Saved as ${fullFilename}`,
+    });
+
+    if (pendingPostSaveAction) {
+      const action = pendingPostSaveAction;
+      setPendingPostSaveAction(null);
+      action();
+    }
+  };
+
+  const processLoadedFile = (json: string, filename: string) => {
+    try {
+      const parsed = JSON.parse(json);
+
+      const legacyComponentSchema = z.object({
+        id: z.string().optional(),
+        type: z.string().optional(),
+        x: z.number().optional(),
+        y: z.number().optional(),
+        side: z.string().optional(),
+      });
+
+      const projectFileSchema = z.object({
+        enclosureType: z.string().optional(),
+        currentSide: z.string().optional(),
+        components: z.array(legacyComponentSchema).optional(),
+        gridEnabled: z.boolean().optional(),
+        gridSize: z.number().optional(),
+        zoom: z.any().optional(),
+        rotation: z.any().optional(),
+        unit: z.enum(["metric", "imperial"]).optional(),
+      });
+
+      const result = projectFileSchema.safeParse(parsed);
+      
+      if (!result.success) {
+        throw new Error("Invalid file structure");
+      }
+
+      const rawData = result.data;
+      const SIDE_ORDER: EnclosureSide[] = ["Front", "Right", "Left", "Top", "Bottom"];
+
+      const normalizedEnclosureType = (rawData.enclosureType && rawData.enclosureType in ENCLOSURE_TYPES)
+        ? (rawData.enclosureType as EnclosureType)
+        : "1590B";
+
+      const validComponents: PlacedComponent[] = (rawData.components || [])
+        .filter(c => c.type && c.type in COMPONENT_TYPES)
+        .map((c, index) => {
+          let side = c.side;
+          if (side === "Back") side = "Front";
+          if (!side || !SIDE_ORDER.includes(side as EnclosureSide)) {
+            side = "Front";
+          }
+          
+          return {
+            id: c.id || `component-${Date.now()}-${index}`,
+            type: c.type as ComponentType,
+            x: typeof c.x === 'number' ? c.x : 0,
+            y: typeof c.y === 'number' ? c.y : 0,
+            side: side as EnclosureSide,
+          };
+        });
+
+      let normalizedZoom = 1;
+      if (typeof rawData.zoom === 'number') {
+        normalizedZoom = rawData.zoom;
+      } else if (rawData.zoom && typeof rawData.zoom === 'object') {
+        normalizedZoom = (rawData.zoom as any).Front || 1;
+      }
+
+      setEnclosureType(normalizedEnclosureType);
+      setComponents(validComponents);
+      setGridEnabled(rawData.gridEnabled ?? true);
+      setGridSize(rawData.gridSize ?? 5);
+      setZoom(snapZoom(normalizedZoom));
+      setUnit(rawData.unit ?? "metric");
+      
+      setProjectName(filename.replace('.enc', ''));
+      resetDirty();
+
+      toast({
+        title: "Project Loaded",
+        description: `Loaded ${filename}`,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Invalid Project File",
+          description: `Validation error: ${error.errors[0].message}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to load project file",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+      if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        handleZoomOut();
+      } else if (e.key === '=' || e.key === '+' || (e.code === 'Equal' && e.shiftKey)) {
+        e.preventDefault();
+        handleZoomIn();
+      }
+      else if (modifier && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        setShowSaveAsDialog(true);
+      } else if (modifier && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        handleLoad();
+      } else if (modifier && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        handlePrint();
+      } else if (modifier && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        handleExportPDF();
+      } else if (modifier && e.key.toLowerCase() === 'q') {
+        e.preventDefault();
+        handleQuit();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  return (
+    <div className="relative w-screen h-screen overflow-hidden">
+      <UnwrappedCanvas
+        enclosureType={enclosureType}
+        components={components}
+        zoom={zoom}
+        rotation={rotation}
+        gridEnabled={gridEnabled}
+        gridSize={gridSize}
+        unit={unit}
+        onComponentMove={handleComponentMove}
+        onComponentDelete={handleComponentDelete}
+        selectedComponent={selectedComponent}
+        onSelectComponent={setSelectedComponent}
+        onCanvasClick={() => {
+          setShowPalette(false);
+          setShowEnclosureSelector(false);
+        }}
+        onZoomChange={setZoom}
+      />
+
+      <TopControls
+        currentSide={undefined}
+        zoom={zoom}
+        fileName={projectName}
+        isDirty={isDirty}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onRotate={handleRotate}
+        rotationDirection={rotationDirection}
+        onPrevSide={undefined}
+        onNextSide={undefined}
+        onNew={handleNew}
+        onSaveAs={() => setShowSaveAsDialog(true)}
+        onOpen={handleLoad}
+        onExportPDF={handleExportPDF}
+        onPrint={handlePrint}
+        onQuit={handleQuit}
+      />
+
+      <BottomInfo
+        gridEnabled={gridEnabled}
+        gridSize={gridSize}
+        enclosureType={enclosureType}
+        unit={unit}
+        onEnclosureClick={() => setShowEnclosureSelector(true)}
+        onGridClick={() => setShowGridSelector(true)}
+        onComponentsClick={() => setShowPalette(true)}
+        onUnitChange={(newUnit) => {
+          setUnit(newUnit);
+          markDirty();
+        }}
+      />
+
+      {showPalette && (
+        <ComponentPalette
+          onComponentSelect={handleComponentSelect}
+          onClose={() => setShowPalette(false)}
+          unit={unit}
+        />
+      )}
+
+      <SaveAsDialog
+        open={showSaveAsDialog}
+        onOpenChange={(open) => {
+          setShowSaveAsDialog(open);
+          if (!open && pendingPostSaveAction) {
+            setPendingPostSaveAction(null);
+          }
+        }}
+        currentFilename={projectName || enclosureType}
+        onSave={handleSaveWithFilename}
+      />
+
+      <AlertDialog open={showNewConfirmDialog} onOpenChange={setShowNewConfirmDialog}>
+        <AlertDialogContent data-testid="dialog-new-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. Would you like to save before starting a new project?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-new-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleNewConfirmDiscard}
+              data-testid="button-new-discard"
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Don't Save
+            </AlertDialogAction>
+            <AlertDialogAction onClick={handleNewConfirmSave} data-testid="button-new-save">
+              Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showQuitConfirmDialog} onOpenChange={setShowQuitConfirmDialog}>
+        <AlertDialogContent data-testid="dialog-quit-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. Would you like to save before quitting?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-quit-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleQuitConfirmDiscard}
+              data-testid="button-quit-discard"
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Don't Save
+            </AlertDialogAction>
+            <AlertDialogAction onClick={handleQuitConfirmSave} data-testid="button-quit-save">
+              Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showOpenConfirmDialog} onOpenChange={setShowOpenConfirmDialog}>
+        <AlertDialogContent data-testid="dialog-open-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. Would you like to save before opening another file?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-open-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleOpenConfirmDiscard}
+              data-testid="button-open-discard"
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Don't Save
+            </AlertDialogAction>
+            <AlertDialogAction onClick={handleOpenConfirmSave} data-testid="button-open-save">
+              Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <EnclosureSelector
+        open={showEnclosureSelector}
+        onClose={() => setShowEnclosureSelector(false)}
+        currentType={enclosureType}
+        onSelect={(type) => {
+          setEnclosureType(type);
+          markDirty();
+        }}
+        unit={unit}
+      />
+
+      <GridSelector
+        open={showGridSelector}
+        onOpenChange={setShowGridSelector}
+        gridEnabled={gridEnabled}
+        onGridEnabledChange={(enabled) => {
+          setGridEnabled(enabled);
+          markDirty();
+        }}
+        gridSize={gridSize}
+        onGridSizeChange={(size) => {
+          setGridSize(size);
+          markDirty();
+        }}
+        unit={unit}
+      />
+
+      <button
+        onClick={() => setShowPalette(true)}
+        className="hidden lg:block absolute left-4 top-20 px-4 py-3 bg-primary text-primary-foreground rounded-lg shadow-lg hover-elevate active-elevate-2 font-medium z-40"
+        data-testid="button-show-palette"
+      >
+        Add Component
+      </button>
+    </div>
+  );
+}

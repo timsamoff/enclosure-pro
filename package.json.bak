@@ -1,0 +1,23 @@
+{
+  "name": "enclosure-pro",
+  "version": "1.0.0",
+  "description": "An application for designing effects pedal enclosures.",
+  "homepage": "https://github.com/timsamoff/enclosure-pro#readme",
+  "bugs": {
+    "url": "https://github.com/timsamoff/enclosure-pro/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timsamoff/enclosure-pro.git"
+  },
+  "license": "ISC",
+  "author": "Tim Samoff",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^39.2.0"
+  }
+}
