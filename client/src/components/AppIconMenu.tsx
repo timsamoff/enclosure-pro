@@ -64,7 +64,7 @@ export default function AppIconMenu() {
             data-testid="link-buy-me-coffee"
           >
             <Coffee className="w-4 h-4" />
-            <span>Buy Me a Coffee</span>
+            <span>Buy Me a Cup of Coffee</span>
           </a>
         </DropdownMenuItem>
       </DropdownMenuContent>
