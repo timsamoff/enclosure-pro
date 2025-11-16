@@ -124,9 +124,9 @@ export default function TopControls({
         fileName={fileName}
         isDirty={isDirty}
         onNew={onNew}
+        onOpen={onOpen}
         onSave={onSave}
         onSaveAs={onSaveAs}
-        onOpen={onOpen}
         onPrint={onPrint}
         onExportPDF={onExportPDF}
         onQuit={onQuit}

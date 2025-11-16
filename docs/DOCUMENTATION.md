@@ -61,7 +61,7 @@ The Project Menu contains the following options:
 	 - Ctrl/Cmd+N
  - **Open:** Open a saved enclosure project
 	 - Ctrl/Cmd+O
- - **Save:** Save the open project
+ - **Save:** Save the open project as an **.enc** file on your computer
 	 - Also Ctrl/Cmd+S
  - **Save As:** Save the open project as (can be used to duplicate a current project)
 	 - Ctrl/Cmd+Shift+S

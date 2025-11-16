@@ -54,20 +54,23 @@ export default function FileDropdownMenu({
           <span className="flex-1">New</span>
           <span className="text-xs text-muted-foreground ml-4">Ctrl+N</span>
         </DropdownMenuItem>
+        {/* MOVED: Open is now after New */}
+        <DropdownMenuItem onClick={onOpen} data-testid="menu-item-open">
+          <FolderOpen className="w-4 h-4 mr-2" />
+          <span className="flex-1">Open</span>
+          <span className="text-xs text-muted-foreground ml-4">Ctrl+O</span>
+        </DropdownMenuItem>
+        {/* MOVED: Save is now after Open */}
         <DropdownMenuItem onClick={onSave} data-testid="menu-item-save">
           <Save className="w-4 h-4 mr-2" />
           <span className="flex-1">Save</span>
           <span className="text-xs text-muted-foreground ml-4">Ctrl+S</span>
         </DropdownMenuItem>
+        {/* MOVED: Save As is now after Save */}
         <DropdownMenuItem onClick={onSaveAs} data-testid="menu-item-save-as">
           <FilePlus className="w-4 h-4 mr-2" />
           <span className="flex-1">Save As</span>
           <span className="text-xs text-muted-foreground ml-4">Ctrl+Shift+S</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onOpen} data-testid="menu-item-open">
-          <FolderOpen className="w-4 h-4 mr-2" />
-          <span className="flex-1">Open</span>
-          <span className="text-xs text-muted-foreground ml-4">Ctrl+O</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onPrint} data-testid="menu-item-print">
           <Printer className="w-4 h-4 mr-2" />

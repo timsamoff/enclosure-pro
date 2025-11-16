@@ -36,18 +36,7 @@ export default function FileMenu({
 
         <div className="space-y-6 py-4">
           <div className="space-y-3">
-            <Button
-              onClick={() => {
-                onSave();
-                onOpenChange(false);
-              }}
-              className="w-full"
-              variant="outline"
-              data-testid="button-save-enc"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Save Project (.enc)
-            </Button>
+            {/* The 'Open Project' button is now the first element, placing it before 'Save'. */}
             <Button
               onClick={() => {
                 onLoad();
@@ -59,6 +48,19 @@ export default function FileMenu({
             >
               <FolderOpen className="w-4 h-4 mr-2" />
               Open Project (.enc)
+            </Button>
+            {/* The 'Save Project' button is now the second element. */}
+            <Button
+              onClick={() => {
+                onSave();
+                onOpenChange(false);
+              }}
+              className="w-full"
+              variant="outline"
+              data-testid="button-save-enc"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Save Project (.enc)
             </Button>
           </div>
 
