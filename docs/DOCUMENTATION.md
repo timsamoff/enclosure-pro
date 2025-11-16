@@ -93,6 +93,8 @@ The Grid Settings Menu provides several grid spacing options as well as the opti
 The Components Menu provides a list of many common enclosure components (potentiometers, switches, LEDs, etc.). When components are selected, they will appear in the center of the enclosure.
 
 #### 3. Design Canvas
-The Design Canvas is where components are placed on the enclosure. Components can be dragged and dropped anywhere on the Canvas, and can also be deleted.
+The Design Canvas is where components are placed on the enclosure. Components can be dragged and dropped anywhere on the Canvas.
+
+When a component is selected, an orange trash can icon will appear at the bottom right of the Design Canvas. Click this button to delete the selected component.
 
 Use the mouse right-click to pan around the Design Canvas space.
