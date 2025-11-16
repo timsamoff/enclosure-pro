@@ -8,9 +8,10 @@ Enclosure Pro is pretty straightforward to use and presents very few menu option
 
 If you have any questions, please email circuitousfx@gmail.com.
 
-### Interface
+### User Interface
 
-IMAGE OF INTERFACE HERE
+[<img  src="https://github.com/timsamoff/enclosure-pro/blob/main/docs/ep_ui.png?raw=true" width="640px" alt="Enclosure Pro User Interface">](https://github.com/timsamoff/enclosure-pro/blob/main/docs/ep_ui.png)
+*(Click to view a larger version.)*
 
 1.  **Top Toolbar**
 	A. App Menu
