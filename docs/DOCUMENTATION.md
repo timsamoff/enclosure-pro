@@ -1,4 +1,5 @@
 
+
 <img  src="https://github.com/timsamoff/enclosure-pro/blob/main/images/EnclosureProIcon.png?raw=true" width="128px" alt="Enclosure Pro">
 
 # Enclosure Pro
@@ -6,24 +7,34 @@
 ## Documentation
 Enclosure Pro is pretty straightforward to use and presents very few menu options that should be familiar to any effects pedal builder. Experiment for a few minutes and you'll get the hang of it.
 
-If you have any questions, please email circuitousfx@gmail.com.
+If you have any questions, please email [circuitousfx@gmail.com](mailto:circuitousfx@gmail.com).
 
 ### User Interface
 
 [<img  src="https://github.com/timsamoff/enclosure-pro/blob/main/docs/ep_ui.png?raw=true" width="640px" alt="Enclosure Pro User Interface">](https://github.com/timsamoff/enclosure-pro/blob/main/docs/ep_ui.png)
 *(Click to view a larger version.)*
 
-1.  **Top Toolbar**
-	A. App Menu
-	B. Zoom
-	C. Rotate
-	D. Project Menu
-2. **Bottom Toolbar**
-	E. Enclosures Menu
-	F. Unit Switcher
-	G. Grid Settings Menu
-	H. Components Menu
-3. **Design Canvas**
+1.  [**Top Toolbar**](#1-top-toolbar)
+
+	A. [App Menu](#a-app-menu)
+
+	B. [Zoom](#b-zoom)
+
+	C. [Rotate](#b-rotate)
+
+	D. [Project Menu](d-project-menu)
+
+2. [**Bottom Toolbar**](2-bottom-toolbar)
+   
+	E. [Enclosures Menu](#e-enclosures-menu)
+
+	F. [Unit Switcher](#f-unit-switcher)
+
+	G. [Grid Settings Menu](g-grid-settings-menu)
+
+	H. [Components Menu](#h-components-menu)
+
+3. [**Design Canvas**](#3-design-canvas)
 
 #### 1. Top Toolbar
 
