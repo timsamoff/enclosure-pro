@@ -30,7 +30,7 @@ export default function AppIconMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <a
-            href="https://github.com/timsamoff/enclosure-pro"
+            href="https://github.com/timsamoff/enclosure-pro/blob/main/docs/DOCUMENTATION.md"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 cursor-pointer"
