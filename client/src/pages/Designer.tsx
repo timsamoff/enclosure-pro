@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import UnwrappedCanvas from "@/components/UnwrappedCanvas";
 import TopControls from "@/components/TopControls";
 import BottomInfo from "@/components/BottomInfo";
 import ComponentPalette from "@/components/ComponentPalette";
 import EnclosureSelector from "@/components/EnclosureSelector";
 import GridSelector from "@/components/GridSelector";
-import SaveAsDialog from "@/components/SaveAsDialog";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,13 +44,16 @@ export default function Designer() {
   const [showPalette, setShowPalette] = useState(false);
   const [showEnclosureSelector, setShowEnclosureSelector] = useState(false);
   const [showGridSelector, setShowGridSelector] = useState(false);
-  const [showSaveAsDialog, setShowSaveAsDialog] = useState(false);
   const [showNewConfirmDialog, setShowNewConfirmDialog] = useState(false);
   const [showQuitConfirmDialog, setShowQuitConfirmDialog] = useState(false);
   const [showOpenConfirmDialog, setShowOpenConfirmDialog] = useState(false);
   const [pendingPostSaveAction, setPendingPostSaveAction] = useState<(() => void) | null>(null);
   
+  const isDirtyRef = useRef(false);
+
   const [projectName, setProjectName] = useState("");
+  const [projectFilePath, setProjectFilePath] = useState<string | null>(null);
+  const projectFilePathRef = useRef<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [zoom, setZoom] = useState<number>(snapZoom(1));
   const [rotation, setRotation] = useState<number>(0);
@@ -62,8 +65,15 @@ export default function Designer() {
     return unwrapped[side.toLowerCase() as keyof ReturnType<typeof getUnwrappedDimensions>];
   };
 
-  const markDirty = () => setIsDirty(true);
-  const resetDirty = () => setIsDirty(false);
+  const markDirty = () => {
+    setIsDirty(true);
+    isDirtyRef.current = true;
+  };
+  
+  const resetDirty = () => {
+    setIsDirty(false);
+    isDirtyRef.current = false;
+  };
 
   const performNewProject = () => {
     setEnclosureType("125B");
@@ -75,6 +85,8 @@ export default function Designer() {
     setUnit("metric");
     setSelectedComponent(null);
     setProjectName("");
+    setProjectFilePath(null);
+    projectFilePathRef.current = null;
     resetDirty();
     toast({
       title: "New Project",
@@ -93,7 +105,7 @@ export default function Designer() {
   const handleNewConfirmSave = () => {
     setPendingPostSaveAction(() => performNewProject);
     setShowNewConfirmDialog(false);
-    setShowSaveAsDialog(true);
+    handleSave();
   };
 
   const handleNewConfirmDiscard = () => {
@@ -106,7 +118,7 @@ export default function Designer() {
       setShowQuitConfirmDialog(true);
     } else {
       if (window.electronAPI?.isElectron) {
-        window.close();
+        window.electronAPI.closeWindow();
       }
     }
   };
@@ -114,17 +126,17 @@ export default function Designer() {
   const handleQuitConfirmSave = () => {
     setPendingPostSaveAction(() => {
       if (window.electronAPI?.isElectron) {
-        window.close();
+        window.electronAPI.closeWindow();
       }
     });
     setShowQuitConfirmDialog(false);
-    setShowSaveAsDialog(true);
+    handleSave();
   };
 
   const handleQuitConfirmDiscard = () => {
     setShowQuitConfirmDialog(false);
     if (window.electronAPI?.isElectron) {
-      window.close();
+      window.electronAPI.closeWindow();
     }
   };
 
@@ -150,8 +162,8 @@ export default function Designer() {
           throw new Error(readResult.error || 'Failed to read file');
         }
 
-        const filename = result.filePath.split('/').pop() || 'untitled.enc';
-        processLoadedFile(readResult.content, filename);
+        const filename = result.filePath.split(/[/\\]/).pop() || 'untitled.enc';
+        processLoadedFile(readResult.content, filename, result.filePath);
         return;
       } catch (error) {
         console.error('Electron load failed:', error);
@@ -186,7 +198,7 @@ export default function Designer() {
   const handleOpenConfirmSave = () => {
     setPendingPostSaveAction(() => performLoad);
     setShowOpenConfirmDialog(false);
-    setShowSaveAsDialog(true);
+    handleSave();
   };
 
   const handleOpenConfirmDiscard = async () => {
@@ -439,7 +451,10 @@ export default function Designer() {
     }
   };
 
-  const handleSaveWithFilename = async (filename: string): Promise<void> => {
+  const handleSaveWithFilename = async (defaultFilename: string): Promise<void> => {
+    console.log('=== handleSaveWithFilename called ===');
+    console.log('defaultFilename:', defaultFilename);
+    
     const projectState: ProjectState = {
       enclosureType,
       components,
@@ -450,7 +465,7 @@ export default function Designer() {
     };
 
     const json = JSON.stringify(projectState, null, 2);
-    const fullFilename = filename.endsWith('.enc') ? filename : `${filename}.enc`;
+    const fullFilename = defaultFilename.endsWith('.enc') ? defaultFilename : `${defaultFilename}.enc`;
 
     if (window.electronAPI?.isElectron) {
       try {
@@ -461,6 +476,8 @@ export default function Designer() {
             { name: 'All Files', extensions: ['*'] }
           ]
         });
+
+        console.log('Save dialog result:', result);
 
         if (result.canceled) {
           throw new Error('User canceled save operation');
@@ -475,8 +492,16 @@ export default function Designer() {
           throw new Error(writeResult.error || 'Failed to write file');
         }
 
-        const savedFilename = result.filePath!.split('/').pop()?.replace('.enc', '') || filename;
+        const savedFilename = result.filePath!.split(/[/\\]/).pop()?.replace('.enc', '') || defaultFilename;
+        console.log('About to set projectName to:', savedFilename);
+        console.log('About to set projectFilePath to:', result.filePath);
+        
         setProjectName(savedFilename);
+        setProjectFilePath(result.filePath!);
+        projectFilePathRef.current = result.filePath!;
+        
+        console.log('State setters called');
+        console.log('projectFilePathRef.current is now:', projectFilePathRef.current);
         resetDirty();
 
         toast({
@@ -510,7 +535,8 @@ export default function Designer() {
         await writable.write(json);
         await writable.close();
         
-        setProjectName(filename.replace('.enc', ''));
+        setProjectName(defaultFilename.replace('.enc', ''));
+        setProjectFilePath(handle.name);
         resetDirty();
         
         toast({
@@ -542,7 +568,8 @@ export default function Designer() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    setProjectName(filename.replace('.enc', ''));
+    setProjectName(defaultFilename.replace('.enc', ''));
+    setProjectFilePath(fullFilename);
     resetDirty();
 
     toast({
@@ -557,7 +584,76 @@ export default function Designer() {
     }
   };
 
-  const processLoadedFile = (json: string, filename: string) => {
+  const handleSave = async () => {
+    console.log('=== handleSave called ===');
+    console.log('projectFilePath (state):', projectFilePath);
+    console.log('projectFilePathRef.current:', projectFilePathRef.current);
+    console.log('window.electronAPI?.isElectron:', window.electronAPI?.isElectron);
+    console.log('condition result:', projectFilePathRef.current && window.electronAPI?.isElectron);
+    
+    if (projectFilePathRef.current && window.electronAPI?.isElectron) {
+      console.log('Taking SAVE path (overwrite existing file)');
+      // File already has a path, just overwrite it
+      const projectState: ProjectState = {
+        enclosureType,
+        components,
+        gridEnabled,
+        gridSize,
+        zoom,
+        unit,
+      };
+
+      const json = JSON.stringify(projectState, null, 2);
+
+      try {
+        const writeResult = await window.electronAPI.writeFile({
+          filePath: projectFilePathRef.current,
+          content: json
+        });
+
+        if (!writeResult.success) {
+          throw new Error(writeResult.error || 'Failed to write file');
+        }
+
+        resetDirty();
+
+        toast({
+          title: "Project Saved",
+          description: `Saved ${projectFilePathRef.current.split(/[/\\]/).pop()}`,
+        });
+
+        if (pendingPostSaveAction) {
+          const action = pendingPostSaveAction;
+          setPendingPostSaveAction(null);
+          action();
+        }
+      } catch (err: any) {
+        console.error('Save failed:', err);
+        toast({
+          title: "Save Failed",
+          description: err.message || 'Failed to save file',
+          variant: "destructive",
+        });
+      }
+    } else {
+      console.log('Taking SAVE AS path (no file path yet)');
+      // No file path yet, or not in Electron - show save dialog (Save As)
+      await handleSaveAs();
+    }
+  };
+
+  const handleSaveAs = async () => {
+    try {
+      await handleSaveWithFilename(projectName || enclosureType);
+    } catch (err: any) {
+      // User cancelled or error occurred - don't show error for cancellation
+      if (err.message !== 'User canceled save operation') {
+        console.error('Save As failed:', err);
+      }
+    }
+  };
+
+  const processLoadedFile = (json: string, filename: string, filePath?: string) => {
     try {
       const parsed = JSON.parse(json);
 
@@ -626,6 +722,8 @@ export default function Designer() {
       setUnit(rawData.unit ?? "metric");
       
       setProjectName(filename.replace('.enc', ''));
+      setProjectFilePath(filePath || null);
+      projectFilePathRef.current = filePath || null;
       resetDirty();
 
       toast({
@@ -650,6 +748,21 @@ export default function Designer() {
   };
 
   useEffect(() => {
+    // Listen for window close events from Electron
+    if (window.electronAPI?.isElectron && window.electronAPI.onCloseRequested) {
+      const unsubscribe = window.electronAPI.onCloseRequested(() => {
+        // Use refs to get current values
+        if (isDirtyRef.current) {
+          setShowQuitConfirmDialog(true);
+        } else {
+          window.electronAPI.closeWindow();
+        }
+      });
+      return unsubscribe;
+    }
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
@@ -667,7 +780,11 @@ export default function Designer() {
       }
       else if (modifier && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        setShowSaveAsDialog(true);
+        if (e.shiftKey) {
+          handleSaveAs();
+        } else {
+          handleSave();
+        }
       } else if (modifier && e.key.toLowerCase() === 'o') {
         e.preventDefault();
         handleLoad();
@@ -720,7 +837,8 @@ export default function Designer() {
         onPrevSide={undefined}
         onNextSide={undefined}
         onNew={handleNew}
-        onSaveAs={() => setShowSaveAsDialog(true)}
+        onSave={handleSave}
+        onSaveAs={handleSaveAs}
         onOpen={handleLoad}
         onExportPDF={handleExportPDF}
         onPrint={handlePrint}
@@ -748,18 +866,6 @@ export default function Designer() {
           unit={unit}
         />
       )}
-
-      <SaveAsDialog
-        open={showSaveAsDialog}
-        onOpenChange={(open) => {
-          setShowSaveAsDialog(open);
-          if (!open && pendingPostSaveAction) {
-            setPendingPostSaveAction(null);
-          }
-        }}
-        currentFilename={projectName || enclosureType}
-        onSave={handleSaveWithFilename}
-      />
 
       <AlertDialog open={showNewConfirmDialog} onOpenChange={setShowNewConfirmDialog}>
         <AlertDialogContent data-testid="dialog-new-confirm">

@@ -16,6 +16,7 @@ interface TopControlsProps {
   onPrevSide?: () => void;
   onNextSide?: () => void;
   onNew: () => void;
+  onSave: () => void;
   onSaveAs: () => void;
   onOpen: () => void;
   onExportPDF: () => void;
@@ -35,6 +36,7 @@ export default function TopControls({
   onPrevSide,
   onNextSide,
   onNew,
+  onSave,
   onSaveAs,
   onOpen,
   onExportPDF,
@@ -122,6 +124,7 @@ export default function TopControls({
         fileName={fileName}
         isDirty={isDirty}
         onNew={onNew}
+        onSave={onSave}
         onSaveAs={onSaveAs}
         onOpen={onOpen}
         onPrint={onPrint}

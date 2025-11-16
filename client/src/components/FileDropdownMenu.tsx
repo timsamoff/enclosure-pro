@@ -6,12 +6,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, FileText, FilePlus, FolderOpen, Printer, Download, X } from "lucide-react";
+import { ChevronDown, FileText, Save, FilePlus, FolderOpen, Printer, Download, X } from "lucide-react";
 
 interface FileDropdownMenuProps {
   fileName: string;
   isDirty: boolean;
   onNew: () => void;
+  onSave: () => void;
   onSaveAs: () => void;
   onOpen: () => void;
   onPrint: () => void;
@@ -23,6 +24,7 @@ export default function FileDropdownMenu({
   fileName,
   isDirty,
   onNew,
+  onSave,
   onSaveAs,
   onOpen,
   onPrint,
@@ -52,10 +54,15 @@ export default function FileDropdownMenu({
           <span className="flex-1">New</span>
           <span className="text-xs text-muted-foreground ml-4">Ctrl+N</span>
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={onSave} data-testid="menu-item-save">
+          <Save className="w-4 h-4 mr-2" />
+          <span className="flex-1">Save</span>
+          <span className="text-xs text-muted-foreground ml-4">Ctrl+S</span>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={onSaveAs} data-testid="menu-item-save-as">
           <FilePlus className="w-4 h-4 mr-2" />
           <span className="flex-1">Save As</span>
-          <span className="text-xs text-muted-foreground ml-4">Ctrl+S</span>
+          <span className="text-xs text-muted-foreground ml-4">Ctrl+Shift+S</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onOpen} data-testid="menu-item-open">
           <FolderOpen className="w-4 h-4 mr-2" />

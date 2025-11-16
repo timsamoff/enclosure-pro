@@ -20,6 +20,12 @@ function createWindow() {
   // Remove the system menu bar
   Menu.setApplicationMenu(null);
 
+  // Prevent window from closing, let renderer handle it
+  mainWindow.on('close', (e) => {
+    e.preventDefault();
+    mainWindow.webContents.send('window-close-requested');
+  });
+
   // Always load from built files (standalone Electron app)
   mainWindow.loadFile(path.join(__dirname, '../dist/public/index.html'));
   
@@ -42,6 +48,13 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+// IPC handler to actually close the window (called after save check)
+ipcMain.handle('window:close', () => {
+  if (mainWindow) {
+    mainWindow.destroy();
   }
 });
 
