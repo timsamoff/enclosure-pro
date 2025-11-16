@@ -16,14 +16,14 @@ Created by Tim Samoff ([@circuitous.fx](https://www.instagram.com/circuitous.fx/
 * Metric/imperial units
 * Print-ready blueprint export
 
-## Download
+## Downloads (Coming soon!)
 
  - Windows
  - Mac
  - Linux
 
 ## Documentation
-- Link here soon...
+- [Documentation](https://github.com/timsamoff/enclosure-pro/blob/main/docs/DOCUMENTATION.md)
 
 ## License
 
