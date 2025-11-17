@@ -204,6 +204,13 @@ export default function UnwrappedCanvas({
         ctx.strokeRect(0, 0, sideLayout.width, sideLayout.height);
       }
 
+      // DRAW SIDE LABEL - This is what was missing!
+      ctx.fillStyle = "hsl(var(--foreground))";
+      ctx.font = `${14 / zoom}px Arial`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, sideLayout.width / 2, sideLayout.height / 2);
+
       // Draw components for this side
       const sideName = (label) as EnclosureSide; // label is already capitalized (e.g., "Front")
       const sideComponents = components.filter(c => c.side === sideName);
