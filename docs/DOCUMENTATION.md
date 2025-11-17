@@ -4,11 +4,7 @@
 
 # Enclosure Pro
 
-<iframe width="560" height="315"
-src="https://youtu.be/jDg9bKsPez0" 
-frameborder="0" 
-allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" 
-allowfullscreen></iframe>
+[![Enclosure Pro Overview](https://img.youtube.com/vi/jDg9bKsPez0/0.jpg)](https://youtu.be/jDg9bKsPez0)
 
 ## Documentation
 Enclosure Pro is pretty straightforward to use and presents very few menu options that should be familiar to any effects pedal builder. Experiment for a few minutes and you'll get the hang of it.
