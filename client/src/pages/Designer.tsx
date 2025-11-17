@@ -50,6 +50,7 @@ export default function Designer() {
   const [pendingPostSaveAction, setPendingPostSaveAction] = useState<(() => void) | null>(null);
   
   const isDirtyRef = useRef(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [projectName, setProjectName] = useState("");
   const [projectFilePath, setProjectFilePath] = useState<string | null>(null);
@@ -256,200 +257,336 @@ export default function Designer() {
     markDirty();
   };
 
-  const generatePDF = () => {
-    const mmToPixels = 3.7795275591;
-    const dimensions = getUnwrappedDimensions(enclosureType);
+  // Function to render the enclosure at 1:1 scale for printing/export
+  const renderForPrintExport = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      try {
+        const mmToPixels = 3.7795275591; // 96 DPI: 1mm = 3.7795275591 pixels
+        const dimensions = getUnwrappedDimensions(enclosureType);
 
-    const frontW = dimensions.front.width;
-    const frontH = dimensions.front.height;
-    const topW = dimensions.top.width;
-    const topH = dimensions.top.height;
-    const bottomW = dimensions.bottom.width;
-    const bottomH = dimensions.bottom.height;
-    const leftW = dimensions.left.width;
-    const leftH = dimensions.left.height;
-    const rightW = dimensions.right.width;
-    const rightH = dimensions.right.height;
+        // Calculate total size in mm
+        const frontW = dimensions.front.width;
+        const frontH = dimensions.front.height;
+        const topW = dimensions.top.width;
+        const topH = dimensions.top.height;
+        const bottomW = dimensions.bottom.width;
+        const bottomH = dimensions.bottom.height;
+        const leftW = dimensions.left.width;
+        const leftH = dimensions.left.height;
+        const rightW = dimensions.right.width;
+        const rightH = dimensions.right.height;
 
-    const totalWidth = leftW + frontW + rightW;
-    const totalHeight = topH + frontH + bottomH;
+        const totalWidthMM = leftW + frontW + rightW;
+        const totalHeightMM = topH + frontH + bottomH;
 
-    const orientation = totalWidth > totalHeight ? "landscape" : "portrait";
-    
-    const requiredWidth = totalWidth + 40;
-    const requiredHeight = totalHeight + 60;
-    
-    let pageFormat: string | number[];
-    let pageWidth: number;
-    let pageHeight: number;
-    let pageName: string;
-    
-    const A5 = { width: 148, height: 210, name: "A5" };
-    const A4 = { width: 210, height: 297, name: "A4" };
-    const A3 = { width: 297, height: 420, name: "A3" };
-    const A2 = { width: 420, height: 594, name: "A2" };
-    
-    if (orientation === "landscape") {
-      if (requiredWidth <= A5.height && requiredHeight <= A5.width) {
-        pageFormat = "a5";
-        pageWidth = A5.height;
-        pageHeight = A5.width;
-        pageName = A5.name;
-      } else if (requiredWidth <= A4.height && requiredHeight <= A4.width) {
-        pageFormat = "a4";
-        pageWidth = A4.height;
-        pageHeight = A4.width;
-        pageName = A4.name;
-      } else if (requiredWidth <= A3.height && requiredHeight <= A3.width) {
-        pageFormat = "a3";
-        pageWidth = A3.height;
-        pageHeight = A3.width;
-        pageName = A3.name;
-      } else if (requiredWidth <= A2.height && requiredHeight <= A2.width) {
-        pageFormat = "a2";
-        pageWidth = A2.height;
-        pageHeight = A2.width;
-        pageName = A2.name;
-      } else {
-        pageWidth = Math.ceil(requiredWidth / 10) * 10;
-        pageHeight = Math.ceil(requiredHeight / 10) * 10;
-        pageFormat = [pageWidth, pageHeight];
-        pageName = "Custom";
+        // Convert to pixels at 300 DPI for print quality (300 DPI = 11.811 pixels per mm)
+        const printDPI = 300;
+        const pixelsPerMM = printDPI / 25.4; // 300 DPI = 11.811 pixels/mm
+        
+        const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
+        const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
+
+        // Create offscreen canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+
+        // Set white background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        // Calculate layout for print (centered on canvas)
+        const topOffsetX = (frontW - topW) / 2;
+        const bottomOffsetX = (frontW - bottomW) / 2;
+        const leftOffsetY = (frontH - leftH) / 2;
+        const rightOffsetY = (frontH - rightH) / 2;
+
+        const layout = {
+          front: { x: leftW, y: topH, width: frontW, height: frontH },
+          top: { x: leftW + topOffsetX, y: 0, width: topW, height: topH },
+          bottom: { x: leftW + bottomOffsetX, y: topH + frontH, width: bottomW, height: bottomH },
+          left: { x: 0, y: topH + leftOffsetY, width: leftW, height: leftH },
+          right: { x: leftW + frontW, y: topH + rightOffsetY, width: rightW, height: rightH },
+        };
+
+        // Scale factor: convert mm to pixels for our print canvas
+        const scale = pixelsPerMM;
+
+        // Draw each side
+        const drawSide = (sideKey: keyof typeof layout, label: string) => {
+          const side = layout[sideKey];
+          const x = side.x * scale;
+          const y = side.y * scale;
+          const w = side.width * scale;
+          const h = side.height * scale;
+
+          ctx.strokeStyle = 'black';
+          ctx.lineWidth = 1;
+          
+          // Draw rounded rectangle for front face
+          if (sideKey === 'front') {
+            const cornerRadius = 5 * scale; // 5mm radius
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, cornerRadius);
+            ctx.stroke();
+          } else {
+            // Regular rectangles for other sides
+            ctx.strokeRect(x, y, w, h);
+          }
+
+          // Draw side label
+          ctx.fillStyle = 'black';
+          ctx.font = `${12 * scale / pixelsPerMM}px Arial`; // Scale font appropriately
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, x + w / 2, y + h / 2);
+
+          // Draw components for this side
+          const sideComponents = components.filter(c => c.side === label);
+          sideComponents.forEach(component => {
+            const compData = COMPONENT_TYPES[component.type];
+            const radius = (compData.drillSize / 2) * scale;
+
+            // Convert component position from screen pixels to mm, then to print pixels
+            const compX = (component.x / mmToPixels) * scale;
+            const compY = (component.y / mmToPixels) * scale;
+
+            const centerX = x + (w / 2 + compX);
+            const centerY = y + (h / 2 + compY);
+
+            // Draw drill hole
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.stroke();
+
+            // Draw crosshair
+            const crosshairSize = Math.max(radius, 3 * scale);
+            ctx.beginPath();
+            ctx.moveTo(centerX - crosshairSize, centerY);
+            ctx.lineTo(centerX + crosshairSize, centerY);
+            ctx.moveTo(centerX, centerY - crosshairSize);
+            ctx.lineTo(centerX, centerY + crosshairSize);
+            ctx.stroke();
+
+            // Draw label
+            ctx.fillStyle = 'black';
+            ctx.font = `${8 * scale / pixelsPerMM}px Arial`;
+            ctx.textAlign = 'center';
+            const drillText = unit === "metric"
+              ? `${compData.drillSize.toFixed(1)}mm`
+              : compData.imperialLabel;
+            ctx.fillText(drillText, centerX, centerY + radius + (5 * scale / pixelsPerMM));
+          });
+        };
+
+        // Draw all sides
+        drawSide('front', 'Front');
+        drawSide('top', 'Top');
+        drawSide('bottom', 'Bottom');
+        drawSide('left', 'Left');
+        drawSide('right', 'Right');
+
+        // Convert to data URL
+        const dataUrl = canvas.toDataURL('image/png', 1.0);
+        resolve(dataUrl);
+      } catch (error) {
+        reject(error);
       }
-    } else {
-      if (requiredWidth <= A5.width && requiredHeight <= A5.height) {
-        pageFormat = "a5";
-        pageWidth = A5.width;
-        pageHeight = A5.height;
-        pageName = A5.name;
-      } else if (requiredWidth <= A4.width && requiredHeight <= A4.height) {
-        pageFormat = "a4";
-        pageWidth = A4.width;
-        pageHeight = A4.height;
-        pageName = A4.name;
-      } else if (requiredWidth <= A3.width && requiredHeight <= A3.height) {
-        pageFormat = "a3";
-        pageWidth = A3.width;
-        pageHeight = A3.height;
-        pageName = A3.name;
-      } else if (requiredWidth <= A2.width && requiredHeight <= A2.height) {
-        pageFormat = "a2";
-        pageWidth = A2.width;
-        pageHeight = A2.height;
-        pageName = A2.name;
-      } else {
-        pageWidth = Math.ceil(requiredWidth / 10) * 10;
-        pageHeight = Math.ceil(requiredHeight / 10) * 10;
-        pageFormat = [pageWidth, pageHeight];
-        pageName = "Custom";
-      }
-    }
-    
-    const pdf = new jsPDF({
-      orientation,
-      unit: "mm",
-      format: pageFormat,
     });
+  };
 
-    const topOffsetX = (frontW - topW) / 2;
-    const bottomOffsetX = (frontW - bottomW) / 2;
-    const leftOffsetY = (frontH - leftH) / 2;
-    const rightOffsetY = (frontH - rightH) / 2;
+  const generatePDF = async (): Promise<jsPDF> => {
+    try {
+      // Render at 1:1 scale
+      const imageData = await renderForPrintExport();
+      
+      const dimensions = getUnwrappedDimensions(enclosureType);
+      const mmToPixels = 3.7795275591;
 
-    const layout = {
-      front: { x: leftW, y: topH, width: frontW, height: frontH },
-      top: { x: leftW + topOffsetX, y: 0, width: topW, height: topH },
-      bottom: { x: leftW + bottomOffsetX, y: topH + frontH, width: bottomW, height: bottomH },
-      left: { x: 0, y: topH + leftOffsetY, width: leftW, height: leftH },
-      right: { x: leftW + frontW, y: topH + rightOffsetY, width: rightW, height: rightH },
-    };
+      const frontW = dimensions.front.width;
+      const frontH = dimensions.front.height;
+      const topW = dimensions.top.width;
+      const topH = dimensions.top.height;
+      const bottomW = dimensions.bottom.width;
+      const bottomH = dimensions.bottom.height;
+      const leftW = dimensions.left.width;
+      const leftH = dimensions.left.height;
+      const rightW = dimensions.right.width;
+      const rightH = dimensions.right.height;
 
-    const margin = 20;
-    const scale = 1.0;
+      const totalWidth = leftW + frontW + rightW;
+      const totalHeight = topH + frontH + bottomH;
 
-    const offsetX = (pageWidth - totalWidth * scale) / 2;
-    const offsetY = 30 + (pageHeight - 30 - totalHeight * scale) / 2;
+      const orientation = totalWidth > totalHeight ? "landscape" : "portrait";
+      
+      // Add generous margins
+      const requiredWidth = totalWidth + 40;
+      const requiredHeight = totalHeight + 60;
+      
+      let pageFormat: string | number[];
+      let pageWidth: number;
+      let pageHeight: number;
+      let pageName: string;
+      
+      const A5 = { width: 148, height: 210, name: "A5" };
+      const A4 = { width: 210, height: 297, name: "A4" };
+      const A3 = { width: 297, height: 420, name: "A3" };
+      const A2 = { width: 420, height: 594, name: "A2" };
+      
+      if (orientation === "landscape") {
+        if (requiredWidth <= A5.height && requiredHeight <= A5.width) {
+          pageFormat = "a5";
+          pageWidth = A5.height;
+          pageHeight = A5.width;
+          pageName = A5.name;
+        } else if (requiredWidth <= A4.height && requiredHeight <= A4.width) {
+          pageFormat = "a4";
+          pageWidth = A4.height;
+          pageHeight = A4.width;
+          pageName = A4.name;
+        } else if (requiredWidth <= A3.height && requiredHeight <= A3.width) {
+          pageFormat = "a3";
+          pageWidth = A3.height;
+          pageHeight = A3.width;
+          pageName = A3.name;
+        } else if (requiredWidth <= A2.height && requiredHeight <= A2.width) {
+          pageFormat = "a2";
+          pageWidth = A2.height;
+          pageHeight = A2.width;
+          pageName = A2.name;
+        } else {
+          pageWidth = Math.ceil(requiredWidth / 10) * 10;
+          pageHeight = Math.ceil(requiredHeight / 10) * 10;
+          pageFormat = [pageWidth, pageHeight];
+          pageName = "Custom";
+        }
+      } else {
+        if (requiredWidth <= A5.width && requiredHeight <= A5.height) {
+          pageFormat = "a5";
+          pageWidth = A5.width;
+          pageHeight = A5.height;
+          pageName = A5.name;
+        } else if (requiredWidth <= A4.width && requiredHeight <= A4.height) {
+          pageFormat = "a4";
+          pageWidth = A4.width;
+          pageHeight = A4.height;
+          pageName = A4.name;
+        } else if (requiredWidth <= A3.width && requiredHeight <= A3.height) {
+          pageFormat = "a3";
+          pageWidth = A3.width;
+          pageHeight = A3.height;
+          pageName = A3.name;
+        } else if (requiredWidth <= A2.width && requiredHeight <= A2.height) {
+          pageFormat = "a2";
+          pageWidth = A2.width;
+          pageHeight = A2.height;
+          pageName = A2.name;
+        } else {
+          pageWidth = Math.ceil(requiredWidth / 10) * 10;
+          pageHeight = Math.ceil(requiredHeight / 10) * 10;
+          pageFormat = [pageWidth, pageHeight];
+          pageName = "Custom";
+        }
+      }
+      
+      const pdf = new jsPDF({
+        orientation,
+        unit: "mm",
+        format: pageFormat,
+      });
 
-    pdf.setFontSize(14);
-    const title = projectName ? `${projectName} - Drill Template` : `${enclosureType} - Drill Template`;
-    pdf.text(title, pageWidth / 2, 15, { align: "center" });
+      // Calculate image position (centered with margins)
+      const margin = 20;
+      const maxWidth = pageWidth - (margin * 2);
+      const maxHeight = pageHeight - (margin * 2) - 20; // Extra space for header
 
-    const enc = ENCLOSURE_TYPES[enclosureType];
-    pdf.setFontSize(10);
-    const encInfo = `${enclosureType}: ${enc.width}mm × ${enc.height}mm × ${enc.depth}mm`;
-    pdf.text(encInfo, pageWidth / 2, 22, { align: "center" });
+      // Use actual dimensions at 100% scale
+      const imageWidth = totalWidth;
+      const imageHeight = totalHeight;
 
-    pdf.setFontSize(8);
-    const pageInfo = pageName === "Custom" 
-      ? `Scale: 100% (Actual Size) | Page: ${Math.round(pageWidth)}×${Math.round(pageHeight)}mm`
-      : `Scale: 100% (Actual Size) | Page: ${pageName}`;
-    pdf.text(pageInfo, pageWidth / 2, 28, { align: "center" });
+      // Center the image
+      const x = (pageWidth - imageWidth) / 2;
+      const y = margin + 20;
 
-    const drawSide = (sideKey: keyof typeof layout, label: string) => {
-      const side = layout[sideKey];
-      const x = offsetX + side.x * scale;
-      const y = offsetY + side.y * scale;
-      const w = side.width * scale;
-      const h = side.height * scale;
+      // Add header information
+      pdf.setFontSize(14);
+      const title = projectName ? `${projectName} - Drill Template` : `${enclosureType} - Drill Template`;
+      pdf.text(title, pageWidth / 2, 15, { align: "center" });
 
-      pdf.setLineWidth(0.3);
-      pdf.rect(x, y, w, h);
+      const enc = ENCLOSURE_TYPES[enclosureType];
+      pdf.setFontSize(10);
+      const encInfo = `${enclosureType}: ${enc.width}mm × ${enc.height}mm × ${enc.depth}mm`;
+      pdf.text(encInfo, pageWidth / 2, 22, { align: "center" });
 
       pdf.setFontSize(8);
-      pdf.text(label, x + w / 2, y + h / 2, { align: "center" });
+      const pageInfo = pageName === "Custom" 
+        ? `Scale: 100% (Actual Size) | Page: ${Math.round(pageWidth)}×${Math.round(pageHeight)}mm`
+        : `Scale: 100% (Actual Size) | Page: ${pageName}`;
+      pdf.text(pageInfo, pageWidth / 2, 28, { align: "center" });
 
-      const sideComponents = components.filter(c => c.side === label);
-      sideComponents.forEach(component => {
-        const compData = COMPONENT_TYPES[component.type];
-        const radius = compData.drillSize / 2;
+      // Add the high-resolution image at 100% scale
+      pdf.addImage(imageData, 'PNG', x, y, imageWidth, imageHeight);
 
-        const compX = component.x / mmToPixels;
-        const compY = component.y / mmToPixels;
-
-        const centerX = x + (w / 2 + compX * scale);
-        const centerY = y + (h / 2 + compY * scale);
-
-        pdf.setLineWidth(0.2);
-        pdf.circle(centerX, centerY, radius * scale);
-
-        const crosshairSize = Math.max(radius * scale, 2);
-        pdf.line(centerX - crosshairSize, centerY, centerX + crosshairSize, centerY);
-        pdf.line(centerX, centerY - crosshairSize, centerX, centerY + crosshairSize);
-
-        pdf.setFontSize(6);
-        const drillText = unit === "metric"
-          ? `${compData.drillSize.toFixed(1)}mm`
-          : compData.imperialLabel;
-        pdf.text(drillText, centerX, centerY + radius * scale + 2.5, { align: "center" });
-      });
-    };
-
-    drawSide('front', 'Front');
-    drawSide('top', 'Top');
-    drawSide('bottom', 'Bottom');
-    drawSide('left', 'Left');
-    drawSide('right', 'Right');
-
-    return pdf;
+      return pdf;
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      throw new Error('Failed to generate PDF');
+    }
   };
 
   const handleExportPDF = async () => {
-    const pdf = generatePDF();
-    const filename = projectName ? `${projectName}.pdf` : `${enclosureType}-drill-template.pdf`;
-    pdf.save(filename);
-  };
-
-  const handlePrint = async () => {
-    const pdf = generatePDF();
-    const pdfBlob = pdf.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    const printWindow = window.open(pdfUrl);
-    if (printWindow) {
-      printWindow.addEventListener('load', () => {
-        printWindow.print();
+    try {
+      const pdf = await generatePDF();
+      const filename = projectName ? `${projectName}.pdf` : `${enclosureType}-drill-template.pdf`;
+      pdf.save(filename);
+      toast({
+        title: "PDF Exported",
+        description: "Template exported at 100% scale with high-quality rendering",
+      });
+    } catch (error) {
+      console.error('PDF export failed:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate PDF",
+        variant: "destructive",
       });
     }
   };
+
+  const handlePrint = async () => {
+    try {
+      const pdf = await generatePDF();
+      const pdfBlob = pdf.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const printWindow = window.open(pdfUrl);
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+      toast({
+        title: "Print Ready",
+        description: "Template prepared for printing at 100% scale",
+      });
+    } catch (error) {
+      console.error('Print failed:', error);
+      toast({
+        title: "Print Failed",
+        description: "Failed to generate print document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ... (rest of the file remains exactly the same - all the save/load functions and JSX)
 
   const handleSaveWithFilename = async (defaultFilename: string): Promise<void> => {
     console.log('=== handleSaveWithFilename called ===');
