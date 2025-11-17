@@ -64,7 +64,9 @@ export default function Designer() {
 useEffect(() => {
   const loadIcon = async () => {
     try {
-      const response = await fetch('/images/EnclosureProIcon.png');
+      const iconPath = '/images/EnclosureProIcon.png';
+      
+      const response = await fetch(iconPath); // This was missing!
       const blob = await response.blob();
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -835,99 +837,104 @@ const renderForPrintExport = (): Promise<string> => {
   };
 
   const processLoadedFile = (json: string, filename: string, filePath?: string) => {
-    try {
-      const parsed = JSON.parse(json);
+  try {
+    const parsed = JSON.parse(json);
 
-      const legacyComponentSchema = z.object({
-        id: z.string().optional(),
-        type: z.string().optional(),
-        x: z.number().optional(),
-        y: z.number().optional(),
-        side: z.string().optional(),
-      });
+    const legacyComponentSchema = z.object({
+      id: z.string().optional(),
+      type: z.string().optional(),
+      x: z.number().optional(),
+      y: z.number().optional(),
+      side: z.string().optional(),
+    });
 
-      const projectFileSchema = z.object({
-  enclosureType: z.string().optional(),
-  currentSide: z.string().optional(),
-  components: z.array(legacyComponentSchema).optional(),
-  gridEnabled: z.boolean().optional(),
-  gridSize: z.number().optional(),
-  zoom: z.any().optional(),
-  rotation: z.any().optional(),
-  unit: z.enum(["metric", "imperial"]).optional(),
-  appIcon: z.string().optional(),
-});
+    const projectFileSchema = z.object({
+      enclosureType: z.string().optional(),
+      currentSide: z.string().optional(),
+      components: z.array(legacyComponentSchema).optional(),
+      gridEnabled: z.boolean().optional(),
+      gridSize: z.number().optional(),
+      zoom: z.any().optional(),
+      rotation: z.any().optional(),
+      unit: z.enum(["metric", "imperial"]).optional(),
+      appIcon: z.string().optional(), // Added this line
+    });
 
-      const result = projectFileSchema.safeParse(parsed);
-      
-      if (!result.success) {
-        throw new Error("Invalid file structure");
-      }
-
-      const rawData = result.data;
-      const SIDE_ORDER: EnclosureSide[] = ["Front", "Right", "Left", "Top", "Bottom"];
-
-      const normalizedEnclosureType = (rawData.enclosureType && rawData.enclosureType in ENCLOSURE_TYPES)
-        ? (rawData.enclosureType as EnclosureType)
-        : "1590B";
-
-      const validComponents: PlacedComponent[] = (rawData.components || [])
-        .filter(c => c.type && c.type in COMPONENT_TYPES)
-        .map((c, index) => {
-          let side = c.side;
-          if (side === "Back") side = "Front";
-          if (!side || !SIDE_ORDER.includes(side as EnclosureSide)) {
-            side = "Front";
-          }
-          
-          return {
-            id: c.id || `component-${Date.now()}-${index}`,
-            type: c.type as ComponentType,
-            x: typeof c.x === 'number' ? c.x : 0,
-            y: typeof c.y === 'number' ? c.y : 0,
-            side: side as EnclosureSide,
-          };
-        });
-
-      let normalizedZoom = 1;
-      if (typeof rawData.zoom === 'number') {
-        normalizedZoom = rawData.zoom;
-      } else if (rawData.zoom && typeof rawData.zoom === 'object') {
-        normalizedZoom = (rawData.zoom as any).Front || 1;
-      }
-
-      setEnclosureType(normalizedEnclosureType);
-      setComponents(validComponents);
-      setGridEnabled(rawData.gridEnabled ?? true);
-      setGridSize(rawData.gridSize ?? 5);
-      setZoom(snapZoom(normalizedZoom));
-      setUnit(rawData.unit ?? "metric");
-      
-      setProjectName(filename.replace('.enc', ''));
-      setProjectFilePath(filePath || null);
-      projectFilePathRef.current = filePath || null;
-      resetDirty();
-
-      toast({
-        title: "Project Loaded",
-        description: `Loaded ${filename}`,
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast({
-          title: "Invalid Project File",
-          description: `Validation error: ${error.errors[0].message}`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to load project file",
-          variant: "destructive",
-        });
-      }
+    const result = projectFileSchema.safeParse(parsed);
+    
+    if (!result.success) {
+      throw new Error("Invalid file structure");
     }
-  };
+
+    const rawData = result.data;
+    const SIDE_ORDER: EnclosureSide[] = ["Front", "Right", "Left", "Top", "Bottom"];
+
+    const normalizedEnclosureType = (rawData.enclosureType && rawData.enclosureType in ENCLOSURE_TYPES)
+      ? (rawData.enclosureType as EnclosureType)
+      : "1590B";
+
+    const validComponents: PlacedComponent[] = (rawData.components || [])
+      .filter(c => c.type && c.type in COMPONENT_TYPES)
+      .map((c, index) => {
+        let side = c.side;
+        if (side === "Back") side = "Front";
+        if (!side || !SIDE_ORDER.includes(side as EnclosureSide)) {
+          side = "Front";
+        }
+        
+        return {
+          id: c.id || `component-${Date.now()}-${index}`,
+          type: c.type as ComponentType,
+          x: typeof c.x === 'number' ? c.x : 0,
+          y: typeof c.y === 'number' ? c.y : 0,
+          side: side as EnclosureSide,
+        };
+      });
+
+    let normalizedZoom = 1;
+    if (typeof rawData.zoom === 'number') {
+      normalizedZoom = rawData.zoom;
+    } else if (rawData.zoom && typeof rawData.zoom === 'object') {
+      normalizedZoom = (rawData.zoom as any).Front || 1;
+    }
+
+    setEnclosureType(normalizedEnclosureType);
+    setComponents(validComponents);
+    setGridEnabled(rawData.gridEnabled ?? true);
+    setGridSize(rawData.gridSize ?? 5);
+    setZoom(snapZoom(normalizedZoom));
+    setUnit(rawData.unit ?? "metric");
+    
+    // Load the icon if it was saved in the file
+    if (rawData.appIcon) {
+      setAppIcon(rawData.appIcon);
+    }
+    
+    setProjectName(filename.replace('.enc', ''));
+    setProjectFilePath(filePath || null);
+    projectFilePathRef.current = filePath || null;
+    resetDirty();
+
+    toast({
+      title: "Project Loaded",
+      description: `Loaded ${filename}`,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      toast({
+        title: "Invalid Project File",
+        description: `Validation error: ${error.errors[0].message}`,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load project file",
+        variant: "destructive",
+      });
+    }
+  }
+};
 
   useEffect(() => {
     // Listen for window close events from Electron

@@ -18,30 +18,76 @@
     "productName": "Enclosure Pro",
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "images/**/*"
     ],
     "directories": {
+      "buildResources": "build",
       "output": "release"
     },
+    "fileAssociations": [
+      {
+        "ext": "enc",
+        "name": "Enclosure Project File",
+        "description": "Enclosure Pro Project File",
+        "role": "Editor"
+      }
+    ],
     "mac": {
       "category": "public.app-category.productivity",
+      "icon": "build/icon.icns",
       "target": [
         "dmg",
         "zip"
+      ],
+      "fileAssociations": [
+        {
+          "ext": "enc",
+          "name": "Enclosure Project File",
+          "description": "Enclosure Pro Project File",
+          "role": "Editor"
+        }
       ]
     },
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis",
         "portable"
+      ],
+      "fileAssociations": [
+        {
+          "ext": "enc",
+          "name": "Enclosure Project File",
+          "description": "Enclosure Pro Project File"
+        }
       ]
     },
     "linux": {
+      "icon": "build/icon.png",
       "target": [
         "AppImage",
         "deb"
       ],
-      "category": "Graphics"
+      "category": "Graphics",
+      "fileAssociations": [
+        {
+          "ext": "enc",
+          "name": "Enclosure Project File",
+          "description": "Enclosure Pro Project File",
+          "mimeType": "application/x-enclosure-project"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "perMachine": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   },
   "dependencies": {
@@ -79,8 +125,6 @@
     "cmdk": "^1.1.1",
     "concurrently": "^9.2.1",
     "date-fns": "^3.6.0",
-    "electron": "^39.2.0",
-    "electron-builder": "^26.0.12",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^11.13.1",
     "html2canvas": "^1.4.1",
@@ -111,6 +155,8 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
+    "electron": "^39.2.0",
+    "electron-builder": "^26.0.12",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.17",
     "typescript": "5.6.3",

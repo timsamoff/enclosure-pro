@@ -36,8 +36,6 @@ export const COMPONENT_TYPES = {
 
 export type ComponentType = keyof typeof COMPONENT_TYPES;
 
-export interface
-
 export interface ProjectState {
   enclosureType: EnclosureType;
   components: PlacedComponent[];
@@ -45,6 +43,15 @@ export interface ProjectState {
   gridSize: number;
   zoom: number;
   unit: MeasurementUnit;
+  appIcon?: string; // Add this line - make it optional for backward compatibility
+}
+
+export interface PlacedComponent {
+  id: string;
+  type: ComponentType;
+  x: number;
+  y: number;
+  side: EnclosureSide;
 }
 
 export function getUnwrappedDimensions(enclosureType: EnclosureType) {

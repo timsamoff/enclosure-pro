@@ -1,3 +1,6 @@
+#Builds
+release/
+
 #Misc
 .DS_Store
 server/public
