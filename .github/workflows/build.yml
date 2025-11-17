@@ -6,6 +6,9 @@ on:
       - 'v*'  # Trigger on version tags like v1.0.0
   workflow_dispatch:  # Allow manual trigger
 
+permissions:
+  contents: write  # Required to create releases and upload assets
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -31,7 +34,7 @@ jobs:
         run: npm ci --legacy-peer-deps
       
       - name: Build app
-        run: npm run electron:build
+        run: npm run electron:build -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
