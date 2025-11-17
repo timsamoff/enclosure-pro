@@ -422,7 +422,6 @@ export default function UnwrappedCanvas({
           clickedComponent = component;
           clickedSideX = sideX;
           clickedSideY = sideY;
-          break;
         }
       }
       
