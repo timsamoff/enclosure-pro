@@ -44,6 +44,7 @@ export default function UnwrappedCanvas({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [justFinishedDrag, setJustFinishedDrag] = useState(false);
+  const [resizeTrigger, setResizeTrigger] = useState(0);
 
   const mmToPixels = 3.7795275591;
   const dimensions = getUnwrappedDimensions(enclosureType);
@@ -204,20 +205,20 @@ export default function UnwrappedCanvas({
         ctx.strokeRect(0, 0, sideLayout.width, sideLayout.height);
       }
 
-// DRAW SIDE LABEL - with rotation compensation to keep readable
-ctx.save();
-// Translate to center of side
-ctx.translate(sideLayout.width / 2, sideLayout.height / 2);
-// Rotate back to cancel out the enclosure rotation
-const rotRad = (-rotation * Math.PI) / 180;
-ctx.rotate(rotRad);
-// Now draw the text at origin (which is now the center)
-ctx.fillStyle = "hsl(var(--foreground))";
-ctx.font = `${14 / zoom}px Arial`;
-ctx.textAlign = "center";
-ctx.textBaseline = "middle";
-ctx.fillText(label, 0, 0);
-ctx.restore();
+      // DRAW SIDE LABEL - with rotation compensation to keep readable
+      ctx.save();
+      // Translate to center of side
+      ctx.translate(sideLayout.width / 2, sideLayout.height / 2);
+      // Rotate back to cancel out the enclosure rotation
+      const rotRad = (-rotation * Math.PI) / 180;
+      ctx.rotate(rotRad);
+      // Now draw the text at origin (which is now the center)
+      ctx.fillStyle = "hsl(var(--foreground))";
+      ctx.font = `${14 / zoom}px Arial`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
 
       // Draw components for this side
       const sideName = (label) as EnclosureSide; // label is already capitalized (e.g., "Front")
@@ -316,7 +317,17 @@ ctx.restore();
     drawSide('right', 'Right');
 
     ctx.restore();
-  }, [components, zoom, rotation, gridEnabled, gridSize, unit, selectedComponent, panOffset, enclosureType]);
+  }, [components, zoom, rotation, gridEnabled, gridSize, unit, selectedComponent, panOffset, enclosureType, resizeTrigger]);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setResizeTrigger(prev => prev + 1);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Mouse wheel zoom handler (use ref to avoid recreating handler on every zoom change)
   const zoomRef = useRef(zoom);

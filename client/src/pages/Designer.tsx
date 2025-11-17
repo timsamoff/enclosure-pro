@@ -390,7 +390,7 @@ const renderForPrintExport = (): Promise<string> => {
           const labelOffset = 3 * scale; // Closer to component
           
           // Measure text for background
-          ctx.font = `${36 * scale / pixelsPerMM}px Arial`;
+          ctx.font = `${28 * scale / pixelsPerMM}px Arial`;
           const textMetrics = ctx.measureText(drillText);
           const textWidth = textMetrics.width;
           const textHeight = 14 * scale / pixelsPerMM;
