@@ -83,7 +83,7 @@ export default function EnclosureCanvas({
     const encHeight = height * mmToPixels;
 
     if (gridEnabled && gridSize > 0) {
-      ctx.strokeStyle = "hsl(var(--border))";
+      ctx.strokeStyle = "rgba(128, 128, 128, 0.5)";  // 50% gray with transparency
       ctx.lineWidth = 0.5 / zoom;
       
       const gridPixels = gridSize * mmToPixels;
@@ -103,7 +103,7 @@ export default function EnclosureCanvas({
       }
       ctx.stroke();
 
-      ctx.strokeStyle = "hsl(var(--foreground))";
+      ctx.strokeStyle = "rgba(128, 128, 128, 0.8)";  // Slightly darker for center lines
       ctx.lineWidth = 1.5 / zoom;
       ctx.beginPath();
       ctx.moveTo(0, -encHeight / 2);

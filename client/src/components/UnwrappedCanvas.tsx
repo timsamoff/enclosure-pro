@@ -132,7 +132,7 @@ export default function UnwrappedCanvas({
 
       // Draw grid if enabled
       if (gridEnabled && gridSize > 0) {
-        ctx.strokeStyle = "hsl(var(--border))";
+        ctx.strokeStyle = "rgba(128, 128, 128, 0.5)";  // 50% gray with some transparency
         ctx.lineWidth = 0.5 / zoom;
         
         const gridPixels = gridSize * mmToPixels;
@@ -181,7 +181,7 @@ export default function UnwrappedCanvas({
         ctx.stroke();
 
         // Center lines
-        ctx.strokeStyle = "hsl(var(--foreground))";
+        ctx.strokeStyle = "rgba(128, 128, 128, 0.8)";  // Slightly darker 50% gray for center lines
         ctx.lineWidth = 1.5 / zoom;
         ctx.beginPath();
         ctx.moveTo(sideLayout.width / 2, 0);

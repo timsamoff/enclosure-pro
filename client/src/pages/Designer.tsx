@@ -58,6 +58,25 @@ export default function Designer() {
   const [isDirty, setIsDirty] = useState(false);
   const [zoom, setZoom] = useState<number>(snapZoom(1));
   const [rotation, setRotation] = useState<number>(0);
+  const [appIcon, setAppIcon] = useState<string | null>(null);
+
+  // Load icon on mount
+useEffect(() => {
+  const loadIcon = async () => {
+    try {
+      const response = await fetch('/images/EnclosureProIcon.png');
+      const blob = await response.blob();
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAppIcon(reader.result as string);
+      };
+      reader.readAsDataURL(blob);
+    } catch (error) {
+      console.error('Failed to load icon:', error);
+    }
+  };
+  loadIcon();
+}, []);
 
   const enclosure = ENCLOSURE_TYPES[enclosureType];
   
@@ -617,13 +636,14 @@ const renderForPrintExport = (): Promise<string> => {
     console.log('defaultFilename:', defaultFilename);
     
     const projectState: ProjectState = {
-      enclosureType,
-      components,
-      gridEnabled,
-      gridSize,
-      zoom,
-      unit,
-    };
+    enclosureType,
+    components,
+    gridEnabled,
+    gridSize,
+    zoom,
+    unit,
+    appIcon: appIcon || undefined,
+  };
 
     const json = JSON.stringify(projectState, null, 2);
     const fullFilename = defaultFilename.endsWith('.enc') ? defaultFilename : `${defaultFilename}.enc`;
@@ -827,15 +847,16 @@ const renderForPrintExport = (): Promise<string> => {
       });
 
       const projectFileSchema = z.object({
-        enclosureType: z.string().optional(),
-        currentSide: z.string().optional(),
-        components: z.array(legacyComponentSchema).optional(),
-        gridEnabled: z.boolean().optional(),
-        gridSize: z.number().optional(),
-        zoom: z.any().optional(),
-        rotation: z.any().optional(),
-        unit: z.enum(["metric", "imperial"]).optional(),
-      });
+  enclosureType: z.string().optional(),
+  currentSide: z.string().optional(),
+  components: z.array(legacyComponentSchema).optional(),
+  gridEnabled: z.boolean().optional(),
+  gridSize: z.number().optional(),
+  zoom: z.any().optional(),
+  rotation: z.any().optional(),
+  unit: z.enum(["metric", "imperial"]).optional(),
+  appIcon: z.string().optional(),
+});
 
       const result = projectFileSchema.safeParse(parsed);
       

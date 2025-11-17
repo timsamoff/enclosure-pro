@@ -36,13 +36,7 @@ export const COMPONENT_TYPES = {
 
 export type ComponentType = keyof typeof COMPONENT_TYPES;
 
-export interface PlacedComponent {
-  id: string;
-  type: ComponentType;
-  x: number;
-  y: number;
-  side: EnclosureSide;
-}
+export interface
 
 export interface ProjectState {
   enclosureType: EnclosureType;
