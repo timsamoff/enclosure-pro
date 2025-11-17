@@ -258,150 +258,176 @@ export default function Designer() {
   };
 
   // Function to render the enclosure at 1:1 scale for printing/export
-  const renderForPrintExport = (): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      try {
-        const mmToPixels = 3.7795275591; // 96 DPI: 1mm = 3.7795275591 pixels
-        const dimensions = getUnwrappedDimensions(enclosureType);
+const renderForPrintExport = (): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    try {
+      const mmToPixels = 3.7795275591; // 96 DPI: 1mm = 3.7795275591 pixels
+      const dimensions = getUnwrappedDimensions(enclosureType);
 
-        // Calculate total size in mm
-        const frontW = dimensions.front.width;
-        const frontH = dimensions.front.height;
-        const topW = dimensions.top.width;
-        const topH = dimensions.top.height;
-        const bottomW = dimensions.bottom.width;
-        const bottomH = dimensions.bottom.height;
-        const leftW = dimensions.left.width;
-        const leftH = dimensions.left.height;
-        const rightW = dimensions.right.width;
-        const rightH = dimensions.right.height;
+      // Calculate total size in mm
+      const frontW = dimensions.front.width;
+      const frontH = dimensions.front.height;
+      const topW = dimensions.top.width;
+      const topH = dimensions.top.height;
+      const bottomW = dimensions.bottom.width;
+      const bottomH = dimensions.bottom.height;
+      const leftW = dimensions.left.width;
+      const leftH = dimensions.left.height;
+      const rightW = dimensions.right.width;
+      const rightH = dimensions.right.height;
 
-        const totalWidthMM = leftW + frontW + rightW;
-        const totalHeightMM = topH + frontH + bottomH;
+      const totalWidthMM = leftW + frontW + rightW;
+      const totalHeightMM = topH + frontH + bottomH;
 
-        // Convert to pixels at 300 DPI for print quality (300 DPI = 11.811 pixels per mm)
-        const printDPI = 300;
-        const pixelsPerMM = printDPI / 25.4; // 300 DPI = 11.811 pixels/mm
+      // Convert to pixels at 300 DPI for print quality (300 DPI = 11.811 pixels per mm)
+      const printDPI = 300;
+      const pixelsPerMM = printDPI / 25.4; // 300 DPI = 11.811 pixels/mm
+      
+      const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
+      const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
+
+      // Create offscreen canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+
+      // Set white background
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      // Calculate layout for print (centered on canvas)
+      const topOffsetX = (frontW - topW) / 2;
+      const bottomOffsetX = (frontW - bottomW) / 2;
+      const leftOffsetY = (frontH - leftH) / 2;
+      const rightOffsetY = (frontH - rightH) / 2;
+
+      const layout = {
+        front: { x: leftW, y: topH, width: frontW, height: frontH },
+        top: { x: leftW + topOffsetX, y: 0, width: topW, height: topH },
+        bottom: { x: leftW + bottomOffsetX, y: topH + frontH, width: bottomW, height: bottomH },
+        left: { x: 0, y: topH + leftOffsetY, width: leftW, height: leftH },
+        right: { x: leftW + frontW, y: topH + rightOffsetY, width: rightW, height: rightH },
+      };
+
+      // Scale factor: convert mm to pixels for our print canvas
+      const scale = pixelsPerMM;
+
+      // Draw each side
+      const drawSide = (sideKey: keyof typeof layout, label: string) => {
+        const side = layout[sideKey];
+        const x = side.x * scale;
+        const y = side.y * scale;
+        const w = side.width * scale;
+        const h = side.height * scale;
+
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
         
-        const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
-        const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
-
-        // Create offscreen canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-        const ctx = canvas.getContext('2d');
-        
-        if (!ctx) {
-          reject(new Error('Could not get canvas context'));
-          return;
+        // Draw rounded rectangle for front face
+        if (sideKey === 'front') {
+          const cornerRadius = 5 * scale; // 5mm radius
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, h, cornerRadius);
+          ctx.stroke();
+        } else {
+          // Regular rectangles for other sides
+          ctx.strokeRect(x, y, w, h);
         }
 
-        // Set white background
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        // Draw side label FIRST (before components) - with increased font size
+        ctx.fillStyle = 'black';
+        ctx.font = `${36 * scale / pixelsPerMM}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x + w / 2, y + h / 2);
 
-        // Calculate layout for print (centered on canvas)
-        const topOffsetX = (frontW - topW) / 2;
-        const bottomOffsetX = (frontW - bottomW) / 2;
-        const leftOffsetY = (frontH - leftH) / 2;
-        const rightOffsetY = (frontH - rightH) / 2;
+        // Draw components for this side (AFTER label, so they go on top)
+        const sideComponents = components.filter(c => c.side === label);
+        sideComponents.forEach(component => {
+          const compData = COMPONENT_TYPES[component.type];
+          const radius = (compData.drillSize / 2) * scale;
 
-        const layout = {
-          front: { x: leftW, y: topH, width: frontW, height: frontH },
-          top: { x: leftW + topOffsetX, y: 0, width: topW, height: topH },
-          bottom: { x: leftW + bottomOffsetX, y: topH + frontH, width: bottomW, height: bottomH },
-          left: { x: 0, y: topH + leftOffsetY, width: leftW, height: leftH },
-          right: { x: leftW + frontW, y: topH + rightOffsetY, width: rightW, height: rightH },
-        };
+          // Convert component position from screen pixels to mm, then to print pixels
+          const compX = (component.x / mmToPixels) * scale;
+          const compY = (component.y / mmToPixels) * scale;
 
-        // Scale factor: convert mm to pixels for our print canvas
-        const scale = pixelsPerMM;
+          const centerX = x + (w / 2 + compX);
+          const centerY = y + (h / 2 + compY);
 
-        // Draw each side
-        const drawSide = (sideKey: keyof typeof layout, label: string) => {
-          const side = layout[sideKey];
-          const x = side.x * scale;
-          const y = side.y * scale;
-          const w = side.width * scale;
-          const h = side.height * scale;
+          // Draw white filled circle for component (covers the label)
+          ctx.fillStyle = 'white';
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+          ctx.fill();
 
+          // Draw drill hole outline
           ctx.strokeStyle = 'black';
           ctx.lineWidth = 1;
-          
-          // Draw rounded rectangle for front face
-          if (sideKey === 'front') {
-            const cornerRadius = 5 * scale; // 5mm radius
-            ctx.beginPath();
-            ctx.roundRect(x, y, w, h, cornerRadius);
-            ctx.stroke();
-          } else {
-            // Regular rectangles for other sides
-            ctx.strokeRect(x, y, w, h);
-          }
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+          ctx.stroke();
 
-          // Draw side label
+          // Draw crosshair
+          const crosshairSize = Math.max(radius, 3 * scale);
+          ctx.beginPath();
+          ctx.moveTo(centerX - crosshairSize, centerY);
+          ctx.lineTo(centerX + crosshairSize, centerY);
+          ctx.moveTo(centerX, centerY - crosshairSize);
+          ctx.lineTo(centerX, centerY + crosshairSize);
+          ctx.stroke();
+
+          // Draw measurement label with white background
+          const drillText = unit === "metric"
+            ? `${compData.drillSize.toFixed(1)}mm`
+            : compData.imperialLabel;
+          
+          const labelOffset = 3 * scale; // Closer to component
+          
+          // Measure text for background
+          ctx.font = `${36 * scale / pixelsPerMM}px Arial`;
+          const textMetrics = ctx.measureText(drillText);
+          const textWidth = textMetrics.width;
+          const textHeight = 14 * scale / pixelsPerMM;
+          const padding = 2 * scale / pixelsPerMM;
+          
+          // Draw white background rectangle for label
+          ctx.fillStyle = 'white';
+          ctx.fillRect(
+            centerX - textWidth / 2 - padding,
+            centerY + radius + labelOffset - textHeight / 2 - padding,
+            textWidth + padding * 2,
+            textHeight + padding * 2
+          );
+          
+          // Draw text
           ctx.fillStyle = 'black';
-          ctx.font = `${12 * scale / pixelsPerMM}px Arial`; // Scale font appropriately
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(label, x + w / 2, y + h / 2);
+          ctx.fillText(drillText, centerX, centerY + radius + labelOffset);
+        });
+      };
 
-          // Draw components for this side
-          const sideComponents = components.filter(c => c.side === label);
-          sideComponents.forEach(component => {
-            const compData = COMPONENT_TYPES[component.type];
-            const radius = (compData.drillSize / 2) * scale;
+      // Draw all sides
+      drawSide('front', 'Front');
+      drawSide('top', 'Top');
+      drawSide('bottom', 'Bottom');
+      drawSide('left', 'Left');
+      drawSide('right', 'Right');
 
-            // Convert component position from screen pixels to mm, then to print pixels
-            const compX = (component.x / mmToPixels) * scale;
-            const compY = (component.y / mmToPixels) * scale;
-
-            const centerX = x + (w / 2 + compX);
-            const centerY = y + (h / 2 + compY);
-
-            // Draw drill hole
-            ctx.strokeStyle = 'black';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.stroke();
-
-            // Draw crosshair
-            const crosshairSize = Math.max(radius, 3 * scale);
-            ctx.beginPath();
-            ctx.moveTo(centerX - crosshairSize, centerY);
-            ctx.lineTo(centerX + crosshairSize, centerY);
-            ctx.moveTo(centerX, centerY - crosshairSize);
-            ctx.lineTo(centerX, centerY + crosshairSize);
-            ctx.stroke();
-
-            // Draw label
-            ctx.fillStyle = 'black';
-            ctx.font = `${8 * scale / pixelsPerMM}px Arial`;
-            ctx.textAlign = 'center';
-            const drillText = unit === "metric"
-              ? `${compData.drillSize.toFixed(1)}mm`
-              : compData.imperialLabel;
-            ctx.fillText(drillText, centerX, centerY + radius + (5 * scale / pixelsPerMM));
-          });
-        };
-
-        // Draw all sides
-        drawSide('front', 'Front');
-        drawSide('top', 'Top');
-        drawSide('bottom', 'Bottom');
-        drawSide('left', 'Left');
-        drawSide('right', 'Right');
-
-        // Convert to data URL
-        const dataUrl = canvas.toDataURL('image/png', 1.0);
-        resolve(dataUrl);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  };
+      // Convert to data URL
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      resolve(dataUrl);
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
 
   const generatePDF = async (): Promise<jsPDF> => {
     try {
@@ -585,8 +611,6 @@ export default function Designer() {
       });
     }
   };
-
-  // ... (rest of the file remains exactly the same - all the save/load functions and JSX)
 
   const handleSaveWithFilename = async (defaultFilename: string): Promise<void> => {
     console.log('=== handleSaveWithFilename called ===');

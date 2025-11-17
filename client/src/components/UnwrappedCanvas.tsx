@@ -204,12 +204,20 @@ export default function UnwrappedCanvas({
         ctx.strokeRect(0, 0, sideLayout.width, sideLayout.height);
       }
 
-      // DRAW SIDE LABEL - This is what was missing!
-      ctx.fillStyle = "hsl(var(--foreground))";
-      ctx.font = `${14 / zoom}px Arial`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, sideLayout.width / 2, sideLayout.height / 2);
+// DRAW SIDE LABEL - with rotation compensation to keep readable
+ctx.save();
+// Translate to center of side
+ctx.translate(sideLayout.width / 2, sideLayout.height / 2);
+// Rotate back to cancel out the enclosure rotation
+const rotRad = (-rotation * Math.PI) / 180;
+ctx.rotate(rotRad);
+// Now draw the text at origin (which is now the center)
+ctx.fillStyle = "hsl(var(--foreground))";
+ctx.font = `${14 / zoom}px Arial`;
+ctx.textAlign = "center";
+ctx.textBaseline = "middle";
+ctx.fillText(label, 0, 0);
+ctx.restore();
 
       // Draw components for this side
       const sideName = (label) as EnclosureSide; // label is already capitalized (e.g., "Front")
