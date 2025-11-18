@@ -17,6 +17,8 @@ function createWindow() {
     icon: path.join(__dirname, '../images/EnclosureProIcon.png'),
   });
 
+  mainWindow.webContents.openDevTools();
+
   // Remove the system menu bar
   Menu.setApplicationMenu(null);
 

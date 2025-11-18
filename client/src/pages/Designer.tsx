@@ -47,7 +47,6 @@ export default function Designer() {
   const [showNewConfirmDialog, setShowNewConfirmDialog] = useState(false);
   const [showQuitConfirmDialog, setShowQuitConfirmDialog] = useState(false);
   const [showOpenConfirmDialog, setShowOpenConfirmDialog] = useState(false);
-  const [pendingPostSaveAction, setPendingPostSaveAction] = useState<(() => void) | null>(null);
   
   const isDirtyRef = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -61,24 +60,24 @@ export default function Designer() {
   const [appIcon, setAppIcon] = useState<string | null>(null);
 
   // Load icon on mount
-useEffect(() => {
-  const loadIcon = async () => {
-    try {
-      const iconPath = '/images/EnclosureProIcon.png';
-      
-      const response = await fetch(iconPath); // This was missing!
-      const blob = await response.blob();
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAppIcon(reader.result as string);
-      };
-      reader.readAsDataURL(blob);
-    } catch (error) {
-      console.error('Failed to load icon:', error);
-    }
-  };
-  loadIcon();
-}, []);
+  useEffect(() => {
+    const loadIcon = async () => {
+      try {
+        const iconPath = '/images/EnclosureProIcon.png';
+        
+        const response = await fetch(iconPath);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAppIcon(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error('Failed to load icon:', error);
+      }
+    };
+    loadIcon();
+  }, []);
 
   const enclosure = ENCLOSURE_TYPES[enclosureType];
   
@@ -117,6 +116,11 @@ useEffect(() => {
   };
 
   const handleNew = () => {
+    console.log('=== handleNew called ===');
+    console.log('isDirty:', isDirty);
+    console.log('components.length:', components.length);
+    
+    // Only ask to save if the project has unsaved changes
     if (isDirty) {
       setShowNewConfirmDialog(true);
     } else {
@@ -124,10 +128,15 @@ useEffect(() => {
     }
   };
 
-  const handleNewConfirmSave = () => {
-    setPendingPostSaveAction(() => performNewProject);
+  const handleNewConfirmSave = async () => {
     setShowNewConfirmDialog(false);
-    handleSave();
+    try {
+      await handleSave();
+      // Only perform new project after save completes
+      performNewProject();
+    } catch (error) {
+      console.error('Save failed, not starting new project:', error);
+    }
   };
 
   const handleNewConfirmDiscard = () => {
@@ -145,14 +154,17 @@ useEffect(() => {
     }
   };
 
-  const handleQuitConfirmSave = () => {
-    setPendingPostSaveAction(() => {
+  const handleQuitConfirmSave = async () => {
+    setShowQuitConfirmDialog(false);
+    try {
+      await handleSave();
+      // Only quit after save completes
       if (window.electronAPI?.isElectron) {
         window.electronAPI.closeWindow();
       }
-    });
-    setShowQuitConfirmDialog(false);
-    handleSave();
+    } catch (error) {
+      console.error('Save failed, not quitting:', error);
+    }
   };
 
   const handleQuitConfirmDiscard = () => {
@@ -217,10 +229,15 @@ useEffect(() => {
     }
   };
 
-  const handleOpenConfirmSave = () => {
-    setPendingPostSaveAction(() => performLoad);
+  const handleOpenConfirmSave = async () => {
     setShowOpenConfirmDialog(false);
-    handleSave();
+    try {
+      await handleSave();
+      // Only load new file after save completes
+      await performLoad();
+    } catch (error) {
+      console.error('Save failed, not opening file:', error);
+    }
   };
 
   const handleOpenConfirmDiscard = async () => {
@@ -279,180 +296,158 @@ useEffect(() => {
   };
 
   // Function to render the enclosure at 1:1 scale for printing/export
-const renderForPrintExport = (): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    try {
-      const mmToPixels = 3.7795275591; // 96 DPI: 1mm = 3.7795275591 pixels
-      const dimensions = getUnwrappedDimensions(enclosureType);
+  const renderForPrintExport = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      try {
+        const mmToPixels = 3.7795275591;
+        const dimensions = getUnwrappedDimensions(enclosureType);
 
-      // Calculate total size in mm
-      const frontW = dimensions.front.width;
-      const frontH = dimensions.front.height;
-      const topW = dimensions.top.width;
-      const topH = dimensions.top.height;
-      const bottomW = dimensions.bottom.width;
-      const bottomH = dimensions.bottom.height;
-      const leftW = dimensions.left.width;
-      const leftH = dimensions.left.height;
-      const rightW = dimensions.right.width;
-      const rightH = dimensions.right.height;
+        const frontW = dimensions.front.width;
+        const frontH = dimensions.front.height;
+        const topW = dimensions.top.width;
+        const topH = dimensions.top.height;
+        const bottomW = dimensions.bottom.width;
+        const bottomH = dimensions.bottom.height;
+        const leftW = dimensions.left.width;
+        const leftH = dimensions.left.height;
+        const rightW = dimensions.right.width;
+        const rightH = dimensions.right.height;
 
-      const totalWidthMM = leftW + frontW + rightW;
-      const totalHeightMM = topH + frontH + bottomH;
+        const totalWidthMM = leftW + frontW + rightW;
+        const totalHeightMM = topH + frontH + bottomH;
 
-      // Convert to pixels at 300 DPI for print quality (300 DPI = 11.811 pixels per mm)
-      const printDPI = 300;
-      const pixelsPerMM = printDPI / 25.4; // 300 DPI = 11.811 pixels/mm
-      
-      const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
-      const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
-
-      // Create offscreen canvas
-      const canvas = document.createElement('canvas');
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
-      const ctx = canvas.getContext('2d');
-      
-      if (!ctx) {
-        reject(new Error('Could not get canvas context'));
-        return;
-      }
-
-      // Set white background
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-      // Calculate layout for print (centered on canvas)
-      const topOffsetX = (frontW - topW) / 2;
-      const bottomOffsetX = (frontW - bottomW) / 2;
-      const leftOffsetY = (frontH - leftH) / 2;
-      const rightOffsetY = (frontH - rightH) / 2;
-
-      const layout = {
-        front: { x: leftW, y: topH, width: frontW, height: frontH },
-        top: { x: leftW + topOffsetX, y: 0, width: topW, height: topH },
-        bottom: { x: leftW + bottomOffsetX, y: topH + frontH, width: bottomW, height: bottomH },
-        left: { x: 0, y: topH + leftOffsetY, width: leftW, height: leftH },
-        right: { x: leftW + frontW, y: topH + rightOffsetY, width: rightW, height: rightH },
-      };
-
-      // Scale factor: convert mm to pixels for our print canvas
-      const scale = pixelsPerMM;
-
-      // Draw each side
-      const drawSide = (sideKey: keyof typeof layout, label: string) => {
-        const side = layout[sideKey];
-        const x = side.x * scale;
-        const y = side.y * scale;
-        const w = side.width * scale;
-        const h = side.height * scale;
-
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 1;
+        const printDPI = 300;
+        const pixelsPerMM = printDPI / 25.4;
         
-        // Draw rounded rectangle for front face
-        if (sideKey === 'front') {
-          const cornerRadius = 5 * scale; // 5mm radius
-          ctx.beginPath();
-          ctx.roundRect(x, y, w, h, cornerRadius);
-          ctx.stroke();
-        } else {
-          // Regular rectangles for other sides
-          ctx.strokeRect(x, y, w, h);
+        const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
+        const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
         }
 
-        // Draw side label FIRST (before components) - with increased font size
-        ctx.fillStyle = 'black';
-        ctx.font = `${36 * scale / pixelsPerMM}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(label, x + w / 2, y + h / 2);
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-        // Draw components for this side (AFTER label, so they go on top)
-        const sideComponents = components.filter(c => c.side === label);
-        sideComponents.forEach(component => {
-          const compData = COMPONENT_TYPES[component.type];
-          const radius = (compData.drillSize / 2) * scale;
+        const topOffsetX = (frontW - topW) / 2;
+        const bottomOffsetX = (frontW - bottomW) / 2;
+        const leftOffsetY = (frontH - leftH) / 2;
+        const rightOffsetY = (frontH - rightH) / 2;
 
-          // Convert component position from screen pixels to mm, then to print pixels
-          const compX = (component.x / mmToPixels) * scale;
-          const compY = (component.y / mmToPixels) * scale;
+        const layout = {
+          front: { x: leftW, y: topH, width: frontW, height: frontH },
+          top: { x: leftW + topOffsetX, y: 0, width: topW, height: topH },
+          bottom: { x: leftW + bottomOffsetX, y: topH + frontH, width: bottomW, height: bottomH },
+          left: { x: 0, y: topH + leftOffsetY, width: leftW, height: leftH },
+          right: { x: leftW + frontW, y: topH + rightOffsetY, width: rightW, height: rightH },
+        };
 
-          const centerX = x + (w / 2 + compX);
-          const centerY = y + (h / 2 + compY);
+        const scale = pixelsPerMM;
 
-          // Draw white filled circle for component (covers the label)
-          ctx.fillStyle = 'white';
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-          ctx.fill();
+        const drawSide = (sideKey: keyof typeof layout, label: string) => {
+          const side = layout[sideKey];
+          const x = side.x * scale;
+          const y = side.y * scale;
+          const w = side.width * scale;
+          const h = side.height * scale;
 
-          // Draw drill hole outline
           ctx.strokeStyle = 'black';
           ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-          ctx.stroke();
+          
+          if (sideKey === 'front') {
+            const cornerRadius = 5 * scale;
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, cornerRadius);
+            ctx.stroke();
+          } else {
+            ctx.strokeRect(x, y, w, h);
+          }
 
-          // Draw crosshair
-          const crosshairSize = Math.max(radius, 3 * scale);
-          ctx.beginPath();
-          ctx.moveTo(centerX - crosshairSize, centerY);
-          ctx.lineTo(centerX + crosshairSize, centerY);
-          ctx.moveTo(centerX, centerY - crosshairSize);
-          ctx.lineTo(centerX, centerY + crosshairSize);
-          ctx.stroke();
-
-          // Draw measurement label with white background
-          const drillText = unit === "metric"
-            ? `${compData.drillSize.toFixed(1)}mm`
-            : compData.imperialLabel;
-          
-          const labelOffset = 3 * scale; // Closer to component
-          
-          // Measure text for background
-          ctx.font = `${28 * scale / pixelsPerMM}px Arial`;
-          const textMetrics = ctx.measureText(drillText);
-          const textWidth = textMetrics.width;
-          const textHeight = 14 * scale / pixelsPerMM;
-          const padding = 2 * scale / pixelsPerMM;
-          
-          // Draw white background rectangle for label
-          ctx.fillStyle = 'white';
-          ctx.fillRect(
-            centerX - textWidth / 2 - padding,
-            centerY + radius + labelOffset - textHeight / 2 - padding,
-            textWidth + padding * 2,
-            textHeight + padding * 2
-          );
-          
-          // Draw text
           ctx.fillStyle = 'black';
+          ctx.font = `${36 * scale / pixelsPerMM}px Arial`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(drillText, centerX, centerY + radius + labelOffset);
-        });
-      };
+          ctx.fillText(label, x + w / 2, y + h / 2);
 
-      // Draw all sides
-      drawSide('front', 'Front');
-      drawSide('top', 'Top');
-      drawSide('bottom', 'Bottom');
-      drawSide('left', 'Left');
-      drawSide('right', 'Right');
+          const sideComponents = components.filter(c => c.side === label);
+          sideComponents.forEach(component => {
+            const compData = COMPONENT_TYPES[component.type];
+            const radius = (compData.drillSize / 2) * scale;
 
-      // Convert to data URL
-      const dataUrl = canvas.toDataURL('image/png', 1.0);
-      resolve(dataUrl);
-    } catch (error) {
-      reject(error);
-    }
-  });
-};
+            const compX = (component.x / mmToPixels) * scale;
+            const compY = (component.y / mmToPixels) * scale;
+
+            const centerX = x + (w / 2 + compX);
+            const centerY = y + (h / 2 + compY);
+
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.fill();
+
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.stroke();
+
+            const crosshairSize = Math.max(radius, 3 * scale);
+            ctx.beginPath();
+            ctx.moveTo(centerX - crosshairSize, centerY);
+            ctx.lineTo(centerX + crosshairSize, centerY);
+            ctx.moveTo(centerX, centerY - crosshairSize);
+            ctx.lineTo(centerX, centerY + crosshairSize);
+            ctx.stroke();
+
+            const drillText = unit === "metric"
+              ? `${compData.drillSize.toFixed(1)}mm`
+              : compData.imperialLabel;
+            
+            const labelOffset = 3 * scale;
+            
+            ctx.font = `${28 * scale / pixelsPerMM}px Arial`;
+            const textMetrics = ctx.measureText(drillText);
+            const textWidth = textMetrics.width;
+            const textHeight = 14 * scale / pixelsPerMM;
+            const padding = 2 * scale / pixelsPerMM;
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(
+              centerX - textWidth / 2 - padding,
+              centerY + radius + labelOffset - textHeight / 2 - padding,
+              textWidth + padding * 2,
+              textHeight + padding * 2
+            );
+            
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(drillText, centerX, centerY + radius + labelOffset);
+          });
+        };
+
+        drawSide('front', 'Front');
+        drawSide('top', 'Top');
+        drawSide('bottom', 'Bottom');
+        drawSide('left', 'Left');
+        drawSide('right', 'Right');
+
+        const dataUrl = canvas.toDataURL('image/png', 1.0);
+        resolve(dataUrl);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
 
   const generatePDF = async (): Promise<jsPDF> => {
     try {
-      // Render at 1:1 scale
       const imageData = await renderForPrintExport();
       
       const dimensions = getUnwrappedDimensions(enclosureType);
@@ -474,7 +469,6 @@ const renderForPrintExport = (): Promise<string> => {
 
       const orientation = totalWidth > totalHeight ? "landscape" : "portrait";
       
-      // Add generous margins
       const requiredWidth = totalWidth + 40;
       const requiredHeight = totalHeight + 60;
       
@@ -550,20 +544,16 @@ const renderForPrintExport = (): Promise<string> => {
         format: pageFormat,
       });
 
-      // Calculate image position (centered with margins)
       const margin = 20;
       const maxWidth = pageWidth - (margin * 2);
-      const maxHeight = pageHeight - (margin * 2) - 20; // Extra space for header
+      const maxHeight = pageHeight - (margin * 2) - 20;
 
-      // Use actual dimensions at 100% scale
       const imageWidth = totalWidth;
       const imageHeight = totalHeight;
 
-      // Center the image
       const x = (pageWidth - imageWidth) / 2;
       const y = margin + 20;
 
-      // Add header information
       pdf.setFontSize(14);
       const title = projectName ? `${projectName} - Drill Template` : `${enclosureType} - Drill Template`;
       pdf.text(title, pageWidth / 2, 15, { align: "center" });
@@ -579,7 +569,6 @@ const renderForPrintExport = (): Promise<string> => {
         : `Scale: 100% (Actual Size) | Page: ${pageName}`;
       pdf.text(pageInfo, pageWidth / 2, 28, { align: "center" });
 
-      // Add the high-resolution image at 100% scale
       pdf.addImage(imageData, 'PNG', x, y, imageWidth, imageHeight);
 
       return pdf;
@@ -634,20 +623,23 @@ const renderForPrintExport = (): Promise<string> => {
   };
 
   const handleSaveWithFilename = async (defaultFilename: string): Promise<void> => {
-    console.log('=== handleSaveWithFilename called ===');
-    console.log('defaultFilename:', defaultFilename);
+    console.log('=== SAVING FILE ===');
+    console.log('Number of components to save:', components.length);
+    console.log('Components:', JSON.stringify(components, null, 2));
     
     const projectState: ProjectState = {
-    enclosureType,
-    components,
-    gridEnabled,
-    gridSize,
-    zoom,
-    unit,
-    appIcon: appIcon || undefined,
-  };
+      enclosureType,
+      components,
+      gridEnabled,
+      gridSize,
+      zoom,
+      unit,
+      appIcon: appIcon || undefined,
+    };
 
     const json = JSON.stringify(projectState, null, 2);
+    console.log('JSON being saved (first 500 chars):', json.substring(0, 500));
+    
     const fullFilename = defaultFilename.endsWith('.enc') ? defaultFilename : `${defaultFilename}.enc`;
 
     if (window.electronAPI?.isElectron) {
@@ -676,15 +668,11 @@ const renderForPrintExport = (): Promise<string> => {
         }
 
         const savedFilename = result.filePath!.split(/[/\\]/).pop()?.replace('.enc', '') || defaultFilename;
-        console.log('About to set projectName to:', savedFilename);
-        console.log('About to set projectFilePath to:', result.filePath);
+        console.log('File saved successfully to:', result.filePath);
         
         setProjectName(savedFilename);
         setProjectFilePath(result.filePath!);
         projectFilePathRef.current = result.filePath!;
-        
-        console.log('State setters called');
-        console.log('projectFilePathRef.current is now:', projectFilePathRef.current);
         resetDirty();
 
         toast({
@@ -692,11 +680,6 @@ const renderForPrintExport = (): Promise<string> => {
           description: `Saved as ${result.filePath!.split('/').pop()}`,
         });
 
-        if (pendingPostSaveAction) {
-          const action = pendingPostSaveAction;
-          setPendingPostSaveAction(null);
-          action();
-        }
         return;
       } catch (err: any) {
         console.error('Electron save failed:', err);
@@ -718,6 +701,8 @@ const renderForPrintExport = (): Promise<string> => {
         await writable.write(json);
         await writable.close();
         
+        console.log('File saved via File System Access API');
+        
         setProjectName(defaultFilename.replace('.enc', ''));
         setProjectFilePath(handle.name);
         resetDirty();
@@ -727,11 +712,6 @@ const renderForPrintExport = (): Promise<string> => {
           description: `Saved as ${fullFilename}`,
         });
         
-        if (pendingPostSaveAction) {
-          const action = pendingPostSaveAction;
-          setPendingPostSaveAction(null);
-          action();
-        }
         return;
       } catch (err: any) {
         if (err.name === 'AbortError') {
@@ -751,6 +731,8 @@ const renderForPrintExport = (): Promise<string> => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
+    console.log('File downloaded as:', fullFilename);
+
     setProjectName(defaultFilename.replace('.enc', ''));
     setProjectFilePath(fullFilename);
     resetDirty();
@@ -759,24 +741,16 @@ const renderForPrintExport = (): Promise<string> => {
       title: "Project Saved",
       description: `Saved as ${fullFilename}`,
     });
-
-    if (pendingPostSaveAction) {
-      const action = pendingPostSaveAction;
-      setPendingPostSaveAction(null);
-      action();
-    }
   };
 
   const handleSave = async () => {
     console.log('=== handleSave called ===');
-    console.log('projectFilePath (state):', projectFilePath);
+    console.log('Current components count:', components.length);
     console.log('projectFilePathRef.current:', projectFilePathRef.current);
-    console.log('window.electronAPI?.isElectron:', window.electronAPI?.isElectron);
-    console.log('condition result:', projectFilePathRef.current && window.electronAPI?.isElectron);
     
     if (projectFilePathRef.current && window.electronAPI?.isElectron) {
       console.log('Taking SAVE path (overwrite existing file)');
-      // File already has a path, just overwrite it
+      
       const projectState: ProjectState = {
         enclosureType,
         components,
@@ -784,9 +758,11 @@ const renderForPrintExport = (): Promise<string> => {
         gridSize,
         zoom,
         unit,
+        appIcon: appIcon || undefined,
       };
 
       const json = JSON.stringify(projectState, null, 2);
+      console.log('Saving', components.length, 'components to existing file');
 
       try {
         const writeResult = await window.electronAPI.writeFile({
@@ -804,12 +780,6 @@ const renderForPrintExport = (): Promise<string> => {
           title: "Project Saved",
           description: `Saved ${projectFilePathRef.current.split(/[/\\]/).pop()}`,
         });
-
-        if (pendingPostSaveAction) {
-          const action = pendingPostSaveAction;
-          setPendingPostSaveAction(null);
-          action();
-        }
       } catch (err: any) {
         console.error('Save failed:', err);
         toast({
@@ -820,7 +790,6 @@ const renderForPrintExport = (): Promise<string> => {
       }
     } else {
       console.log('Taking SAVE AS path (no file path yet)');
-      // No file path yet, or not in Electron - show save dialog (Save As)
       await handleSaveAs();
     }
   };
@@ -829,7 +798,6 @@ const renderForPrintExport = (): Promise<string> => {
     try {
       await handleSaveWithFilename(projectName || enclosureType);
     } catch (err: any) {
-      // User cancelled or error occurred - don't show error for cancellation
       if (err.message !== 'User canceled save operation') {
         console.error('Save As failed:', err);
       }
@@ -837,110 +805,132 @@ const renderForPrintExport = (): Promise<string> => {
   };
 
   const processLoadedFile = (json: string, filename: string, filePath?: string) => {
-  try {
-    const parsed = JSON.parse(json);
+    try {
+      console.log('=== LOADING FILE ===');
+      console.log('Filename:', filename);
+      console.log('FilePath:', filePath);
+      console.log('Current projectFilePathRef:', projectFilePathRef.current);
+      
+      // If loading the same file that's already open, don't proceed
+      if (filePath && projectFilePathRef.current === filePath) {
+        console.log('Same file already open, skipping load');
+        toast({
+          title: "File Already Open",
+          description: `${filename} is already open`,
+        });
+        return;
+      }
+      
+      console.log('Raw JSON (first 500 chars):', json.substring(0, 500));
+      
+      const parsed = JSON.parse(json);
+      console.log('Parsed data:', parsed);
+      console.log('Number of components in file:', parsed.components?.length || 0);
 
-    const legacyComponentSchema = z.object({
-      id: z.string().optional(),
-      type: z.string().optional(),
-      x: z.number().optional(),
-      y: z.number().optional(),
-      side: z.string().optional(),
-    });
-
-    const projectFileSchema = z.object({
-      enclosureType: z.string().optional(),
-      currentSide: z.string().optional(),
-      components: z.array(legacyComponentSchema).optional(),
-      gridEnabled: z.boolean().optional(),
-      gridSize: z.number().optional(),
-      zoom: z.any().optional(),
-      rotation: z.any().optional(),
-      unit: z.enum(["metric", "imperial"]).optional(),
-      appIcon: z.string().optional(), // Added this line
-    });
-
-    const result = projectFileSchema.safeParse(parsed);
-    
-    if (!result.success) {
-      throw new Error("Invalid file structure");
-    }
-
-    const rawData = result.data;
-    const SIDE_ORDER: EnclosureSide[] = ["Front", "Right", "Left", "Top", "Bottom"];
-
-    const normalizedEnclosureType = (rawData.enclosureType && rawData.enclosureType in ENCLOSURE_TYPES)
-      ? (rawData.enclosureType as EnclosureType)
-      : "1590B";
-
-    const validComponents: PlacedComponent[] = (rawData.components || [])
-      .filter(c => c.type && c.type in COMPONENT_TYPES)
-      .map((c, index) => {
-        let side = c.side;
-        if (side === "Back") side = "Front";
-        if (!side || !SIDE_ORDER.includes(side as EnclosureSide)) {
-          side = "Front";
-        }
-        
-        return {
-          id: c.id || `component-${Date.now()}-${index}`,
-          type: c.type as ComponentType,
-          x: typeof c.x === 'number' ? c.x : 0,
-          y: typeof c.y === 'number' ? c.y : 0,
-          side: side as EnclosureSide,
-        };
+      const legacyComponentSchema = z.object({
+        id: z.string().optional(),
+        type: z.string().optional(),
+        x: z.number().optional(),
+        y: z.number().optional(),
+        side: z.string().optional(),
       });
 
-    let normalizedZoom = 1;
-    if (typeof rawData.zoom === 'number') {
-      normalizedZoom = rawData.zoom;
-    } else if (rawData.zoom && typeof rawData.zoom === 'object') {
-      normalizedZoom = (rawData.zoom as any).Front || 1;
-    }
+      const projectFileSchema = z.object({
+        enclosureType: z.string().optional(),
+        currentSide: z.string().optional(),
+        components: z.array(legacyComponentSchema).optional(),
+        gridEnabled: z.boolean().optional(),
+        gridSize: z.number().optional(),
+        zoom: z.any().optional(),
+        rotation: z.any().optional(),
+        unit: z.enum(["metric", "imperial"]).optional(),
+        appIcon: z.string().optional(),
+      });
 
-    setEnclosureType(normalizedEnclosureType);
-    setComponents(validComponents);
-    setGridEnabled(rawData.gridEnabled ?? true);
-    setGridSize(rawData.gridSize ?? 5);
-    setZoom(snapZoom(normalizedZoom));
-    setUnit(rawData.unit ?? "metric");
-    
-    // Load the icon if it was saved in the file
-    if (rawData.appIcon) {
-      setAppIcon(rawData.appIcon);
-    }
-    
-    setProjectName(filename.replace('.enc', ''));
-    setProjectFilePath(filePath || null);
-    projectFilePathRef.current = filePath || null;
-    resetDirty();
+      const result = projectFileSchema.safeParse(parsed);
+      
+      if (!result.success) {
+        throw new Error("Invalid file structure");
+      }
 
-    toast({
-      title: "Project Loaded",
-      description: `Loaded ${filename}`,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
+      const rawData = result.data;
+      const SIDE_ORDER: EnclosureSide[] = ["Front", "Right", "Left", "Top", "Bottom"];
+
+      const normalizedEnclosureType = (rawData.enclosureType && rawData.enclosureType in ENCLOSURE_TYPES)
+        ? (rawData.enclosureType as EnclosureType)
+        : "1590B";
+
+      const validComponents: PlacedComponent[] = (rawData.components || [])
+        .filter(c => c.type && c.type in COMPONENT_TYPES)
+        .map((c, index) => {
+          let side = c.side;
+          if (side === "Back") side = "Front";
+          if (!side || !SIDE_ORDER.includes(side as EnclosureSide)) {
+            side = "Front";
+          }
+          
+          return {
+            id: c.id || `component-${Date.now()}-${index}`,
+            type: c.type as ComponentType,
+            x: typeof c.x === 'number' ? c.x : 0,
+            y: typeof c.y === 'number' ? c.y : 0,
+            side: side as EnclosureSide,
+          };
+        });
+
+      console.log('Valid components after processing:', validComponents.length);
+      console.log('Components being loaded:', JSON.stringify(validComponents, null, 2));
+
+      let normalizedZoom = 1;
+      if (typeof rawData.zoom === 'number') {
+        normalizedZoom = rawData.zoom;
+      } else if (rawData.zoom && typeof rawData.zoom === 'object') {
+        normalizedZoom = (rawData.zoom as any).Front || 1;
+      }
+
+      setEnclosureType(normalizedEnclosureType);
+      setComponents(validComponents);
+      console.log('setComponents called with', validComponents.length, 'components');
+      
+      setGridEnabled(rawData.gridEnabled ?? true);
+      setGridSize(rawData.gridSize ?? 5);
+      setZoom(snapZoom(normalizedZoom));
+      setUnit(rawData.unit ?? "metric");
+      
+      if (rawData.appIcon) {
+        setAppIcon(rawData.appIcon);
+      }
+      
+      setProjectName(filename.replace('.enc', ''));
+      setProjectFilePath(filePath || null);
+      projectFilePathRef.current = filePath || null;
+      resetDirty();
+
       toast({
-        title: "Invalid Project File",
-        description: `Validation error: ${error.errors[0].message}`,
-        variant: "destructive",
+        title: "Project Loaded",
+        description: `Loaded ${filename}`,
       });
-    } else {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load project file",
-        variant: "destructive",
-      });
+    } catch (error) {
+      console.error('Load error:', error);
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Invalid Project File",
+          description: `Validation error: ${error.errors[0].message}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to load project file",
+          variant: "destructive",
+        });
+      }
     }
-  }
-};
+  };
 
   useEffect(() => {
-    // Listen for window close events from Electron
     if (window.electronAPI?.isElectron && window.electronAPI.onCloseRequested) {
       const unsubscribe = window.electronAPI.onCloseRequested(() => {
-        // Use refs to get current values
         if (isDirtyRef.current) {
           setShowQuitConfirmDialog(true);
         } else {
@@ -969,6 +959,8 @@ const renderForPrintExport = (): Promise<string> => {
       }
       else if (modifier && e.key.toLowerCase() === 's') {
         e.preventDefault();
+        console.log('=== CTRL+S pressed ===');
+        console.log('Components before save:', components.length);
         if (e.shiftKey) {
           handleSaveAs();
         } else {
@@ -991,7 +983,7 @@ const renderForPrintExport = (): Promise<string> => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [components]);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden">
