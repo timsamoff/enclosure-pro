@@ -5,8 +5,10 @@
   "description": "Professional effects pedal enclosure drill hole designer",
   "main": "electron/main.js",
   "license": "GPL-3.0",
-  "author": "Tim Samoff",
-  "email" : "samoff@gmail.com",
+  "author": "Tim Samoff <samoff@gmail.com>",
+  "maintainers": [
+    "Tim Samoff <samoff@gmail.com>"
+  ],
   "scripts": {
     "start": "electron .",
     "dev": "vite",
@@ -57,6 +59,7 @@
       "deb"
     ],
     "category": "Graphics",
+    "maintainer": "Tim Samoff <samoff@gmail.com>",
     "synopsis": "Professional effects pedal enclosure designer",
     "description": "Design drill hole layouts for effects pedal enclosures"
   },
