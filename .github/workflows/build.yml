@@ -30,6 +30,12 @@ jobs:
           node-version: '20'
           cache: 'npm'
       
+      - name: Install dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 libxtst6 xauth
+      
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
       
@@ -37,6 +43,10 @@ jobs:
         run: npm run electron:build -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI: true  # Set CI environment variable to true
+      
+      - name: List release directory contents
+        run: ls -la release/
       
       - name: Upload Windows artifacts
         if: matrix.os == 'windows-latest'
