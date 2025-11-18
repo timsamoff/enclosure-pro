@@ -16,8 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Uncomment macos-latest when ready
-        os: [windows-latest, ubuntu-latest] #, macos-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
     
     steps:
       - name: Checkout code
@@ -29,42 +28,35 @@ jobs:
           node-version: '20'
           cache: 'npm'
       
-      - name: Install dependencies
-        run: |
-          npm ci --legacy-peer-deps
-          # Also try installing electron-builder globally if needed
-          # npm install -g electron-builder
+      - name: Install dependencies with legacy peer deps
+        run: npm ci --legacy-peer-deps
       
-      - name: Debug - List files
-        run: ls -la
-      
-      - name: Build app with timeout and logging
-        run: |
-          # Add timeout to prevent hanging indefinitely
-          timeout 1800 npm run electron:build -- --publish never
+      - name: Build app
+        run: npm run electron:build -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Add CI flag to prevent interactive prompts
-          CI: true
-        # Continue on error to see what happened
-        continue-on-error: true
-      
-      - name: Check build output
-        run: |
-          echo "Checking release directory:"
-          ls -la release/ || echo "No release directory found"
-          echo "Build process completed"
+        timeout-minutes: 30
       
       - name: Upload Windows artifacts
-        if: matrix.os == 'windows-latest' && success()
+        if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: windows-builds
           path: release/*.exe
           if-no-files-found: warn
       
+      - name: Upload macOS artifacts
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-builds
+          path: |
+            release/*.dmg
+            release/*.zip
+          if-no-files-found: warn
+      
       - name: Upload Linux artifacts
-        if: matrix.os == 'ubuntu-latest' && success()
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: linux-builds
@@ -84,14 +76,10 @@ jobs:
         with:
           path: artifacts
       
-      - name: List downloaded artifacts
-        run: find artifacts -type f
-      
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            artifacts/**/*
+          files: artifacts/**/*
           draft: true
           generate_release_notes: true
         env:
