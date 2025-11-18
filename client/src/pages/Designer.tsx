@@ -63,9 +63,17 @@ export default function Designer() {
   useEffect(() => {
     const loadIcon = async () => {
       try {
-        const iconPath = '/images/EnclosureProIcon.png';
+        // In Electron production, files are served from dist/public
+        const iconPath = window.electronAPI?.isElectron 
+          ? './images/EnclosureProIcon.png'
+          : '/images/EnclosureProIcon.png';
         
         const response = await fetch(iconPath);
+        if (!response.ok) {
+          console.log('Icon not found, continuing without it');
+          return;
+        }
+        
         const blob = await response.blob();
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -73,7 +81,8 @@ export default function Designer() {
         };
         reader.readAsDataURL(blob);
       } catch (error) {
-        console.error('Failed to load icon:', error);
+        // Icon is optional, just log and continue
+        console.log('Icon not available:', error.message);
       }
     };
     loadIcon();
