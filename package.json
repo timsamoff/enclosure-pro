@@ -6,7 +6,7 @@
   "main": "electron/main.js",
   "license": "GPL-3.0",
   "author": "Tim Samoff",
-  "email" : "circuitousfx@gmail.com",
+  "email" : "samoff@gmail.com",
   "scripts": {
     "start": "electron .",
     "dev": "vite",
