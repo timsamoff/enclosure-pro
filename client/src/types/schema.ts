@@ -6,13 +6,13 @@ export type MeasurementUnit = "metric" | "imperial";
 export const CORNER_RADIUS = 5;
 
 export const ENCLOSURE_TYPES = {
-  "1590A": { width: 39, height: 93, depth: 31 },
-  "1590B": { width: 60, height: 113, depth: 31 },
-  "1590LB": { width: 51, height: 51, depth: 31 },
-  "125B": { width: 66.7, height: 122.4, depth: 35.6 },
-  "1590BB": { width: 119.5, height: 94, depth: 34 },
-  "1590BB2": { width: 119.5, height: 94, depth: 38 },
-  "1590DD": { width: 188, height: 120, depth: 37 },
+  "1590A": { width: 38.5, height: 93.6, depth: 28 },
+  "1590B": { width: 60.9, height: 111.9, depth: 29 },
+  "1590LB": { width: 50.5, height: 50.5, depth: 29 },
+  "125B": { width: 66, height: 121, depth: 35.94 },
+  "1590BB": { width: 119.5, height: 94, depth: 30 },
+  "1590BB2": { width: 120, height: 94, depth: 34 },
+  "1590DD": { width: 188, height: 120, depth: 33 },
 } as const;
 
 export type EnclosureType = keyof typeof ENCLOSURE_TYPES;

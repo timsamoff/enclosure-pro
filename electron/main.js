@@ -110,3 +110,22 @@ ipcMain.handle('file:read', async (event, { filePath }) => {
     return { success: false, error: error.message };
   }
 });
+
+ipcMain.handle('print-pdf', async (event, { pdfData, printOptions }) => {
+  const pdfBuffer = Buffer.from(pdfData);
+  const pdfPath = path.join(os.tmpdir(), `print-${Date.now()}.pdf`);
+  
+  await fs.promises.writeFile(pdfPath, pdfBuffer);
+  
+  const printWindow = new BrowserWindow({ show: false });
+  await printWindow.loadURL(`file://${pdfPath}`);
+  
+  return new Promise((resolve) => {
+    printWindow.webContents.once('did-finish-load', () => {
+      printWindow.webContents.print(printOptions, (success) => {
+        printWindow.destroy();
+        resolve(success);
+      });
+    });
+  });
+});
