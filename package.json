@@ -1,10 +1,12 @@
 {
   "name": "enclosure-pro",
   "version": "1.0.0",
+  "type": "module",
   "description": "Professional effects pedal enclosure drill hole designer",
   "main": "electron/main.js",
   "license": "GPL-3.0",
   "author": "Tim Samoff",
+  "email" : "circuitousfx@gmail.com",
   "scripts": {
     "start": "electron .",
     "dev": "vite",
