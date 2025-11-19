@@ -9,7 +9,7 @@
 
   
 
-A cross-platform precision drill hole layout tool for guitar pedal enclosures.
+A cross-platform precision drill hole layout tool for effect pedal enclosures.
 
   
 
