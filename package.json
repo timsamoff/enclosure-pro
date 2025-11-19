@@ -37,13 +37,13 @@
     }
   ],
   "mac": {
-    "category": "public.app-category.productivity",
-    "icon": "build/icon.icns",
-    "target": [
-      "dmg",
-      "zip"
-    ]
-  },
+  "build": {
+    "mac": {
+      "target": ["dmg", "zip"],
+      "arch": ["universal"]
+    }
+  }
+},
   "win": {
     "icon": "build/icon.ico",
     "target": [
