@@ -94,16 +94,29 @@ h4 {
     font-size: 1.2em;
 }
 
-.ui-image-container {
-    text-align: center;
-    margin: 30px 0;
+/* FIGURE AND CAPTION STYLES */
+figure {
+    margin: 30px 0; /* Add margin around the figure */
+    padding: 0;
+    text-align: center; /* Center the image and caption */
 }
-.ui-image-container img {
+
+figcaption {
+    margin-top: 10px;
+    font-style: italic;
+    color: #555; /* Medium gray for captions */
+    font-size: 0.9em;
+}
+/* END FIGURE AND CAPTION STYLES */
+
+/* Images inside figures */
+figure img {
     max-width: 100%;
     height: auto;
     border: 1px solid #ddd;
     border-radius: 5px;
 }
+
 
 /* Index.html Specific Styles */
 .coffee-link {
@@ -190,6 +203,10 @@ h4 {
 
 /* Documentation.html Specific Styles */
 
+.video-overview {
+    text-align: center;
+    margin-bottom: 30px;
+}
 .video-overview img {
     border: 4px solid var(--secondary-color); /* Dark Grey/Black border */
     max-width: 100%;
