@@ -98,14 +98,14 @@ h4 {
 figure {
     margin: 30px 0; /* Add margin around the figure */
     padding: 0;
-    text-align: center; /* Center the image and caption */
+    text-align: center; /* Centers the image and caption */
 }
 
 figcaption {
     margin-top: 10px;
     font-style: italic;
     color: #555; /* Medium gray for captions */
-    font-size: 0.9em;
+    font-size: 0.85em; /* Updated for smaller size */
 }
 /* END FIGURE AND CAPTION STYLES */
 
@@ -216,13 +216,17 @@ figure img {
 }
 
 .ui-image-list {
-    list-style: none;
-    padding-left: 0;
+    list-style-type: decimal; /* Enable 1, 2, 3 numbering */
+    padding-left: 20px;
     margin-top: 20px;
-    counter-reset: ui-item;
+    /* We don't need counter-reset since we are using default list style */
 }
 .ui-image-list li {
     margin-bottom: 10px;
+}
+/* Styling for nested list letters */
+.ui-image-list ol {
+    margin-top: 5px;
 }
 
 .menu-option-list {
