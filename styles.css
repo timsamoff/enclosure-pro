@@ -1,0 +1,239 @@
+/*
+ * Enclosure Pro Styles
+ * Used by index.html and documentation.html
+ * Color Scheme: Tan (#e8dcc8), Dark Orange (#cc5500), Black (#212121)
+ */
+
+:root {
+    --primary-color: #cc5500; /* Dark Orange Accent */
+    --secondary-color: #333333; /* Dark Grey/Black for main headers */
+    --text-color: #212121; /* Near Black Text */
+    --bg-color: #e8dcc8; /* Tan/Light Background */
+    --box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Global Styles */
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 1000px;
+    padding: 40px 20px;
+    background: white; /* White paper area to contrast tan background */
+    box-shadow: var(--box-shadow);
+    margin: 30px 0;
+    border-radius: 12px;
+}
+
+/* Typography and Links */
+header {
+    text-align: center;
+    padding-bottom: 25px;
+    border-bottom: 5px solid var(--primary-color); /* Orange Header Rule */
+    margin-bottom: 30px;
+}
+
+header h1 {
+    color: var(--secondary-color);
+    font-size: 3em;
+    margin-top: 10px;
+}
+
+a {
+    color: var(--primary-color); /* Orange Links */
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s;
+}
+
+a:hover {
+    color: #a34400; /* Darker Orange on hover */
+    text-decoration: underline;
+}
+
+h2 {
+    font-size: 2em;
+    color: var(--secondary-color); /* Dark Grey Section Headers */
+    border-bottom: 2px solid #b8a991; /* Subtle Dark Tan Border */
+    padding-bottom: 10px;
+    margin-top: 40px;
+}
+
+h3 {
+    font-size: 1.6em;
+    color: var(--primary-color); /* Orange Sub-headers */
+    margin-top: 30px;
+    border-left: 5px solid #ff9966; /* Light Orange accent bar */
+    padding-left: 10px;
+}
+
+h4 {
+    font-size: 1.2em;
+    color: #616161;
+    margin-top: 20px;
+}
+
+/* Shared Components */
+.icon-text {
+    margin-right: 8px;
+    color: var(--secondary-color);
+}
+
+.asterisk {
+    color: orange;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.ui-image-container {
+    text-align: center;
+    margin: 30px 0;
+}
+.ui-image-container img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+/* Index.html Specific Styles */
+.coffee-link {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 15px;
+    padding: 10px 20px;
+    border: 2px solid var(--primary-color);
+    border-radius: 30px;
+    background-color: #fff; /* White to pop against Tan body background */
+    transition: all 0.3s;
+}
+.coffee-link:hover {
+    background-color: var(--primary-color);
+    color: #fff; /* White text on orange hover */
+    text-decoration: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.coffee-link i {
+    color: var(--primary-color);
+    margin-right: 8px;
+}
+.coffee-link:hover i {
+    color: #fff; /* White icon on orange hover */
+}
+
+
+.features-list {
+    list-style: none;
+    padding-left: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+.features-list li {
+    background: #f0f0f0; /* Light Grey to distinguish from tan background */
+    padding: 15px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: transform 0.2s, background-color 0.3s;
+}
+.features-list li:hover {
+    transform: translateY(-5px);
+    background: #d4d4d4; /* Slightly darker grey on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.features-list i {
+    margin-right: 10px;
+    color: var(--primary-color); /* Orange icons */
+}
+
+.downloads-note {
+    background-color: #f7e9d7; /* Lighter tan for note box */
+    color: #7b4400; /* Dark brown/orange text for contrast */
+    padding: 15px;
+    border: 1px solid #e0d3b6;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    font-style: italic;
+}
+.downloads-list {
+    list-style: none;
+    padding-left: 0;
+}
+.downloads-list li {
+    margin-bottom: 15px;
+}
+.downloads-list a {
+    display: inline-block;
+    padding: 12px 25px;
+    background-color: var(--secondary-color); /* Dark Grey/Black button */
+    color: white;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+.downloads-list a:hover {
+    background-color: #000; /* Pure Black on hover */
+    text-decoration: none;
+}
+.downloads-list i {
+    margin-right: 5px;
+}
+
+/* Documentation.html Specific Styles */
+
+.video-overview img {
+    border: 4px solid var(--secondary-color); /* Dark Grey/Black border */
+    max-width: 100%;
+    height: auto;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.ui-image-list {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 20px;
+    counter-reset: ui-item;
+}
+.ui-image-list li {
+    margin-bottom: 10px;
+}
+
+.menu-option-list {
+    list-style-type: none;
+    padding-left: 15px;
+}
+.menu-option-list strong {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--secondary-color);
+}
+.menu-option-list ul {
+    list-style-type: square;
+    margin-top: 5px;
+    margin-bottom: 10px;
+}
+.menu-option-list ul li {
+    color: #616161;
+}
+
+.printing-steps {
+    list-style: decimal;
+    padding-left: 20px;
+}
+.printing-steps li {
+    margin-bottom: 10px;
+}
+.printing-steps i {
+    margin-right: 8px;
+    color: var(--primary-color);
+}
