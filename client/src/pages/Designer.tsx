@@ -1093,6 +1093,57 @@ export default function Designer() {
     }
   }, [isDirty]);
 
+  // Add this useEffect to your Designer.tsx component (with your other useEffects)
+useEffect(() => {
+  if (window.electronAPI) {
+    // Set up menu event listeners for native menu shortcuts
+    const handleMenuNew = () => {
+      console.log('📝 Menu: New triggered');
+      handleNew();
+    };
+    const handleMenuOpen = () => {
+      console.log('📝 Menu: Open triggered');
+      handleLoad();
+    };
+    const handleMenuSave = () => {
+      console.log('📝 Menu: Save triggered');
+      handleSave();
+    };
+    const handleMenuSaveAs = () => {
+      console.log('📝 Menu: Save As triggered');
+      handleSaveAs();
+    };
+    const handleMenuPrint = () => {
+      console.log('📝 Menu: Print triggered');
+      handlePrint();
+    };
+    const handleMenuExportPDF = () => {
+      console.log('📝 Menu: Export PDF triggered');
+      handleExportPDF();
+    };
+
+    // Register the listeners
+    window.electronAPI.onMenuNew(handleMenuNew);
+    window.electronAPI.onMenuOpen(handleMenuOpen);
+    window.electronAPI.onMenuSave(handleMenuSave);
+    window.electronAPI.onMenuSaveAs(handleMenuSaveAs);
+    window.electronAPI.onMenuPrint(handleMenuPrint);
+    window.electronAPI.onMenuExportPDF(handleMenuExportPDF);
+
+    return () => {
+      // Clean up listeners
+      if (window.electronAPI.removeAllListeners) {
+        window.electronAPI.removeAllListeners('menu-new-file');
+        window.electronAPI.removeAllListeners('menu-open-file');
+        window.electronAPI.removeAllListeners('menu-save-file');
+        window.electronAPI.removeAllListeners('menu-save-as-file');
+        window.electronAPI.removeAllListeners('menu-print');
+        window.electronAPI.removeAllListeners('menu-export-pdf');
+      }
+    };
+  }
+}, [handleNew, handleLoad, handleSave, handleSaveAs, handlePrint, handleExportPDF]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
