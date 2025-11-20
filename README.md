@@ -9,7 +9,7 @@
 
   
 
-A cross-platform precision drill hole layout tool for effect pedal enclosures.
+A cross-platform precision layout tool for guitar pedal enclosures.
 
   
 
@@ -41,7 +41,7 @@ Created by Tim Samoff ([@circuitous.fx](https://www.instagram.com/circuitous.fx/
 
 - [Windows](https://github.com/timsamoff/enclosure-pro/releases/download/untagged-237cd5c4f952fe7f4c46/Enclosure.Pro.Setup.1.0.0.exe) (EXE)
 
-- [Mac](https://github.com/timsamoff/enclosure-pro/releases/download/untagged-237cd5c4f952fe7f4c46/Enclosure.Pro-1.0.0-arm64.dmg) (DMG)
+- [Mac](https://github.com/timsamoff/enclosure-pro/releases/download/untagged-237cd5c4f952fe7f4c46/Enclosure.Pro-1.0.0-universal.dmg) (DMG)
 
 - [Linux](https://github.com/timsamoff/enclosure-pro/releases/download/untagged-237cd5c4f952fe7f4c46/Enclosure.Pro-1.0.0.AppImage) (AppImage)
 
@@ -57,4 +57,4 @@ Created by Tim Samoff ([@circuitous.fx](https://www.instagram.com/circuitous.fx/
 
   
 
-[GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
+ - [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
