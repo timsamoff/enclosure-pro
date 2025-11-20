@@ -229,11 +229,11 @@ figure img {
     font-weight: bold;
     margin-bottom: 0; 
 }
-/* File size (small) styles */
+/* File size (small) styles - NOT BOLD as requested */
 .downloads-list a small {
     font-size: 0.75em; 
     opacity: 0.8; 
-    font-weight: normal;
+    font-weight: normal; 
     margin-top: 0; 
 }
 
@@ -255,42 +255,4 @@ figure img {
 .ui-image-list {
     list-style-type: decimal; /* Enable 1, 2, 3 numbering */
     padding-left: 20px;
-    margin-top: 20px;
-}
-.ui-image-list li {
-    margin-bottom: 10px;
-}
-/* Styling for nested list letters */
-.ui-image-list ol {
-    margin-top: 5px;
-}
-
-.menu-option-list {
-    list-style-type: none;
-    padding-left: 15px;
-}
-.menu-option-list strong {
-    display: block;
-    margin-bottom: 5px;
-    color: var(--secondary-color);
-}
-.menu-option-list ul {
-    list-style-type: square;
-    margin-top: 5px;
-    margin-bottom: 10px;
-}
-.menu-option-list ul li {
-    color: #616161;
-}
-
-.printing-steps {
-    list-style: decimal;
-    padding-left: 20px;
-}
-.printing-steps li {
-    margin-bottom: 10px;
-}
-.printing-steps i {
-    margin-right: 8px;
-    color: var(--primary-color);
-}
+    margin-top: 20px
