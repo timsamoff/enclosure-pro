@@ -219,4 +219,4 @@ After printing the drill hole layout:
 5. Use the crosshairs on the template to guide your center punching.
 6. Remove the template and drill!
 
-<img  src="https://github.com/timsamoff/enclosure-pro/blob/main/images/ep_print.jpg?raw=true"  width="500px"  alt="Enclosure Pro Printout Example">
+<img  src="https://github.com/timsamoff/enclosure-pro/blob/main/docs/ep_print.jpg?raw=true"  width="500px"  alt="Enclosure Pro Printout Example">
