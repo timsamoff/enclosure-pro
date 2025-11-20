@@ -37,8 +37,16 @@
       }
     ],
     "mac": {
-      "target": ["dmg", "zip"],
-      "arch": ["universal"]
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        },
+        {
+          "target": "zip",
+          "arch": ["universal"]
+        }
+      ]
     },
     "win": {
       "icon": "build/icon.ico",
