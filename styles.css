@@ -34,6 +34,17 @@ body {
     border-radius: 12px;
 }
 
+/* --- Margin Fix for Small Screens --- */
+/* On screens small enough for the box to fill width, add side margins and adjust width to prevent overflow. */
+@media (max-width: 1040px) { 
+    .container {
+        margin: 30px 15px; /* Add a 15px margin to the sides */
+        width: calc(100% - 30px); /* Ensure the box stays inside the margin (100% - 2*15px) */
+    }
+}
+/* ------------------------------------- */
+
+
 /* Typography and Links */
 header {
     text-align: center;
@@ -207,12 +218,12 @@ figure img {
     text-align: center;
     margin-bottom: 30px;
 }
-.video-overview img {
-    border: 4px solid var(--secondary-color); /* Dark Grey/Black border */
+.video-overview iframe { /* Added styles for embedded video */
     max-width: 100%;
     height: auto;
+    aspect-ratio: 16 / 9;
+    border: 4px solid var(--secondary-color);
     border-radius: 5px;
-    cursor: pointer;
 }
 
 .ui-image-list {
