@@ -1,20 +1,28 @@
-import { Minus, Plus, RotateCw, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { EnclosureSide } from "@/types/schema";
-import FileDropdownMenu from "./FileDropdownMenu";
-import AppIconMenu from "./AppIconMenu";
+import { 
+  FilePlus, 
+  FolderOpen, 
+  Save, 
+  Download, 
+  Printer, 
+  ZoomIn, 
+  ZoomOut, 
+  RotateCw, 
+  RotateCcw,
+  X
+} from "lucide-react";
+import { shortcuts } from "@/lib/hotkeys";
 
 interface TopControlsProps {
-  currentSide?: EnclosureSide;
+  currentSide: string | undefined;
   zoom: number;
   fileName: string;
   isDirty: boolean;
   onZoomIn: () => void;
   onZoomOut: () => void;
-  onRotate?: () => void;
-  rotationDirection?: 'cw' | 'ccw';
-  onPrevSide?: () => void;
-  onNextSide?: () => void;
+  onRotate: () => void;
+  rotationDirection: 'cw' | 'ccw';
+  onPrevSide: (() => void) | undefined;
+  onNextSide: (() => void) | undefined;
   onNew: () => void;
   onSave: () => void;
   onSaveAs: () => void;
@@ -25,16 +33,13 @@ interface TopControlsProps {
 }
 
 export default function TopControls({
-  currentSide,
   zoom,
   fileName,
   isDirty,
   onZoomIn,
   onZoomOut,
   onRotate,
-  rotationDirection = 'cw',
-  onPrevSide,
-  onNextSide,
+  rotationDirection,
   onNew,
   onSave,
   onSaveAs,
@@ -43,94 +48,142 @@ export default function TopControls({
   onPrint,
   onQuit,
 }: TopControlsProps) {
+  const displayFileName = fileName || "Untitled";
+
   return (
-    <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-background/95 backdrop-blur-md border-b border-border z-[100]">
-      {/* Left: App icon menu */}
-      <AppIconMenu />
+    <div className="absolute top-0 left-0 right-0 h-16 bg-background border-b border-border flex items-center justify-between px-4 z-50">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onNew}
+          className="px-3 py-2 hover:bg-accent rounded-md flex items-center gap-2"
+          data-testid="button-new"
+        >
+          <FilePlus className="w-5 h-5" />
+          <span>New</span>
+          <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-muted rounded border border-border">
+            {shortcuts.new}
+          </kbd>
+        </button>
+        
+        <button
+          onClick={onOpen}
+          className="px-3 py-2 hover:bg-accent rounded-md flex items-center gap-2"
+          data-testid="button-open"
+        >
+          <FolderOpen className="w-5 h-5" />
+          <span>Open</span>
+          <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-muted rounded border border-border">
+            {shortcuts.open}
+          </kbd>
+        </button>
+        
+        <button
+          onClick={onSave}
+          disabled={!isDirty}
+          className="px-3 py-2 hover:bg-accent rounded-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          data-testid="button-save"
+        >
+          <Save className="w-5 h-5" />
+          <span>Save</span>
+          <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-muted rounded border border-border">
+            {shortcuts.save}
+          </kbd>
+        </button>
+        
+        <button
+          onClick={onSaveAs}
+          className="px-3 py-2 hover:bg-accent rounded-md flex items-center gap-2"
+          data-testid="button-save-as"
+        >
+          <Save className="w-5 h-5" />
+          <span>Save As</span>
+          <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-muted rounded border border-border">
+            {shortcuts.saveAs}
+          </kbd>
+        </button>
 
-      {/* Center: Main controls */}
-      <div className="flex-1 flex items-center justify-center gap-3">
-        {/* Side navigation - only shown in legacy single-side view */}
-        {currentSide && onPrevSide && onNextSide && (
-          <div className="flex items-center gap-1 border-r border-border pr-4">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={onPrevSide}
-              data-testid="button-prev-side"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm font-medium min-w-[60px] text-center" data-testid="text-current-side">
-              {currentSide}
-            </span>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={onNextSide}
-              data-testid="button-next-side"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
+        <div className="w-px h-8 bg-border mx-2" />
 
-        {/* Zoom controls - always shown */}
-        <div className={`flex items-center gap-1 ${onRotate ? 'border-r border-border pr-4' : ''}`}>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onZoomOut}
-            data-testid="button-zoom-out"
-          >
-            <Minus className="w-4 h-4" />
-          </Button>
-          <span className="text-sm font-mono min-w-[50px] text-center" data-testid="text-zoom">
-            {Math.round(zoom * 100)}%
-          </span>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onZoomIn}
-            data-testid="button-zoom-in"
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Rotation - shown in unwrapped view */}
-        {onRotate && (
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRotate();
-            }}
-            data-testid="button-rotate"
-            aria-label={rotationDirection === 'cw' ? 'Rotate 90° clockwise' : 'Rotate 90° counterclockwise'}
-          >
-            {rotationDirection === 'cw' ? (
-              <RotateCw className="w-4 h-4" />
-            ) : (
-              <RotateCcw className="w-4 h-4" />
-            )}
-          </Button>
-        )}
+        <button
+          onClick={onPrint}
+          className="px-3 py-2 hover:bg-accent rounded-md flex items-center gap-2"
+          data-testid="button-print"
+        >
+          <Printer className="w-5 h-5" />
+          <span>Print</span>
+          <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-muted rounded border border-border">
+            {shortcuts.print}
+          </kbd>
+        </button>
+        
+        <button
+          onClick={onExportPDF}
+          className="px-3 py-2 hover:bg-accent rounded-md flex items-center gap-2"
+          data-testid="button-export-pdf"
+        >
+          <Download className="w-5 h-5" />
+          <span>Export PDF</span>
+          <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-muted rounded border border-border">
+            {shortcuts.exportPDF}
+          </kbd>
+        </button>
       </div>
 
-      {/* Right: File dropdown menu */}
-      <FileDropdownMenu
-        fileName={fileName}
-        isDirty={isDirty}
-        onNew={onNew}
-        onOpen={onOpen}
-        onSave={onSave}
-        onSaveAs={onSaveAs}
-        onPrint={onPrint}
-        onExportPDF={onExportPDF}
-        onQuit={onQuit}
-      />
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium px-3">
+          {displayFileName}
+          {isDirty && " •"}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onZoomOut}
+          className="p-2 hover:bg-accent rounded-md"
+          data-testid="button-zoom-out"
+        >
+          <ZoomOut className="w-5 h-5" />
+        </button>
+        
+        <span className="text-sm font-medium min-w-[60px] text-center">
+          {Math.round(zoom * 100)}%
+        </span>
+        
+        <button
+          onClick={onZoomIn}
+          className="p-2 hover:bg-accent rounded-md"
+          data-testid="button-zoom-in"
+        >
+          <ZoomIn className="w-5 h-5" />
+        </button>
+
+        <div className="w-px h-8 bg-border mx-2" />
+
+        <button
+          onClick={onRotate}
+          className="p-2 hover:bg-accent rounded-md"
+          data-testid="button-rotate"
+        >
+          {rotationDirection === 'cw' ? (
+            <RotateCw className="w-5 h-5" />
+          ) : (
+            <RotateCcw className="w-5 h-5" />
+          )}
+        </button>
+
+        {window.electronAPI?.isElectron && (
+          <>
+            <div className="w-px h-8 bg-border mx-2" />
+            <button
+              onClick={onQuit}
+              className="p-2 hover:bg-accent rounded-md"
+              data-testid="button-quit"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
