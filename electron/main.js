@@ -211,9 +211,9 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // On macOS, quit the app when all windows are closed
+  // (This overrides the default behavior of keeping the app running)
+  app.quit();
 });
 
 // Helper function to extract file path from command line arguments
@@ -243,6 +243,8 @@ function getFilePathFromArgs(args) {
 ipcMain.handle('window:close', () => {
   if (mainWindow) {
     mainWindow.destroy();
+    // After destroying the window, quit the app
+    app.quit();
   }
 });
 
