@@ -17,62 +17,58 @@
     "check": "tsc"
   },
   "build": {
-  "appId": "com.enclosurepro.app",
-  "productName": "Enclosure Pro",
-  "files": [
-    "dist/**/*",
-    "electron/**/*",
-    "images/**/*"
-  ],
-  "directories": {
-    "buildResources": "build",
-    "output": "release"
-  },
-  "fileAssociations": [
-    {
-      "ext": "enc",
-      "name": "Enclosure Project File",
-      "description": "Enclosure Pro Project File",
-      "role": "Editor"
-    }
-  ],
-  "mac": {
-  "build": {
+    "appId": "com.enclosurepro.app",
+    "productName": "Enclosure Pro",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "images/**/*"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "fileAssociations": [
+      {
+        "ext": "enc",
+        "name": "Enclosure Project File",
+        "description": "Enclosure Pro Project File",
+        "role": "Editor"
+      }
+    ],
     "mac": {
       "target": ["dmg", "zip"],
       "arch": ["universal"]
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Graphics",
+      "maintainer": "Tim Samoff <samoff@gmail.com>",
+      "synopsis": "Professional effects pedal enclosure designer",
+      "description": "Design drill hole layouts for effects pedal enclosures"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "perMachine": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
-  }
-},
-  "win": {
-    "icon": "build/icon.ico",
-    "target": [
-      "nsis",
-      "portable"
-    ]
   },
-  "linux": {
-    "icon": "build/icon.png",
-    "target": [
-      "AppImage",
-      "deb"
-    ],
-    "category": "Graphics",
-    "maintainer": "Tim Samoff <samoff@gmail.com>",
-    "synopsis": "Professional effects pedal enclosure designer",
-    "description": "Design drill hole layouts for effects pedal enclosures"
-  },
-  "nsis": {
-    "oneClick": false,
-    "allowToChangeInstallationDirectory": true,
-    "installerIcon": "build/icon.ico",
-    "uninstallerIcon": "build/icon.ico",
-    "installerHeaderIcon": "build/icon.ico",
-    "perMachine": true,
-    "createDesktopShortcut": true,
-    "createStartMenuShortcut": true
-  }
-},
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.4",
