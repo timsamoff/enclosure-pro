@@ -102,3 +102,7 @@ The Design Canvas is where components are placed on the enclosure. Components ca
 When a component is selected, an orange trash can icon will appear at the bottom right of the Design Canvas. Click this button to delete the selected component.
 
 Use the mouse right-click to pan around the Design Canvas space.
+
+## Printing
+
+Once you have printed your drill hole layout, you will have to cut it out (scissors work fine, but using an X-acto knife and straight edge is recommended). You can cut the enclosure template out with or without the rounded corners, as both will wrap your enclosure just fine. I'm the cutout along the face (front) edges, wrap it around the enclose, and tape it in place. Use the crosshairs in the template to guide your center punching. Remove the template and drill!
