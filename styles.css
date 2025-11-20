@@ -197,20 +197,46 @@ figure img {
     margin-bottom: 15px;
 }
 .downloads-list a {
-    display: inline-block;
-    padding: 12px 25px;
-    background-color: var(--secondary-color); /* Dark Grey/Black button */
+    /* Set dimensions and alignment for the overall button */
+    display: inline-flex; 
+    width: 220px; 
+    flex-direction: column; /* Stacks the primary text and the small text */
+    align-items: flex-start; /* Left-aligns content inside the button */
+    padding: 8px 25px; 
+    background-color: var(--secondary-color); 
     color: white;
     border-radius: 8px;
     transition: background-color 0.3s;
 }
 .downloads-list a:hover {
-    background-color: #000; /* Pure Black on hover */
+    background-color: #000; 
     text-decoration: none;
 }
-.downloads-list i {
-    margin-right: 5px;
+/* Container for icon and OS name (horizontal) */
+.downloads-list a .download-primary {
+    display: flex;
+    align-items: center; /* Vertically centers the icon and text */
+    margin-bottom: 3px; /* Space between the primary label and file size */
 }
+/* Icon styles, now horizontally aligned with span */
+.downloads-list a .download-primary i {
+    margin-right: 8px; /* Space to the right of the icon */
+    margin-bottom: 0; 
+    font-size: 1.5em; 
+}
+/* Existing span styles (OS Name) - ensures content is visible */
+.downloads-list a span {
+    font-weight: bold;
+    margin-bottom: 0; 
+}
+/* File size (small) styles */
+.downloads-list a small {
+    font-size: 0.75em; 
+    opacity: 0.8; 
+    font-weight: normal;
+    margin-top: 0; 
+}
+
 
 /* Documentation.html Specific Styles */
 
@@ -230,7 +256,6 @@ figure img {
     list-style-type: decimal; /* Enable 1, 2, 3 numbering */
     padding-left: 20px;
     margin-top: 20px;
-    /* We don't need counter-reset since we are using default list style */
 }
 .ui-image-list li {
     margin-bottom: 10px;
