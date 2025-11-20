@@ -37,7 +37,7 @@ Created by Tim Samoff ([@circuitous.fx](https://www.instagram.com/circuitous.fx/
 
 ## Installer Downloads
 
-***Note:** When launching the app for the first time, your operating system may ask you to verify or authorize it (this is normal for macOS and occasionally on Windows). Follow the prompts to allow the application to run.*
+***Note:** When launching the app for the first time, your operating system may ask you to verify or authorize it (this is normal for macOS and it will occasionally occur on Windows). Follow the prompts to allow the application to run.*
 
 - [Windows](https://github.com/timsamoff/enclosure-pro/releases/download/untagged-c6d12035384e9af429d9/Enclosure.Pro.Setup.1.0.0.exe) (EXE)
 
