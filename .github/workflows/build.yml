@@ -31,11 +31,18 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
       
-      - name: Build app
+      - name: Build app (macOS - Universal)
+        if: matrix.os == 'macos-latest'
+        run: npm run electron:build -- --mac --universal --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        timeout-minutes: 45
+      
+      - name: Build app (Other platforms)
+        if: matrix.os != 'macos-latest'
         run: npm run electron:build -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APPLE_ARCH: ${{ matrix.os == 'macos-latest' && 'universal' || '' }}
         timeout-minutes: 30
       
       - name: List build outputs (Linux/Mac)
