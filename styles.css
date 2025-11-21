@@ -255,4 +255,10 @@ figure img {
 .ui-image-list {
     list-style-type: decimal; /* Enable 1, 2, 3 numbering */
     padding-left: 20px;
-    margin-top: 20px
+    margin-top: 20px;
+}
+
+.printing-steps i {
+    margin-right: 8px;
+    color: var(--primary-color);
+}
