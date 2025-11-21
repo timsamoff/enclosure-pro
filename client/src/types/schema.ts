@@ -13,6 +13,7 @@ export const ENCLOSURE_TYPES = {
   "1590BB": { width: 119.5, height: 94, depth: 30 },
   "1590BB2": { width: 120, height: 94, depth: 34 },
   "1590DD": { width: 188, height: 120, depth: 33 },
+  "1590XX": { width: 145, height: 120, depth: 35, cornerStyle: "rounded" as const },
 } as const;
 
 export type EnclosureType = keyof typeof ENCLOSURE_TYPES;
