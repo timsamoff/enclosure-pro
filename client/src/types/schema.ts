@@ -5,14 +5,32 @@ export type MeasurementUnit = "metric" | "imperial";
 
 export const CORNER_RADIUS = 5;
 
+export interface EnclosureDimensions {
+  width: number;
+  height: number;
+  depth: number;
+  cornerStyle: "rounded" | "sharp";
+  frontDepth?: number; // For trapezoidal enclosures
+  isTrapezoidal?: boolean; // Add this flag
+}
+
 export const ENCLOSURE_TYPES = {
-  "1590A": { width: 38.5, height: 93.6, depth: 28 },
-  "1590B": { width: 60.9, height: 111.9, depth: 29 },
-  "1590LB": { width: 50.5, height: 50.5, depth: 29 },
-  "125B": { width: 66, height: 121, depth: 35.94 },
-  "1590BB": { width: 119.5, height: 94, depth: 30 },
-  "1590BB2": { width: 120, height: 94, depth: 34 },
-  "1590DD": { width: 188, height: 120, depth: 33 },
+  "1590A": { width: 38.5, height: 93.6, depth: 28, cornerStyle: "rounded" as const, isTrapezoidal: false },
+  "1590B": { width: 60.9, height: 111.9, depth: 29, cornerStyle: "rounded" as const, isTrapezoidal: false },
+  "1590LB": { width: 50.5, height: 50.5, depth: 29, cornerStyle: "rounded" as const, isTrapezoidal: false },
+  "125B": { width: 66, height: 121, depth: 35.94, cornerStyle: "rounded" as const, isTrapezoidal: false },
+  "1590BB": { width: 119.5, height: 94, depth: 30, cornerStyle: "rounded" as const, isTrapezoidal: false },
+  "1590BB2": { width: 120, height: 94, depth: 34, cornerStyle: "rounded" as const, isTrapezoidal: false },
+  "1590DD": { width: 188, height: 120, depth: 33, cornerStyle: "rounded" as const, isTrapezoidal: false },
+  "1590XX": { width: 145, height: 120, depth: 35, cornerStyle: "rounded" as const, isTrapezoidal: false },
+  "FZ-1 FuzzTone": { 
+    width: 91, 
+    height: 150, 
+    depth: 56,
+    frontDepth: 13,
+    cornerStyle: "sharp" as const,
+    isTrapezoidal: true
+  },
 } as const;
 
 export type EnclosureType = keyof typeof ENCLOSURE_TYPES;
@@ -43,7 +61,7 @@ export interface ProjectState {
   gridSize: number;
   zoom: number;
   unit: MeasurementUnit;
-  appIcon?: string; // Add this line - make it optional for backward compatibility
+  appIcon?: string;
 }
 
 export interface PlacedComponent {
@@ -54,13 +72,65 @@ export interface PlacedComponent {
   side: EnclosureSide;
 }
 
-export function getUnwrappedDimensions(enclosureType: EnclosureType) {
+export interface SideDimensions {
+  width: number;
+  height: number;
+  cornerStyle: "rounded" | "sharp";
+  isTrapezoidal?: boolean;
+  frontWidth?: number; // For trapezoidal sides - narrow end width
+}
+
+export function getUnwrappedDimensions(enclosureType: EnclosureType): {
+  front: SideDimensions;
+  top: SideDimensions;
+  bottom: SideDimensions;
+  left: SideDimensions;
+  right: SideDimensions;
+} {
   const enc = ENCLOSURE_TYPES[enclosureType];
+  const isTrapezoidal = enc.isTrapezoidal || false;
+  
+  if (isTrapezoidal && enc.frontDepth) {
+    // For trapezoidal enclosures
+    return {
+      front: { 
+        width: enc.width, 
+        height: enc.height, 
+        cornerStyle: enc.cornerStyle 
+      },
+      top: { 
+        width: enc.width, 
+        height: enc.depth, // Top uses full depth
+        cornerStyle: enc.cornerStyle 
+      },
+      bottom: { 
+        width: enc.width, 
+        height: enc.frontDepth, // Bottom uses front depth (narrow)
+        cornerStyle: enc.cornerStyle 
+      },
+      left: { 
+        width: enc.depth, // Width at top (back - wide)
+        height: enc.height, 
+        cornerStyle: enc.cornerStyle,
+        isTrapezoidal: true,
+        frontWidth: enc.frontDepth // Narrow width at bottom
+      },
+      right: { 
+        width: enc.depth, // Width at top (back - wide)
+        height: enc.height, 
+        cornerStyle: enc.cornerStyle,
+        isTrapezoidal: true,
+        frontWidth: enc.frontDepth // Narrow width at bottom
+      },
+    };
+  }
+  
+  // Original logic for rectangular enclosures
   return {
-    front: { width: enc.width, height: enc.height },
-    top: { width: enc.width - (2 * CORNER_RADIUS), height: enc.depth },
-    bottom: { width: enc.width - (2 * CORNER_RADIUS), height: enc.depth },
-    left: { width: enc.depth, height: enc.height - (2 * CORNER_RADIUS) },
-    right: { width: enc.depth, height: enc.height - (2 * CORNER_RADIUS) },
+    front: { width: enc.width, height: enc.height, cornerStyle: enc.cornerStyle },
+    top: { width: enc.width - (2 * CORNER_RADIUS), height: enc.depth, cornerStyle: enc.cornerStyle },
+    bottom: { width: enc.width - (2 * CORNER_RADIUS), height: enc.depth, cornerStyle: enc.cornerStyle },
+    left: { width: enc.depth, height: enc.height - (2 * CORNER_RADIUS), cornerStyle: enc.cornerStyle },
+    right: { width: enc.depth, height: enc.height - (2 * CORNER_RADIUS), cornerStyle: enc.cornerStyle },
   };
 }
