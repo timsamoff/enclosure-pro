@@ -97,6 +97,7 @@ jobs:
             artifacts/**/latest*.json
           draft: true
           prerelease: ${{ github.ref == 'refs/heads/maintenance/v1.0.0' }}
+          replace: true  # ← ADDED THIS LINE
           generate_release_notes: true
           tag_name: ${{ github.ref == 'refs/heads/maintenance/v1.0.0' && 'v1.0.0-patch.latest' || github.ref_name }}
         env:
