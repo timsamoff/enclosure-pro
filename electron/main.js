@@ -1,10 +1,152 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
+const { autoUpdater } = require('electron-updater');
 
 let mainWindow;
 let fileToOpen = null;
 let isWindowReady = false;
+
+// Test updater function (inline to avoid separate file)
+function setupTestUpdater(mainWindow) {
+  // Simulate update available
+  const simulateUpdate = () => {
+    console.log('🔧 Simulating update available...');
+    
+    // Simulate update-available event
+    mainWindow.webContents.send('update-available', {
+      version: '1.0.1',
+      releaseDate: new Date().toISOString()
+    });
+    
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'TEST - Update Available',
+      message: 'Simulated: Version 1.0.1 is available!',
+      buttons: ['Download', 'Later']
+    }).then((result) => {
+      if (result.response === 0) {
+        // Simulate download progress
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 10;
+          mainWindow.webContents.send('download-progress', {
+            percent: progress,
+            bytesPerSecond: 1000000,
+            total: 50000000,
+            transferred: progress * 500000
+          });
+          
+          if (progress >= 100) {
+            clearInterval(interval);
+            // Simulate update downloaded
+            setTimeout(() => {
+              mainWindow.webContents.send('update-downloaded', {
+                version: '1.0.1'
+              });
+              
+              dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'TEST - Update Ready',
+                message: 'Simulated: Update downloaded. Would you like to restart?',
+                buttons: ['Restart', 'Later']
+              });
+            }, 1000);
+          }
+        }, 200);
+      }
+    });
+  };
+
+  // For development, we'll expose this via IPC instead of menu
+  if (process.env.NODE_ENV === 'development') {
+    // Add IPC handler for test updates
+    ipcMain.handle('test:simulate-update', () => {
+      simulateUpdate();
+      return { success: true };
+    });
+  }
+
+  console.log('🔧 Test updater ready - Use AppIconMenu to test updates');
+}
+
+// Auto-updater setup
+function setupAutoUpdater() {
+  // Don't auto-download, let user control it
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('Update available:', info.version);
+    // Notify renderer that an update is available
+    mainWindow?.webContents.send('update-available', info);
+    
+    // Ask user if they want to download
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update Available',
+      message: `Version ${info.version} is available! Would you like to download it now?`,
+      buttons: ['Download', 'Later'],
+      defaultId: 0,
+      cancelId: 1
+    }).then((result) => {
+      if (result.response === 0) {
+        autoUpdater.downloadUpdate();
+      }
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('Update downloaded:', info.version);
+    // Notify renderer that update is ready
+    mainWindow?.webContents.send('update-downloaded', info);
+    
+    // Ask user to restart
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update Ready',
+      message: `Version ${info.version} has been downloaded. Restart the application to apply the update?`,
+      buttons: ['Restart', 'Later'],
+      defaultId: 0,
+      cancelId: 1
+    }).then((result) => {
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+  });
+
+  autoUpdater.on('error', (error) => {
+    console.error('Auto-updater error:', error);
+    mainWindow?.webContents.send('update-error', error.message);
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    // Send progress to renderer if you want a progress bar
+    mainWindow?.webContents.send('download-progress', progressObj);
+  });
+}
+
+// Check for updates function
+function checkForUpdates() {
+  autoUpdater.checkForUpdates().then(result => {
+    if (!result?.updateInfo) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'No Updates',
+        message: 'You are running the latest version of Enclosure Pro.',
+        buttons: ['OK']
+      });
+    }
+  }).catch(error => {
+    dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: 'Update Check Failed',
+      message: `Failed to check for updates: ${error.message}`,
+      buttons: ['OK']
+    });
+  });
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -17,10 +159,20 @@ function createWindow() {
     },
     title: 'Enclosure Pro',
     icon: path.join(__dirname, '../images/EnclosureProIcon.png'),
+    // Remove the menu bar completely
+    autoHideMenuBar: true,
+    titleBarStyle: 'hiddenInset', // Cleaner look without menu
   });
 
-  // Set up the Project menu with proper shortcuts
-  setupProjectMenu();
+  // REMOVED: setupProjectMenu() - No system menu wanted
+  
+  // Set up auto-updater
+  setupAutoUpdater();
+
+  // Set up test updater
+  if (process.env.NODE_ENV === 'development') {
+    setupTestUpdater(mainWindow);
+  }
 
   // Prevent window from closing, let renderer handle it
   mainWindow.on('close', (e) => {
@@ -38,14 +190,11 @@ function createWindow() {
   
   // When window is ready, check if there's a file to open
   mainWindow.webContents.once('did-finish-load', () => {
-    // console.log('🎯 Window finished loading, window is ready');
     isWindowReady = true;
     
     if (fileToOpen) {
-      // console.log('📁 Found file to open from startup:', fileToOpen);
       // Give React time to initialize
       setTimeout(() => {
-        // console.log('🚀 Sending file-open-request for startup file');
         mainWindow.webContents.send('file-open-request', fileToOpen);
         fileToOpen = null;
       }, 1500);
@@ -58,105 +207,14 @@ function createWindow() {
   }
 }
 
-// Setup Project menu with proper shortcuts for each platform
-function setupProjectMenu() {
-  const isMac = process.platform === 'darwin';
-
-  const template = [
-    {
-      label: 'Project',
-      submenu: [
-        {
-          label: 'New',
-          accelerator: isMac ? 'Cmd+N' : 'Ctrl+N',
-          click: () => {
-            mainWindow?.webContents.send('menu-new-file');
-          }
-        },
-        {
-          label: 'Open',
-          accelerator: isMac ? 'Cmd+O' : 'Ctrl+O',
-          click: async () => {
-            try {
-              const result = await dialog.showOpenDialog(mainWindow, {
-                filters: [
-                  { name: 'Enclosure Project Files', extensions: ['enc'] },
-                  { name: 'All Files', extensions: ['*'] }
-                ]
-              });
-              
-              if (!result.canceled && result.filePaths.length > 0) {
-                mainWindow?.webContents.send('file-open-request', result.filePaths[0]);
-              }
-            } catch (error) {
-              console.error('Open failed:', error);
-            }
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Save',
-          accelerator: isMac ? 'Cmd+S' : 'Ctrl+S',
-          click: () => {
-            mainWindow?.webContents.send('menu-save-file');
-          }
-        },
-        {
-          label: 'Save As',
-          accelerator: isMac ? 'Shift+Cmd+S' : 'Ctrl+Shift+S',
-          click: () => {
-            mainWindow?.webContents.send('menu-save-as-file');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Print',
-          accelerator: isMac ? 'Cmd+P' : 'Ctrl+P',
-          click: () => {
-            mainWindow?.webContents.send('menu-print');
-          }
-        },
-        {
-          label: 'Export PDF',
-          accelerator: isMac ? 'Cmd+E' : 'Ctrl+E',
-          click: () => {
-            mainWindow?.webContents.send('menu-export-pdf');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Quit',
-          accelerator: isMac ? 'Cmd+Q' : 'Ctrl+Q',
-          click: () => {
-            // Send quit request to renderer to handle unsaved changes
-            mainWindow?.webContents.send('window-close-requested');
-          }
-        }
-      ]
-    }
-  ];
-
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
-}
-
 // Handle file open events (macOS)
 app.on('open-file', (event, filePath) => {
   event.preventDefault();
-  // console.log('📂 macOS open-file event received:', filePath);
   
   if (mainWindow && isWindowReady) {
-    // console.log('✅ Window is ready, sending file-open-request immediately');
     mainWindow.webContents.send('file-open-request', filePath);
   } else {
-    // console.log('⏳ Window not ready yet, storing file path for later');
     fileToOpen = filePath;
-    
-    // If app is still starting, we might need to create the window
-    if (!mainWindow) {
-      // console.log('🔄 No main window, will create one');
-      // The window will be created in whenReady and will pick up fileToOpen
-    }
   }
 });
 
@@ -164,12 +222,9 @@ app.on('open-file', (event, filePath) => {
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
-  // console.log('🔒 Another instance is running, quitting...');
   app.quit();
 } else {
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    // console.log('🔄 Second instance attempted with command line:', commandLine);
-    
     // Someone tried to run a second instance, focus our window instead
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
@@ -178,12 +233,9 @@ if (!gotTheLock) {
       // Check for file path in command line
       const filePath = getFilePathFromArgs(commandLine);
       if (filePath) {
-        // console.log('📁 File path from second instance:', filePath);
         if (isWindowReady) {
-          // console.log('✅ Window ready, sending file-open-request');
           mainWindow.webContents.send('file-open-request', filePath);
         } else {
-          // console.log('⏳ Window not ready, storing file path');
           fileToOpen = filePath;
         }
       }
@@ -192,16 +244,18 @@ if (!gotTheLock) {
 }
 
 app.whenReady().then(() => {
-  // console.log('🚀 App is ready, process args:', process.argv);
-  
   // Check for file path in initial launch (Windows/Linux)
   const filePath = getFilePathFromArgs(process.argv);
   if (filePath) {
-    // console.log('📁 File path from initial launch:', filePath);
     fileToOpen = filePath;
   }
   
   createWindow();
+
+  // Check for updates 5 seconds after app starts
+  setTimeout(() => {
+    autoUpdater.checkForUpdates();
+  }, 5000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -212,21 +266,16 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   // On macOS, quit the app when all windows are closed
-  // (This overrides the default behavior of keeping the app running)
   app.quit();
 });
 
 // Helper function to extract file path from command line arguments
 function getFilePathFromArgs(args) {
-  // console.log('🔍 Processing args for file path:', args);
-  
   if (process.platform === 'win32') {
     // On Windows, look for .enc files in all arguments
-    // Skip the first argument (electron.exe or app path)
     const potentialFiles = args.slice(1).filter(arg => 
       arg.endsWith('.enc') && !arg.startsWith('--')
     );
-    // console.log('💻 Windows potential files:', potentialFiles);
     return potentialFiles[0] || null;
   } else if (process.platform === 'darwin') {
     // macOS - we use the 'open-file' event instead
@@ -234,7 +283,6 @@ function getFilePathFromArgs(args) {
   } else {
     // Linux - look for .enc files in arguments
     const fileArg = args.find(arg => arg.endsWith('.enc') && !arg.startsWith('-'));
-    // console.log('🐧 Linux file arg found:', fileArg);
     return fileArg;
   }
 }
@@ -246,6 +294,32 @@ ipcMain.handle('window:close', () => {
     // After destroying the window, quit the app
     app.quit();
   }
+});
+
+// ADDED: IPC handlers for auto-updater
+ipcMain.handle('app:get-version', () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('app:check-for-updates', () => {
+  return autoUpdater.checkForUpdates();
+});
+
+ipcMain.handle('app:restart-and-update', () => {
+  autoUpdater.quitAndInstall();
+});
+
+// ADDED: Test update handler for development
+ipcMain.handle('test:simulate-update', () => {
+  if (process.env.NODE_ENV === 'development') {
+    // Simulate update available
+    mainWindow?.webContents.send('update-available', {
+      version: '1.0.1',
+      releaseDate: new Date().toISOString()
+    });
+    return { success: true };
+  }
+  return { success: false, error: 'Only available in development' };
 });
 
 // IPC Handlers for file operations
@@ -299,15 +373,13 @@ ipcMain.handle('file:read', async (event, { filePath }) => {
   }
 });
 
-// New IPC handler for opening files from double-click
+// IPC handler for opening files from double-click
 ipcMain.handle('file:open-external', async (event, filePath) => {
   try {
-    // console.log('📖 Reading external file:', filePath);
     const content = await fs.readFile(filePath, 'utf8');
-    // console.log('✅ File read successfully, length:', content.length);
     return { success: true, content, filePath };
   } catch (error) {
-    console.error('❌ Error reading external file:', error);
+    console.error('Error reading external file:', error);
     return { success: false, error: error.message };
   }
 });
