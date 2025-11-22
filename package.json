@@ -1,6 +1,6 @@
 {
   "name": "enclosure-pro",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Professional effects pedal enclosure drill hole designer",
   "main": "electron/main.js",
   "license": "GPL-3.0",
