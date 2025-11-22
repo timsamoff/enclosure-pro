@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import enclosureProIcon from "@/../../images/EnclosureProIcon.svg";
 import { useEffect, useState } from "react";
-import ProgressDialog from "./ProgressDialog";
+import ProgressDialog from "@/components/ProgressDialog";
 
 export default function AppIconMenu() {
   const [appVersion, setAppVersion] = useState('1.0.0');
