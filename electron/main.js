@@ -28,9 +28,17 @@ function setupAutoUpdater() {
       cancelId: 1
     }).then((result) => {
       if (result.response === 0) {
+        // Notify renderer that download is starting
+        mainWindow?.webContents.send('download-started');
         autoUpdater.downloadUpdate();
       }
     });
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    console.log('Download progress:', progressObj.percent);
+    // Send progress to renderer
+    mainWindow?.webContents.send('download-progress', progressObj);
   });
 
   autoUpdater.on('update-downloaded', (info) => {
@@ -57,6 +65,7 @@ function setupAutoUpdater() {
     console.error('Auto-updater error:', error);
     mainWindow?.webContents.send('update-error', error.message);
   });
+}
 
   autoUpdater.on('download-progress', (progressObj) => {
     // Send progress to renderer if you want a progress bar
