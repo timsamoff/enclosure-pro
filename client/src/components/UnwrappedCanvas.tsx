@@ -19,7 +19,26 @@ interface UnwrappedCanvasProps {
   onSelectComponent: (id: string | null) => void;
   onCanvasClick?: () => void;
   onZoomChange?: (newZoom: number) => void;
+  rotatesLabels?: boolean;
 }
+
+// Helper function to get rotated side label
+const getRotatedSideLabel = (side: EnclosureSide, rotation: number, rotatesLabels: boolean): EnclosureSide => {
+  if (!rotatesLabels || rotation === 0) {
+    return side;
+  }
+  
+  // 90° clockwise rotation mapping
+  const rotationMap: Record<EnclosureSide, EnclosureSide> = {
+    'Front': 'Front', // Front stays the same
+    'Left': 'Top',
+    'Top': 'Right', 
+    'Right': 'Bottom',
+    'Bottom': 'Left'
+  };
+  
+  return rotationMap[side];
+};
 
 export default function UnwrappedCanvas({
   enclosureType,
@@ -35,6 +54,7 @@ export default function UnwrappedCanvas({
   onSelectComponent,
   onCanvasClick,
   onZoomChange,
+  rotatesLabels = false,
 }: UnwrappedCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -178,6 +198,9 @@ export default function UnwrappedCanvas({
       ctx.save();
       ctx.translate(sideLayout.x, sideLayout.y);
 
+      // Use rotated label if enclosure supports it
+      const displayLabel = getRotatedSideLabel(label as EnclosureSide, rotation, rotatesLabels);
+
       // Draw grid if enabled
       if (gridEnabled && gridSize > 0) {
         ctx.strokeStyle = "rgba(128, 128, 128, 0.5)";
@@ -251,41 +274,39 @@ export default function UnwrappedCanvas({
           // Sharp corners
           ctx.strokeRect(0, 0, sideLayout.width, sideLayout.height);
         }
-      // In your drawSide function, replace the trapezoid drawing section with:
-
-} else if ((side === 'left' || side === 'right') && sideData.isTrapezoidal && sideData.frontWidth) {
-  // Draw trapezoid for trapezoidal left/right sides
-  const backWidth = sideLayout.width; // Wide end at top (56mm)
-  const frontWidth = sideData.frontWidth * mmToPixels; // Narrow end at bottom (13mm)
-  const height = sideLayout.height;
-  
-  console.log(`${side} side trapezoid:`, {
-    backWidthMM: backWidth / mmToPixels,
-    frontWidthMM: frontWidth / mmToPixels, 
-    heightMM: height / mmToPixels
-  });
-  
-  ctx.beginPath();
-  if (side === 'left') {
-    // Left side: wide at top (back), narrow at bottom (front)
-    // Should connect to front panel on the RIGHT edge
-    // Horizontally mirrored: draw from RIGHT to LEFT
-    ctx.moveTo(backWidth, 0);           // Top RIGHT (back, wide end - 56mm)
-    ctx.lineTo(0, 0);                   // Top LEFT (back, wide end - 0mm)  
-    ctx.lineTo(backWidth - frontWidth, height); // Bottom LEFT (front, narrow end - 43mm)
-    ctx.lineTo(backWidth, height);      // Bottom RIGHT (front, narrow end - 56mm)
-  } else {
-    // Right side: wide at top (back), narrow at bottom (front)  
-    // Should connect to front panel on the LEFT edge
-    // Normal orientation: draw from LEFT to RIGHT
-    ctx.moveTo(0, 0);                   // Top LEFT (back, wide end - 0mm)
-    ctx.lineTo(backWidth, 0);           // Top RIGHT (back, wide end - 56mm)
-    ctx.lineTo(frontWidth, height);     // Bottom RIGHT (front, narrow end - 13mm)
-    ctx.lineTo(0, height);              // Bottom LEFT (front, narrow end - 0mm)
-  }
-  ctx.closePath();
-  ctx.stroke();
+      } else if ((side === 'left' || side === 'right') && sideData.isTrapezoidal && sideData.frontWidth) {
+        // Draw trapezoid for trapezoidal left/right sides
+        const backWidth = sideLayout.width; // Wide end at top (56mm)
+        const frontWidth = sideData.frontWidth * mmToPixels; // Narrow end at bottom (13mm)
+        const height = sideLayout.height;
         
+        console.log(`${side} side trapezoid:`, {
+          backWidthMM: backWidth / mmToPixels,
+          frontWidthMM: frontWidth / mmToPixels, 
+          heightMM: height / mmToPixels
+        });
+        
+        ctx.beginPath();
+        if (side === 'left') {
+          // Left side: wide at top (back), narrow at bottom (front)
+          // Should connect to front panel on the RIGHT edge
+          // Horizontally mirrored: draw from RIGHT to LEFT
+          ctx.moveTo(backWidth, 0);           // Top RIGHT (back, wide end - 56mm)
+          ctx.lineTo(0, 0);                   // Top LEFT (back, wide end - 0mm)  
+          ctx.lineTo(backWidth - frontWidth, height); // Bottom LEFT (front, narrow end - 43mm)
+          ctx.lineTo(backWidth, height);      // Bottom RIGHT (front, narrow end - 56mm)
+        } else {
+          // Right side: wide at top (back), narrow at bottom (front)  
+          // Should connect to front panel on the LEFT edge
+          // Normal orientation: draw from LEFT to RIGHT
+          ctx.moveTo(0, 0);                   // Top LEFT (back, wide end - 0mm)
+          ctx.lineTo(backWidth, 0);           // Top RIGHT (back, wide end - 56mm)
+          ctx.lineTo(frontWidth, height);     // Bottom RIGHT (front, narrow end - 13mm)
+          ctx.lineTo(0, height);              // Bottom LEFT (front, narrow end - 0mm)
+        }
+        ctx.closePath();
+        ctx.stroke();
+              
         // Draw centerline for reference
         ctx.save();
         ctx.strokeStyle = "rgba(128, 128, 128, 0.5)";
@@ -300,16 +321,19 @@ export default function UnwrappedCanvas({
         ctx.strokeRect(0, 0, sideLayout.width, sideLayout.height);
       }
 
-      // DRAW SIDE LABEL - with rotation compensation to keep readable
+      // DRAW SIDE LABEL - FIXED: Always keep labels readable left-to-right
       ctx.save();
       ctx.translate(sideLayout.width / 2, sideLayout.height / 2);
+      
+      // Apply counter-rotation to keep labels readable regardless of canvas rotation
       const rotRad = (-rotation * Math.PI) / 180;
       ctx.rotate(rotRad);
+      
       ctx.fillStyle = "hsl(var(--foreground))";
       ctx.font = `${14 / zoom}px Arial`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(label, 0, 0);
+      ctx.fillText(displayLabel, 0, 0);
       ctx.restore();
 
       // Draw components for this side
@@ -433,7 +457,7 @@ export default function UnwrappedCanvas({
     drawSide('right', 'Right');
 
     ctx.restore();
-  }, [components, zoom, rotation, gridEnabled, gridSize, unit, selectedComponent, panOffset, enclosureType, resizeTrigger]);
+  }, [components, zoom, rotation, gridEnabled, gridSize, unit, selectedComponent, panOffset, enclosureType, resizeTrigger, rotatesLabels]);
 
   // Handle window resize
   useEffect(() => {
