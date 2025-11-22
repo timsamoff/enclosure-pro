@@ -1,25 +1,12 @@
-
-  
-
 <img  src="https://github.com/timsamoff/enclosure-pro/blob/main/images/EnclosureProIcon.png?raw=true"  width="128px"  alt="Enclosure Pro">
-
-  
 
 # Enclosure Pro
 
-  
-
 A cross-platform precision layout tool for guitar pedal enclosures.
-
-  
 
 Created by Tim Samoff ([@circuitous.fx](https://www.instagram.com/circuitous.fx/))
 
-  
-
 <img  src="https://github.com/timsamoff/enclosure-pro/blob/main/docs/Fa-Team-Fontawesome-FontAwesome-Mug-Saucer.512.png?raw=true"  width="20px"  alt="Buy Me a Cup of Coffee"> [Buy Me a Cup of Coffee](https://www.paypal.com/paypalme/circuitousfx)
-
-  
 
 ## Features
 
@@ -33,28 +20,10 @@ Created by Tim Samoff ([@circuitous.fx](https://www.instagram.com/circuitous.fx/
 
 * Print-ready blueprint export
 
-  
+## Download/Info
 
-## Installer Downloads
-
-***Note:** When launching the app for the first time, your operating system may ask you to verify or authorize it (this is normal for macOS and it will occasionally occur on Windows). Follow the prompts to allow the application to run.*
-
-- [Windows](https://github.com/timsamoff/enclosure-pro/releases/download/v1.0.0/Enclosure.Pro.Setup.1.0.0.exe) (EXE)
-
-- [Mac](https://github.com/timsamoff/enclosure-pro/releases/download/v1.0.0/Enclosure.Pro-1.0.0-universal.dmg) (DMG)
-
-- [Linux](https://github.com/timsamoff/enclosure-pro/releases/download/v1.0.0/Enclosure.Pro-1.0.0.AppImage) (AppImage)
-
-  
-
-## Documentation
-
-- [Documentation](https://github.com/timsamoff/enclosure-pro/blob/main/docs/DOCUMENTATION.md)
-
-  
+ - [Official Website](http://samoff.com/enclosure-pro)
 
 ## License
 
-  
-
- - [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
+- [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
