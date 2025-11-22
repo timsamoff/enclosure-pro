@@ -50,8 +50,8 @@ export const COMPONENT_TYPES = {
   "jewel-light": { name: "Jewel Light Fixture", drillSize: 16.0, imperialLabel: '5/8"', category: "Fixtures" },
   "pilot-light": { name: "Pilot Light Fixture", drillSize: 23.0, imperialLabel: '7/8"', category: "Fixtures" },
   "screw-3": { name: "M3 Screw", drillSize: 3, imperialLabel: '1/8"', category: "Screws" },
+  "screw-6": { name: "#6-32 Screw", drillSize: 3.5, imperialLabel: '5/8"', category: "Screws" },
   "screw-4": { name: "M4 Screw", drillSize: 4, imperialLabel: '5/32"', category: "Screws" },
-  "screw-6": { name: '6/32" Screw', drillSize: 3.5, imperialLabel: '6/32"', category: "Screws" },
 } as const;
 
 export type ComponentType = keyof typeof COMPONENT_TYPES;
