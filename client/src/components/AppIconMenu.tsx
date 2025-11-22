@@ -88,7 +88,7 @@ export default function AppIconMenu() {
     }
   };
 
-  // Simple development detection - always show test option when running locally
+  // Simple development detection (always show test option when running locally)
   const isDevelopment = false; // Set this to false when building for production
 
   return (
