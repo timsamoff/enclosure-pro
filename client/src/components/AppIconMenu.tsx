@@ -26,11 +26,10 @@ export default function AppIconMenu() {
       // Listen for update events
       const removeUpdateAvailable = window.electronAPI.onUpdateAvailable((event, info) => {
         setUpdateAvailable(true);
-        console.log('Update available:', info.version);
       });
 
       const removeUpdateDownloaded = window.electronAPI.onUpdateDownloaded((event, info) => {
-        console.log('Update downloaded:', info.version);
+        // Update is ready to install
       });
 
       return () => {
@@ -54,14 +53,22 @@ export default function AppIconMenu() {
   };
 
   const handleSimulateUpdate = async () => {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI) {
+      console.log('❌ electronAPI not available');
+      return;
+    }
     
+    console.log('🎭 Starting simulate update...');
     try {
-      await window.electronAPI.simulateUpdate();
+      const result = await window.electronAPI.simulateUpdate();
+      console.log('✅ Simulate update result:', result);
     } catch (error) {
-      console.error('Failed to simulate update:', error);
+      console.error('❌ Simulate update failed:', error);
     }
   };
+
+  // Simple development detection - always show test option when running locally
+  const isDevelopment = true; // Set this to false when building for production
 
   return (
     <DropdownMenu>
@@ -75,6 +82,7 @@ export default function AppIconMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56" data-testid="menu-app-dropdown">
+        {/* 1. App Info (First) */}
         <DropdownMenuItem disabled className="flex flex-col items-start gap-1 py-3">
           <div className="font-semibold text-base">Enclosure Pro</div>
           <div className="text-xs text-muted-foreground">Version {appVersion}</div>
@@ -84,46 +92,7 @@ export default function AppIconMenu() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         
-        {/* Check for Updates */}
-        <DropdownMenuItem 
-          onClick={handleCheckForUpdates} 
-          disabled={isChecking}
-          className="flex items-center gap-2 cursor-pointer"
-        >
-          {isChecking ? (
-            <RefreshCw className="w-4 h-4 animate-spin" />
-          ) : (
-            <Download className="w-4 h-4" />
-          )}
-          <span>{isChecking ? 'Checking...' : 'Check for Updates'}</span>
-        </DropdownMenuItem>
-
-        {/* Test Simulate Update (Development only) */}
-        {process.env.NODE_ENV === 'development' && (
-          <DropdownMenuItem 
-            onClick={handleSimulateUpdate}
-            className="flex items-center gap-2 cursor-pointer text-yellow-600"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>TEST: Simulate Update</span>
-          </DropdownMenuItem>
-        )}
-
-        <DropdownMenuSeparator />
-        
-        <DropdownMenuItem asChild>
-          <a
-            href="https://samoff.com/enclosure-pro/documentation.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 cursor-pointer"
-            data-testid="link-documentation"
-          >
-            <Book className="w-4 h-4" />
-            <span>Documentation</span>
-          </a>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        {/* 2. Created By (Second) */}
         <div className="px-2 py-3">
           <div className="text-xs text-muted-foreground mb-2">Created by Tim Samoff</div>
           <a
@@ -137,6 +106,53 @@ export default function AppIconMenu() {
             <SiInstagram className="w-4 h-4" />
           </a>
         </div>
+        
+        <DropdownMenuSeparator />
+        
+        {/* 3. Documentation (Third) */}
+        <DropdownMenuItem asChild>
+          <a
+            href="https://samoff.com/enclosure-pro/documentation.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 cursor-pointer"
+            data-testid="link-documentation"
+          >
+            <Book className="w-4 h-4" />
+            <span>Documentation</span>
+          </a>
+        </DropdownMenuItem>
+
+        {/* Test Simulate Update - Always show in development */}
+        {isDevelopment && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={handleSimulateUpdate}
+              className="flex items-center gap-2 cursor-pointer text-yellow-600"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>TEST: Simulate Update</span>
+            </DropdownMenuItem>
+          </>
+        )}
+
+        {/* Check for Updates (Second to Last) */}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem 
+          onClick={handleCheckForUpdates} 
+          disabled={isChecking}
+          className="flex items-center gap-2 cursor-pointer"
+        >
+          {isChecking ? (
+            <RefreshCw className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          <span>{isChecking ? 'Checking...' : 'Check for Updates'}</span>
+        </DropdownMenuItem>
+
+        {/* Buy Me a Cup of Coffee (Last) */}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <a

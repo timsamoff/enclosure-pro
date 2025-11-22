@@ -7,69 +7,6 @@ let mainWindow;
 let fileToOpen = null;
 let isWindowReady = false;
 
-// Test updater function (inline to avoid separate file)
-function setupTestUpdater(mainWindow) {
-  // Simulate update available
-  const simulateUpdate = () => {
-    console.log('🔧 Simulating update available...');
-    
-    // Simulate update-available event
-    mainWindow.webContents.send('update-available', {
-      version: '1.0.1',
-      releaseDate: new Date().toISOString()
-    });
-    
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: 'TEST - Update Available',
-      message: 'Simulated: Version 1.0.1 is available!',
-      buttons: ['Download', 'Later']
-    }).then((result) => {
-      if (result.response === 0) {
-        // Simulate download progress
-        let progress = 0;
-        const interval = setInterval(() => {
-          progress += 10;
-          mainWindow.webContents.send('download-progress', {
-            percent: progress,
-            bytesPerSecond: 1000000,
-            total: 50000000,
-            transferred: progress * 500000
-          });
-          
-          if (progress >= 100) {
-            clearInterval(interval);
-            // Simulate update downloaded
-            setTimeout(() => {
-              mainWindow.webContents.send('update-downloaded', {
-                version: '1.0.1'
-              });
-              
-              dialog.showMessageBox(mainWindow, {
-                type: 'info',
-                title: 'TEST - Update Ready',
-                message: 'Simulated: Update downloaded. Would you like to restart?',
-                buttons: ['Restart', 'Later']
-              });
-            }, 1000);
-          }
-        }, 200);
-      }
-    });
-  };
-
-  // For development, we'll expose this via IPC instead of menu
-  if (process.env.NODE_ENV === 'development') {
-    // Add IPC handler for test updates
-    ipcMain.handle('test:simulate-update', () => {
-      simulateUpdate();
-      return { success: true };
-    });
-  }
-
-  console.log('🔧 Test updater ready - Use AppIconMenu to test updates');
-}
-
 // Auto-updater setup
 function setupAutoUpdater() {
   // Don't auto-download, let user control it
@@ -156,23 +93,18 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      devTools: true
     },
     title: 'Enclosure Pro',
     icon: path.join(__dirname, '../images/EnclosureProIcon.png'),
-    // Remove the menu bar completely
     autoHideMenuBar: true,
-    titleBarStyle: 'hiddenInset', // Cleaner look without menu
   });
 
-  // REMOVED: setupProjectMenu() - No system menu wanted
-  
   // Set up auto-updater
   setupAutoUpdater();
 
-  // Set up test updater
-  if (process.env.NODE_ENV === 'development') {
-    setupTestUpdater(mainWindow);
-  }
+  // FORCE DevTools to open for debugging
+  mainWindow.webContents.openDevTools();
 
   // Prevent window from closing, let renderer handle it
   mainWindow.on('close', (e) => {
@@ -200,11 +132,6 @@ function createWindow() {
       }, 1500);
     }
   });
-  
-  // Open DevTools in development
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.webContents.openDevTools();
-  }
 }
 
 // Handle file open events (macOS)
@@ -296,7 +223,7 @@ ipcMain.handle('window:close', () => {
   }
 });
 
-// ADDED: IPC handlers for auto-updater
+// IPC handlers for auto-updater
 ipcMain.handle('app:get-version', () => {
   return app.getVersion();
 });
@@ -309,17 +236,81 @@ ipcMain.handle('app:restart-and-update', () => {
   autoUpdater.quitAndInstall();
 });
 
-// ADDED: Test update handler for development
+// TEST: Simulate update handler - ALWAYS ALLOW FOR TESTING
 ipcMain.handle('test:simulate-update', () => {
-  if (process.env.NODE_ENV === 'development') {
-    // Simulate update available
-    mainWindow?.webContents.send('update-available', {
-      version: '1.0.1',
-      releaseDate: new Date().toISOString()
-    });
-    return { success: true };
-  }
-  return { success: false, error: 'Only available in development' };
+  console.log('🎭 test:simulate-update IPC handler called');
+  
+  // Always allow simulation for testing (remove the development check)
+  console.log('🔧 Simulating update available...');
+  
+  // Simulate update-available event
+  mainWindow?.webContents.send('update-available', {
+    version: '1.0.1',
+    releaseDate: new Date().toISOString()
+  });
+  
+  // Show the update available dialog
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'TEST - Update Available',
+    message: 'Simulated: Version 1.0.1 is available! Would you like to download it now?',
+    buttons: ['Download', 'Later'],
+    defaultId: 0,
+    cancelId: 1
+  }).then((result) => {
+    if (result.response === 0) {
+      console.log('🔧 User chose to download update');
+      
+      // Simulate download progress
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        console.log(`🔧 Download progress: ${progress}%`);
+        
+        mainWindow?.webContents.send('download-progress', {
+          percent: progress,
+          bytesPerSecond: 1000000,
+          total: 50000000,
+          transferred: progress * 500000
+        });
+        
+        if (progress >= 100) {
+          clearInterval(interval);
+          console.log('🔧 Download complete, simulating update downloaded');
+          
+          // Simulate update downloaded
+          setTimeout(() => {
+            mainWindow?.webContents.send('update-downloaded', {
+              version: '1.0.1'
+            });
+            
+            // Show the restart dialog
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'TEST - Update Ready',
+              message: 'Simulated: Update downloaded. Would you like to restart to apply the update?',
+              buttons: ['Restart', 'Later'],
+              defaultId: 0,
+              cancelId: 1
+            }).then((restartResult) => {
+              if (restartResult.response === 0) {
+                console.log('🔧 User chose to restart (simulation only - no actual restart)');
+                // In simulation, we don't actually restart
+                dialog.showMessageBox(mainWindow, {
+                  type: 'info',
+                  title: 'TEST - Simulation Complete',
+                  message: 'In a real update, the app would now restart with the new version.',
+                  buttons: ['OK']
+                });
+              }
+            });
+          }, 1000);
+        }
+      }, 300); // Slower progress for better visibility
+    }
+  });
+  
+  return { success: true, message: 'Update simulation started' };
 });
 
 // IPC Handlers for file operations
