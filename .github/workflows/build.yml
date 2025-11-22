@@ -22,7 +22,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Fetch all history for proper version detection
           fetch-depth: 0
       
       - name: Setup Node.js
@@ -37,37 +36,32 @@ jobs:
       - name: Build and publish to GitHub Releases
         run: npm run electron:build
         env:
-          # electron-builder automatically detects this and publishes to releases
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         timeout-minutes: 45
       
-      # Optional: List what was created for debugging
-      - name: List build outputs
+      # FIXED: Platform-specific build output listing
+      - name: List build outputs (Windows)
+        if: matrix.os == 'windows-latest'
         run: |
-          echo "=== Build outputs ==="
-          find release/ -type f -name "*" 2>/dev/null || echo "No release directory found"
-          ls -la release/ 2>/dev/null || echo "Cannot list release directory"
+          echo "=== Windows Build Outputs ==="
+          dir release\ /s 2>nul || echo "No release directory found"
       
-      # Optional: Upload artifacts for manual inspection
-      - name: Upload build artifacts (for inspection)
-        if: always()  # Upload even if subsequent steps fail
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-${{ matrix.os }}
-          path: release/
-          retention-days: 7
-          if-no-files-found: warn
+      - name: List build outputs (macOS/Linux)
+        if: matrix.os != 'windows-latest'
+        run: |
+          echo "=== macOS/Linux Build Outputs ==="
+          find release/ -type f 2>/dev/null || echo "No release directory found"
+          ls -la release/ 2>/dev/null || echo "Cannot list release directory"
 
-  # This job ensures the release is properly created with all assets
+  # Optional: Verification step
   verify-release:
     needs: build-and-publish
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     
     steps:
-      - name: Verify Release Creation
+      - name: Verify Release Created
         run: |
           echo "✅ Build completed for all platforms"
-          echo "📦 electron-builder should have automatically published to GitHub Releases"
-          echo "🔗 Check https://github.com/${{ github.repository }}/releases"
-          echo "📁 Look for latest.yml files and installer assets"
+          echo "📦 Check https://github.com/${{ github.repository }}/releases"
+          echo "🔍 Look for the new release with latest.yml files"
