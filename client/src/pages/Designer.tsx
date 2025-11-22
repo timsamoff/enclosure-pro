@@ -33,6 +33,44 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { snapZoom } from "@/lib/zoom";
 
+// Helper functions for label rotation
+const getRotatedSideLabel = (side: EnclosureSide, rotation: number, rotatesLabels: boolean): EnclosureSide => {
+  if (!rotatesLabels || rotation === 0) {
+    return side;
+  }
+  
+  // 90° clockwise rotation mapping
+  const rotationMap: Record<EnclosureSide, EnclosureSide> = {
+    'Front': 'Front', // Front stays the same
+    'Left': 'Top',
+    'Top': 'Right', 
+    'Right': 'Bottom',
+    'Bottom': 'Left'
+  };
+  
+  return rotationMap[side];
+};
+
+const getReverseSideMapping = (rotation: number, rotatesLabels: boolean): Record<EnclosureSide, EnclosureSide> => {
+  if (!rotatesLabels || rotation === 0) {
+    return {
+      'Front': 'Front',
+      'Left': 'Left',
+      'Top': 'Top',
+      'Right': 'Right',
+      'Bottom': 'Bottom'
+    };
+  }
+  
+  return {
+    'Front': 'Front',
+    'Top': 'Left',
+    'Right': 'Top',
+    'Bottom': 'Right',
+    'Left': 'Bottom'
+  };
+};
+
 export default function Designer() {
   const { toast } = useToast();
   const [enclosureType, setEnclosureType] = useState<EnclosureType>("125B");
@@ -64,6 +102,7 @@ export default function Designer() {
   const enclosureTypeRef = useRef(enclosureType);
   const componentsRef = useRef(components);
   const unitRef = useRef(unit);
+  const rotationRef = useRef(rotation);
 
   // Update refs when state changes
   useEffect(() => {
@@ -78,6 +117,10 @@ export default function Designer() {
     unitRef.current = unit;
   }, [unit]);
 
+  useEffect(() => {
+    rotationRef.current = rotation;
+  }, [rotation]);
+
   // Load icon on mount
   useEffect(() => {
     const loadIcon = async () => {
@@ -89,7 +132,6 @@ export default function Designer() {
         
         const response = await fetch(iconPath);
         if (!response.ok) {
-          // console.log('Icon not found, continuing without it');
           return;
         }
         
@@ -101,7 +143,6 @@ export default function Designer() {
         reader.readAsDataURL(blob);
       } catch (error) {
         // Icon is optional, just log and continue
-        // console.log('Icon not available:', error.message);
       }
     };
     loadIcon();
@@ -144,11 +185,6 @@ export default function Designer() {
   };
 
   const handleNew = () => {
-    // console.log('=== handleNew called ===');
-    // console.log('isDirty:', isDirty);
-    // console.log('components.length:', components.length);
-    
-    // Only ask to save if the project has unsaved changes
     if (isDirty) {
       setShowNewConfirmDialog(true);
     } else {
@@ -160,7 +196,6 @@ export default function Designer() {
     setShowNewConfirmDialog(false);
     try {
       await handleSave();
-      // Only perform new project after save completes
       performNewProject();
     } catch (error) {
       console.error('Save failed, not starting new project:', error);
@@ -186,7 +221,6 @@ export default function Designer() {
     setShowQuitConfirmDialog(false);
     try {
       await handleSave();
-      // Only quit after save completes
       if (window.electronAPI?.isElectron) {
         window.electronAPI.closeWindow();
       }
@@ -257,27 +291,18 @@ export default function Designer() {
     }
   };
 
-  // Function to open file from path (used for double-clicked files)
   const openFileFromPath = async (filePath: string) => {
     try {
-      // console.log('📖 Calling openExternalFile...');
       const result = await window.electronAPI.openExternalFile(filePath);
-      console.log('✅ openExternalFile result:', {
-        success: result.success,
-        contentLength: result.content?.length,
-        error: result.error
-      });
       
       if (result.success && result.content) {
         const filename = filePath.split(/[/\\]/).pop() || 'untitled.enc';
-        // console.log('🔄 Processing loaded file:', filename, 'with path:', filePath);
         processLoadedFile(result.content, filename, filePath);
       } else {
-        console.error('❌ File read failed:', result.error);
         throw new Error(result.error || 'Failed to read file');
       }
     } catch (error) {
-      console.error('💥 Error opening file from path:', error);
+      console.error('Error opening file from path:', error);
       toast({
         title: "Open Failed",
         description: `Failed to open ${filePath.split(/[/\\]/).pop()}`,
@@ -286,19 +311,16 @@ export default function Designer() {
     }
   };
 
-  // Handler for when user clicks "Save" in the open confirmation dialog
   const handleOpenConfirmSave = async () => {
     setShowOpenConfirmDialog(false);
     try {
       await handleSave();
-      // Only load new file after save completes
       if (pendingFilePath) {
         await openFileFromPath(pendingFilePath);
         setPendingFilePath(null);
       }
     } catch (error) {
       console.error('Save failed or canceled, not opening file:', error);
-      // If save was canceled, don't open the new file
       setPendingFilePath(null);
       toast({
         title: "Open Canceled",
@@ -307,7 +329,6 @@ export default function Designer() {
     }
   };
 
-  // Handler for when user clicks "Don't Save" in the open confirmation dialog
   const handleOpenConfirmDiscard = async () => {
     setShowOpenConfirmDialog(false);
     if (pendingFilePath) {
@@ -316,11 +337,9 @@ export default function Designer() {
     }
   };
 
-  // Handler for when user clicks "Cancel" in the open confirmation dialog
   const handleOpenConfirmCancel = () => {
     setShowOpenConfirmDialog(false);
     setPendingFilePath(null);
-    // console.log('❌ User canceled the open operation');
     toast({
       title: "Open Canceled",
       description: "File open was canceled",
@@ -337,13 +356,27 @@ export default function Designer() {
 
   const handleRotate = () => {
     setRotation(prev => prev === 0 ? 90 : 0);
+    markDirty();
   };
 
   const rotationDirection: 'cw' | 'ccw' = rotation === 0 ? 'cw' : 'ccw';
 
   const handleComponentMove = (id: string, x: number, y: number, side?: EnclosureSide) => {
+    const rotatesLabels = ENCLOSURE_TYPES[enclosureType].rotatesLabels || false;
+    
     setComponents(prev =>
-      prev.map(c => (c.id === id ? { ...c, x, y, ...(side && { side }) } : c))
+      prev.map(c => {
+        if (c.id === id) {
+          let targetSide = side || c.side;
+          if (side && rotatesLabels && rotation !== 0) {
+            const reverseMap = getReverseSideMapping(rotation, rotatesLabels);
+            targetSide = reverseMap[side] || side;
+          }
+          
+          return { ...c, x, y, side: targetSide };
+        }
+        return c;
+      })
     );
     markDirty();
   };
@@ -377,12 +410,17 @@ export default function Designer() {
     markDirty();
   };
 
-  // Function to render the enclosure at 1:1 scale for printing/export
-  const renderForPrintExport = (currentEnclosureType: EnclosureType, rotate: boolean = false): Promise<string> => {
+  const renderForPrintExport = useCallback((
+    currentEnclosureType: EnclosureType, 
+    shouldRotate: boolean = false, 
+    currentRotation: number = 0
+  ): Promise<string> => {
     return new Promise((resolve, reject) => {
       try {
         const dimensions = getUnwrappedDimensions(currentEnclosureType);
-        const currentUnit = unitRef.current; // Use the current unit setting
+        const currentUnit = unitRef.current;
+        const rotatesLabels = ENCLOSURE_TYPES[currentEnclosureType].rotatesLabels || false;
+        const currentComponents = componentsRef.current;
 
         const frontW = dimensions.front.width;
         const frontH = dimensions.front.height;
@@ -395,17 +433,14 @@ export default function Designer() {
         const rightW = dimensions.right.width;
         const rightH = dimensions.right.height;
 
-        // Calculate total dimensions
         let totalWidthMM = leftW + frontW + rightW;
         let totalHeightMM = topH + frontH + bottomH;
 
-        // Swap dimensions if rotated
-        if (rotate) {
+        if (shouldRotate) {
           [totalWidthMM, totalHeightMM] = [totalHeightMM, totalWidthMM];
         }
 
-        // Use 96 DPI (screen DPI) for consistency with the main canvas
-        const pixelsPerMM = 3.7795275591; // 96 DPI
+        const pixelsPerMM = 3.7795275591;
         
         const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
         const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
@@ -420,21 +455,17 @@ export default function Designer() {
           return;
         }
 
-        // White background
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-        // Apply rotation if needed
-        if (rotate) {
+        if (shouldRotate) {
           ctx.translate(canvasWidth / 2, canvasHeight / 2);
-          ctx.rotate(Math.PI / 2); // 90 degrees
+          ctx.rotate(Math.PI / 2);
           ctx.translate(-canvasHeight / 2, -canvasWidth / 2);
           
-          // Swap width and height for drawing calculations
           [totalWidthMM, totalHeightMM] = [totalHeightMM, totalWidthMM];
         }
 
-        // Calculate layout positions (in pixels)
         const topOffsetX = (frontW - topW) / 2 * pixelsPerMM;
         const bottomOffsetX = (frontW - bottomW) / 2 * pixelsPerMM;
         const leftOffsetY = (frontH - leftH) / 2 * pixelsPerMM;
@@ -473,14 +504,17 @@ export default function Designer() {
           },
         };
 
-        const drawSide = (sideKey: keyof typeof layout, label: string) => {
+        const drawSide = (sideKey: keyof typeof layout, originalLabel: string) => {
           const side = layout[sideKey];
           const x = side.x;
           const y = side.y;
           const w = side.width;
           const h = side.height;
 
-          // Draw side outline
+          const displayLabel = rotatesLabels 
+            ? getRotatedSideLabel(originalLabel as EnclosureSide, currentRotation, rotatesLabels)
+            : originalLabel;
+
           ctx.strokeStyle = 'black';
           ctx.lineWidth = 2;
           
@@ -494,24 +528,32 @@ export default function Designer() {
           }
 
           // Draw side label
+          ctx.save();
           ctx.fillStyle = 'black';
-          ctx.font = '16px Arial'; // Fixed size, not scaled
+          ctx.font = '16px Arial';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(label, x + w / 2, y + h / 2);
+          
+          // Rotate text 90° CCW when user has rotated the enclosure view (currentRotation !== 0)
+          // This makes labels read bottom-to-top to match the rotated physical orientation
+          if (rotatesLabels && currentRotation !== 0) {
+            ctx.translate(x + w / 2, y + h / 2);
+            ctx.rotate(-Math.PI / 2); // 90° counter-clockwise
+            ctx.fillText(displayLabel, 0, 0);
+          } else {
+            ctx.fillText(displayLabel, x + w / 2, y + h / 2);
+          }
+          ctx.restore();
 
-          // Draw components for this side
-          const sideComponents = components.filter(c => c.side === label);
+          const sideComponents = currentComponents.filter(c => c.side === originalLabel);
+
           sideComponents.forEach(component => {
             const compData = COMPONENT_TYPES[component.type];
             const radius = (compData.drillSize / 2) * pixelsPerMM;
 
-            // Use component coordinates directly (they're already in pixels)
-            // Position relative to the side's center
             const centerX = x + (w / 2) + component.x;
             const centerY = y + (h / 2) + component.y;
 
-            // Draw drill hole
             ctx.fillStyle = 'white';
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
@@ -523,7 +565,6 @@ export default function Designer() {
             ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
             ctx.stroke();
 
-            // Draw crosshair
             const crosshairSize = Math.max(radius, 10);
             ctx.beginPath();
             ctx.moveTo(centerX - crosshairSize, centerY);
@@ -532,7 +573,6 @@ export default function Designer() {
             ctx.lineTo(centerX, centerY + crosshairSize);
             ctx.stroke();
 
-            // Draw drill size label - RESPECT USER'S UNIT SELECTION
             const drillText = currentUnit === "metric"
               ? `${compData.drillSize.toFixed(1)}mm`
               : compData.imperialLabel;
@@ -543,7 +583,6 @@ export default function Designer() {
             const textMetrics = ctx.measureText(drillText);
             const textWidth = textMetrics.width;
             
-            // Background for text
             ctx.fillStyle = 'white';
             ctx.fillRect(
               centerX - textWidth / 2 - 3,
@@ -552,7 +591,6 @@ export default function Designer() {
               16
             );
             
-            // Text
             ctx.fillStyle = 'black';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -572,9 +610,13 @@ export default function Designer() {
         reject(error);
       }
     });
-  };
+  }, []);
 
-  const generatePDF = async (currentEnclosureType: EnclosureType, shouldRotate: boolean = false): Promise<jsPDF> => {
+  const generatePDF = async (
+    currentEnclosureType: EnclosureType, 
+    shouldRotate: boolean = false, 
+    currentRotation: number = 0
+  ): Promise<jsPDF> => {
     try {
       const dimensions = getUnwrappedDimensions(currentEnclosureType);
       const enc = ENCLOSURE_TYPES[currentEnclosureType];
@@ -593,29 +635,23 @@ export default function Designer() {
       const totalWidth = leftW + frontW + rightW;
       const totalHeight = topH + frontH + bottomH;
 
-      // Use the passed rotation parameter instead of calculating it here
       const displayWidth = shouldRotate ? totalHeight : totalWidth;
       const displayHeight = shouldRotate ? totalWidth : totalHeight;
 
-      // Render for print with rotation info
-      const imageData = await renderForPrintExport(currentEnclosureType, shouldRotate);
+      const imageData = await renderForPrintExport(currentEnclosureType, shouldRotate, currentRotation);
       
-      // Always use portrait orientation for Letter
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "letter",
       });
 
-      // Get page dimensions (Letter portrait: 215.9mm × 279.4mm)
-      const pageWidth = pdf.internal.pageSize.getWidth();  // 215.9mm
-      const pageHeight = pdf.internal.pageSize.getHeight(); // 279.4mm
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
       
-      // Center the image on the page
       const x = (pageWidth - displayWidth) / 2;
-      const y = (pageHeight - displayHeight) / 2 + 20; // Extra space for header
+      const y = (pageHeight - displayHeight) / 2 + 20;
 
-      // Add header information
       pdf.setFontSize(12);
       const title = projectName ? `${projectName} - ${currentEnclosureType}` : `${currentEnclosureType} Drill Template`;
       pdf.text(title, pageWidth / 2, 10, { align: "center" });
@@ -627,13 +663,11 @@ export default function Designer() {
         : `${mmToFraction(enc.width)} × ${mmToFraction(enc.height)} × ${mmToFraction(enc.depth)} | Scale: 100%`;
       pdf.text(encInfo, pageWidth / 2, 15, { align: "center" });
 
-      // Add rotation info if applied
       if (shouldRotate) {
         pdf.setFontSize(8);
         pdf.text("(Rotated for optimal fit)", pageWidth / 2, 18, { align: "center" });
       }
 
-      // Add the image at 100% scale
       pdf.addImage(imageData, 'PNG', x, y, displayWidth, displayHeight);
 
       return pdf;
@@ -649,10 +683,10 @@ export default function Designer() {
       const totalWidth = dimensions.left.width + dimensions.front.width + dimensions.right.width;
       const totalHeight = dimensions.top.height + dimensions.front.height + dimensions.bottom.height;
       
-      // Use the same rotation logic as generatePDF
       const shouldRotate = totalWidth > totalHeight;
+      const currentRotation = rotationRef.current;
       
-      const pdf = await generatePDF(enclosureTypeRef.current, shouldRotate);
+      const pdf = await generatePDF(enclosureTypeRef.current, shouldRotate, currentRotation);
       const filename = projectName ? `${projectName}.pdf` : `${enclosureTypeRef.current}-drill-template.pdf`;
       pdf.save(filename);
       toast({
@@ -675,13 +709,12 @@ export default function Designer() {
       const totalWidth = dimensions.left.width + dimensions.front.width + dimensions.right.width;
       const totalHeight = dimensions.top.height + dimensions.front.height + dimensions.bottom.height;
       
-      // Use the same rotation logic
       const shouldRotate = totalWidth > totalHeight;
+      const currentRotation = rotationRef.current;
       
-      const pdf = await generatePDF(enclosureTypeRef.current, shouldRotate);
+      const pdf = await generatePDF(enclosureTypeRef.current, shouldRotate, currentRotation);
       
       if (window.electronAPI?.isElectron) {
-        // Use Electron's print API for better control
         const pdfBlob = pdf.output('blob');
         const pdfBuffer = await pdfBlob.arrayBuffer();
         
@@ -690,7 +723,7 @@ export default function Designer() {
             pdfData: Array.from(new Uint8Array(pdfBuffer)),
             printOptions: {
               printBackground: true,
-              scale: 1.0, // Explicitly set scale to 100%
+              scale: 1.0,
               landscape: false,
               margins: {
                 marginType: 'custom',
@@ -708,18 +741,16 @@ export default function Designer() {
           });
           return;
         } catch (error) {
-          // console.log('Electron print API failed, falling back to PDF:', error);
+          // Fallback to PDF window
         }
       }
 
-      // Fallback: open PDF in new window
       const pdfBlob = pdf.output('blob');
       const pdfUrl = URL.createObjectURL(pdfBlob);
       const printWindow = window.open(pdfUrl);
       
       if (printWindow) {
         printWindow.onload = () => {
-          // Try to print after a short delay
           setTimeout(() => {
             printWindow.print();
           }, 500);
@@ -741,9 +772,7 @@ export default function Designer() {
   };
 
   const handleSaveWithFilename = async (defaultFilename: string): Promise<void> => {
-    // console.log('=== SAVING FILE ===');
-    // console.log('Number of components to save:', components.length);
-    // console.log('Components:', JSON.stringify(components, null, 2));
+    const currentRotation = rotationRef.current;
     
     const projectState: ProjectState = {
       enclosureType,
@@ -751,12 +780,12 @@ export default function Designer() {
       gridEnabled,
       gridSize,
       zoom,
+      rotation: currentRotation,
       unit,
       appIcon: appIcon || undefined,
     };
 
     const json = JSON.stringify(projectState, null, 2);
-    // console.log('JSON being saved (first 500 chars):', json.substring(0, 500));
     
     const fullFilename = defaultFilename.endsWith('.enc') ? defaultFilename : `${defaultFilename}.enc`;
 
@@ -769,8 +798,6 @@ export default function Designer() {
             { name: 'All Files', extensions: ['*'] }
           ]
         });
-
-        // console.log('Save dialog result:', result);
 
         if (result.canceled) {
           throw new Error('User canceled save operation');
@@ -786,7 +813,6 @@ export default function Designer() {
         }
 
         const savedFilename = result.filePath!.split(/[/\\]/).pop()?.replace('.enc', '') || defaultFilename;
-        // console.log('File saved successfully to:', result.filePath);
         
         setProjectName(savedFilename);
         setProjectFilePath(result.filePath!);
@@ -819,8 +845,6 @@ export default function Designer() {
         await writable.write(json);
         await writable.close();
         
-        // console.log('File saved via File System Access API');
-        
         setProjectName(defaultFilename.replace('.enc', ''));
         setProjectFilePath(handle.name);
         resetDirty();
@@ -849,8 +873,6 @@ export default function Designer() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    // console.log('File downloaded as:', fullFilename);
-
     setProjectName(defaultFilename.replace('.enc', ''));
     setProjectFilePath(fullFilename);
     resetDirty();
@@ -862,12 +884,8 @@ export default function Designer() {
   };
 
   const handleSave = useCallback(async () => {
-    // console.log('=== handleSave called ===');
-    // console.log('Current components count:', components.length);
-    // console.log('projectFilePathRef.current:', projectFilePathRef.current);
-    
     if (projectFilePathRef.current && window.electronAPI?.isElectron) {
-      // console.log('Taking SAVE path (overwrite existing file)');
+      const currentRotation = rotationRef.current;
       
       const projectState: ProjectState = {
         enclosureType,
@@ -875,12 +893,12 @@ export default function Designer() {
         gridEnabled,
         gridSize,
         zoom,
+        rotation: currentRotation,
         unit,
         appIcon: appIcon || undefined,
       };
 
       const json = JSON.stringify(projectState, null, 2);
-      // console.log('Saving', components.length, 'components to existing file');
 
       try {
         const writeResult = await window.electronAPI.writeFile({
@@ -907,7 +925,6 @@ export default function Designer() {
         });
       }
     } else {
-      // console.log('Taking SAVE AS path (no file path yet)');
       await handleSaveAs();
     }
   }, [components, enclosureType, gridEnabled, gridSize, zoom, unit, appIcon]);
@@ -924,14 +941,7 @@ export default function Designer() {
 
   const processLoadedFile = (json: string, filename: string, filePath?: string) => {
     try {
-      // console.log('=== LOADING FILE ===');
-      // console.log('Filename:', filename);
-      // console.log('FilePath:', filePath);
-      // console.log('Current projectFilePathRef:', projectFilePathRef.current);
-      
-      // If loading the same file that's already open, don't proceed
       if (filePath && projectFilePathRef.current === filePath) {
-        // console.log('Same file already open, skipping load');
         toast({
           title: "File Already Open",
           description: `${filename} is already open`,
@@ -939,11 +949,7 @@ export default function Designer() {
         return;
       }
       
-      // console.log('Raw JSON (first 500 chars):', json.substring(0, 500));
-      
       const parsed = JSON.parse(json);
-      // console.log('Parsed data:', parsed);
-      // console.log('Number of components in file:', parsed.components?.length || 0);
 
       const legacyComponentSchema = z.object({
         id: z.string().optional(),
@@ -960,7 +966,7 @@ export default function Designer() {
         gridEnabled: z.boolean().optional(),
         gridSize: z.number().optional(),
         zoom: z.any().optional(),
-        rotation: z.any().optional(),
+        rotation: z.number().optional(),
         unit: z.enum(["metric", "imperial"]).optional(),
         appIcon: z.string().optional(),
       });
@@ -972,6 +978,7 @@ export default function Designer() {
       }
 
       const rawData = result.data;
+      
       const SIDE_ORDER: EnclosureSide[] = ["Front", "Right", "Left", "Top", "Bottom"];
 
       const normalizedEnclosureType = (rawData.enclosureType && rawData.enclosureType in ENCLOSURE_TYPES)
@@ -996,9 +1003,6 @@ export default function Designer() {
           };
         });
 
-      // console.log('Valid components after processing:', validComponents.length);
-      // console.log('Components being loaded:', JSON.stringify(validComponents, null, 2));
-
       let normalizedZoom = 1;
       if (typeof rawData.zoom === 'number') {
         normalizedZoom = rawData.zoom;
@@ -1006,13 +1010,14 @@ export default function Designer() {
         normalizedZoom = (rawData.zoom as any).Front || 1;
       }
 
+      const loadedRotation = typeof rawData.rotation === 'number' ? rawData.rotation : 0;
+
       setEnclosureType(normalizedEnclosureType);
       setComponents(validComponents);
-      // console.log('setComponents called with', validComponents.length, 'components');
-      
       setGridEnabled(rawData.gridEnabled ?? true);
       setGridSize(rawData.gridSize ?? 5);
       setZoom(snapZoom(normalizedZoom));
+      setRotation(loadedRotation);
       setUnit(rawData.unit ?? "metric");
       
       if (rawData.appIcon) {
@@ -1059,25 +1064,13 @@ export default function Designer() {
     }
   }, []);
 
-  // File open request handler for double-clicking .enc files
   useEffect(() => {
-    // console.log('🔍 Checking for electronAPI and onFileOpenRequest...');
-    
     if (window.electronAPI?.isElectron && window.electronAPI.onFileOpenRequest) {
-      // console.log('✅ Setting up file open request listener in React');
-      
       const handleFileOpenRequest = (event: any, filePath: string) => {
-        // console.log('🎯 File open request received in React:', filePath);
-        
-        // Check if we have unsaved changes
         if (isDirty) {
-          // console.log('⚠️ Unsaved changes detected, storing file path and showing dialog');
-          // Store the file path and show the confirmation dialog
           setPendingFilePath(filePath);
           setShowOpenConfirmDialog(true);
         } else {
-          // No unsaved changes, open the file directly
-          // console.log('✅ No unsaved changes, opening file directly');
           openFileFromPath(filePath);
         }
       };
@@ -1085,64 +1078,51 @@ export default function Designer() {
       const removeListener = window.electronAPI.onFileOpenRequest(handleFileOpenRequest);
       
       return () => {
-        // console.log('🧹 Cleaning up file open request listener in React');
         removeListener();
       };
-    } else {
-      // console.log('❌ electronAPI or onFileOpenRequest not available');
     }
   }, [isDirty]);
 
-  // Add this useEffect to your Designer.tsx component (with your other useEffects)
-useEffect(() => {
-  if (window.electronAPI) {
-    // Set up menu event listeners for native menu shortcuts
-    const handleMenuNew = () => {
-      console.log('📝 Menu: New triggered');
-      handleNew();
-    };
-    const handleMenuOpen = () => {
-      console.log('📝 Menu: Open triggered');
-      handleLoad();
-    };
-    const handleMenuSave = () => {
-      console.log('📝 Menu: Save triggered');
-      handleSave();
-    };
-    const handleMenuSaveAs = () => {
-      console.log('📝 Menu: Save As triggered');
-      handleSaveAs();
-    };
-    const handleMenuPrint = () => {
-      console.log('📝 Menu: Print triggered');
-      handlePrint();
-    };
-    const handleMenuExportPDF = () => {
-      console.log('📝 Menu: Export PDF triggered');
-      handleExportPDF();
-    };
+  useEffect(() => {
+    if (window.electronAPI) {
+      const handleMenuNew = () => {
+        handleNew();
+      };
+      const handleMenuOpen = () => {
+        handleLoad();
+      };
+      const handleMenuSave = () => {
+        handleSave();
+      };
+      const handleMenuSaveAs = () => {
+        handleSaveAs();
+      };
+      const handleMenuPrint = () => {
+        handlePrint();
+      };
+      const handleMenuExportPDF = () => {
+        handleExportPDF();
+      };
 
-    // Register the listeners
-    window.electronAPI.onMenuNew(handleMenuNew);
-    window.electronAPI.onMenuOpen(handleMenuOpen);
-    window.electronAPI.onMenuSave(handleMenuSave);
-    window.electronAPI.onMenuSaveAs(handleMenuSaveAs);
-    window.electronAPI.onMenuPrint(handleMenuPrint);
-    window.electronAPI.onMenuExportPDF(handleMenuExportPDF);
+      window.electronAPI.onMenuNew(handleMenuNew);
+      window.electronAPI.onMenuOpen(handleMenuOpen);
+      window.electronAPI.onMenuSave(handleMenuSave);
+      window.electronAPI.onMenuSaveAs(handleMenuSaveAs);
+      window.electronAPI.onMenuPrint(handleMenuPrint);
+      window.electronAPI.onMenuExportPDF(handleMenuExportPDF);
 
-    return () => {
-      // Clean up listeners
-      if (window.electronAPI.removeAllListeners) {
-        window.electronAPI.removeAllListeners('menu-new-file');
-        window.electronAPI.removeAllListeners('menu-open-file');
-        window.electronAPI.removeAllListeners('menu-save-file');
-        window.electronAPI.removeAllListeners('menu-save-as-file');
-        window.electronAPI.removeAllListeners('menu-print');
-        window.electronAPI.removeAllListeners('menu-export-pdf');
-      }
-    };
-  }
-}, [handleNew, handleLoad, handleSave, handleSaveAs, handlePrint, handleExportPDF]);
+      return () => {
+        if (window.electronAPI.removeAllListeners) {
+          window.electronAPI.removeAllListeners('menu-new-file');
+          window.electronAPI.removeAllListeners('menu-open-file');
+          window.electronAPI.removeAllListeners('menu-save-file');
+          window.electronAPI.removeAllListeners('menu-save-as-file');
+          window.electronAPI.removeAllListeners('menu-print');
+          window.electronAPI.removeAllListeners('menu-export-pdf');
+        }
+      };
+    }
+  }, [handleNew, handleLoad, handleSave, handleSaveAs, handlePrint, handleExportPDF]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1162,8 +1142,6 @@ useEffect(() => {
       }
       else if (modifier && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        // console.log('=== CTRL+S pressed ===');
-        // console.log('Components before save:', components.length);
         if (e.shiftKey) {
           handleSaveAs();
         } else {
@@ -1207,6 +1185,7 @@ useEffect(() => {
           setShowEnclosureSelector(false);
         }}
         onZoomChange={setZoom}
+        rotatesLabels={ENCLOSURE_TYPES[enclosureType].rotatesLabels || false}
       />
 
       <TopControls
@@ -1301,7 +1280,6 @@ useEffect(() => {
 
       <AlertDialog open={showOpenConfirmDialog} onOpenChange={(open) => {
         if (!open) {
-          // When dialog is closed via backdrop click or escape key
           handleOpenConfirmCancel();
         } else {
           setShowOpenConfirmDialog(open);

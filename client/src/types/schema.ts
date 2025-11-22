@@ -12,17 +12,18 @@ export interface EnclosureDimensions {
   cornerStyle: "rounded" | "sharp";
   frontDepth?: number; // For trapezoidal enclosures
   isTrapezoidal?: boolean; // Add this flag
+  rotatesLabels?: boolean; // Add rotation flag
 }
 
 export const ENCLOSURE_TYPES = {
-  "1590A": { width: 38.5, height: 93.6, depth: 28 },
-  "1590B": { width: 60.9, height: 111.9, depth: 29 },
-  "1590LB": { width: 50.5, height: 50.5, depth: 29 },
-  "125B": { width: 66, height: 121, depth: 35.94 },
-  "1590BB": { width: 119.5, height: 94, depth: 30 },
-  "1590BB2": { width: 120, height: 94, depth: 34 },
-  "1590DD": { width: 188, height: 120, depth: 33 },
-  "1590XX": { width: 145, height: 120, depth: 35, cornerStyle: "rounded" as const },
+  "1590A": { width: 38.5, height: 93.6, depth: 28, rotatesLabels: true },
+  "1590B": { width: 60.9, height: 111.9, depth: 29, rotatesLabels: true },
+  "1590LB": { width: 50.5, height: 50.5, depth: 29, rotatesLabels: false },
+  "125B": { width: 66, height: 121, depth: 35.94, rotatesLabels: true },
+  "1590BB": { width: 119.5, height: 94, depth: 30, rotatesLabels: true },
+  "1590BB2": { width: 120, height: 94, depth: 34, rotatesLabels: true },
+  "1590DD": { width: 188, height: 120, depth: 33, rotatesLabels: true },
+  "1590XX": { width: 145, height: 120, depth: 35, cornerStyle: "rounded" as const, rotatesLabels: true },
 } as const;
 
 export type EnclosureType = keyof typeof ENCLOSURE_TYPES;
@@ -52,6 +53,7 @@ export interface ProjectState {
   gridEnabled: boolean;
   gridSize: number;
   zoom: number;
+  rotation: number;
   unit: MeasurementUnit;
   appIcon?: string;
 }
