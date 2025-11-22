@@ -29,20 +29,29 @@ export const ENCLOSURE_TYPES = {
 export type EnclosureType = keyof typeof ENCLOSURE_TYPES;
 
 export const COMPONENT_TYPES = {
+  "pot-9mm": { name: "9mm Potentiometer", drillSize: 6.0, imperialLabel: '1/4"', category: "Potentiometers" },
   "pot-16mm": { name: "16mm Potentiometer", drillSize: 7.0, imperialLabel: '9/32"', category: "Potentiometers" },
+  "pot-17mm": { name: "17mm Potentiometer", drillSize: 7.5, imperialLabel: '19/64"', category: "Potentiometers" },
   "pot-24mm": { name: "24mm Potentiometer", drillSize: 8.0, imperialLabel: '5/16"', category: "Potentiometers" },
-  "quarter-jack": { name: '1/4" Jack', drillSize: 10.0, imperialLabel: '3/8"', category: "Jacks" },
   "eighth-jack": { name: '1/8" Jack', drillSize: 6.0, imperialLabel: '1/4"', category: "Jacks" },
+  "quarter-jack": { name: '1/4" Jack', drillSize: 10.0, imperialLabel: '3/8"', category: "Jacks" },
   "dc-jack": { name: "DC Jack", drillSize: 12.0, imperialLabel: '1/2"', category: "Jacks" },
-  footswitch: { name: "Footswitch", drillSize: 12.0, imperialLabel: '1/2"', category: "Switches" },
-  toggle: { name: "Toggle Switch", drillSize: 7.0, imperialLabel: '1/4"', category: "Switches" },
+  "xlr-jack": { name: "XLR Jack", drillSize: 15.0, imperialLabel: '5/8"', category: "Jacks" },
+  "footswitch": { name: "Footswitch", drillSize: 12.0, imperialLabel: '1/2"', category: "Switches" },
+  "toggle": { name: "Toggle Switch", drillSize: 7.0, imperialLabel: '1/4"', category: "Switches" },
+  "push-button": { name: "Push Button", drillSize: 8.0, imperialLabel: '5/16"', category: "Switches" },
+  "rocker-switch": { name: "Rocker Switch", drillSize: 12.0, imperialLabel: '1/2"', category: "Switches" },
+  "momentary-button": { name: "Momentary Button", drillSize: 6.0, imperialLabel: '1/4"', category: "Switches" },
+  "rotary": { name: "Rotary Switch", drillSize: 10.0, imperialLabel: '3/8"', category: "Switches" },
   "led-3mm-bezel": { name: "3mm LED (bezel)", drillSize: 7.0, imperialLabel: '1/4"', category: "LEDs" },
   "led-3mm-no-bezel": { name: "3mm LED (no bezel)", drillSize: 3.0, imperialLabel: '1/8"', category: "LEDs" },
   "led-5mm-bezel": { name: "5mm LED (bezel)", drillSize: 8.0, imperialLabel: '5/16"', category: "LEDs" },
   "led-5mm-no-bezel": { name: "5mm LED (no bezel)", drillSize: 5.0, imperialLabel: '3/16"', category: "LEDs" },
   "jewel-light": { name: "Jewel Light Fixture", drillSize: 16.0, imperialLabel: '5/8"', category: "Fixtures" },
   "pilot-light": { name: "Pilot Light Fixture", drillSize: 23.0, imperialLabel: '7/8"', category: "Fixtures" },
-  potentiometer: { name: "Potentiometer (Legacy)", drillSize: 8.0, imperialLabel: '5/16"', category: "Potentiometers" },
+  "screw-3": { name: "M3 Screw", drillSize: 3, imperialLabel: '1/8"', category: "Screws" },
+  "screw-4": { name: "M4 Screw", drillSize: 4, imperialLabel: '5/32"', category: "Screws" },
+  "screw-6": { name: '6/32" Screw', drillSize: 3.5, imperialLabel: '6/32"', category: "Screws" },
 } as const;
 
 export type ComponentType = keyof typeof COMPONENT_TYPES;
