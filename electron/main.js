@@ -67,12 +67,6 @@ function setupAutoUpdater() {
   });
 }
 
-  autoUpdater.on('download-progress', (progressObj) => {
-    // Send progress to renderer if you want a progress bar
-    mainWindow?.webContents.send('download-progress', progressObj);
-  });
-}
-
 // Check for updates function
 function checkForUpdates() {
   autoUpdater.checkForUpdates().then(result => {
