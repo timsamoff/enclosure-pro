@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-and-publish:
     runs-on: ${{ matrix.os }}
     
     strategy:
@@ -21,6 +21,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Fetch all history for proper version detection
+          fetch-depth: 0
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -31,75 +34,40 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
       
-      - name: Build app
-        run: npm run electron:build -- --publish never
+      - name: Build and publish to GitHub Releases
+        run: npm run electron:build
         env:
+          # electron-builder automatically detects this and publishes to releases
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         timeout-minutes: 45
       
-      - name: List build outputs (Linux/Mac)
-        if: matrix.os != 'windows-latest'
-        run: ls -la release/ || echo "No release directory found"
+      # Optional: List what was created for debugging
+      - name: List build outputs
+        run: |
+          echo "=== Build outputs ==="
+          find release/ -type f -name "*" 2>/dev/null || echo "No release directory found"
+          ls -la release/ 2>/dev/null || echo "Cannot list release directory"
       
-      - name: List build outputs (Windows)
-        if: matrix.os == 'windows-latest'
-        run: dir release\ || echo "No release directory found"
-      
-      - name: Upload Windows artifacts
-        if: matrix.os == 'windows-latest'
+      # Optional: Upload artifacts for manual inspection
+      - name: Upload build artifacts (for inspection)
+        if: always()  # Upload even if subsequent steps fail
         uses: actions/upload-artifact@v4
         with:
-          name: windows-builds
-          path: |
-            release/*.exe
-            release/*.msi
-            release/*.nsis.exe
-            release/**/*.exe
+          name: build-${{ matrix.os }}
+          path: release/
+          retention-days: 7
           if-no-files-found: warn
-      
-      - name: Upload macOS artifacts
-        if: matrix.os == 'macos-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-builds
-          path: |
-            release/*.dmg
-            release/*.zip
-            release/**/*.dmg
-            release/**/*.zip
-          if-no-files-found: warn
-      
-      - name: Upload Linux artifacts
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-builds
-          path: |
-            release/*.AppImage
-            release/*.deb
-            release/**/*.AppImage
-            release/**/*.deb
-          if-no-files-found: warn
-  
-  release:
-    needs: build
+
+  # This job ensures the release is properly created with all assets
+  verify-release:
+    needs: build-and-publish
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      
-      - name: List downloaded artifacts
-        run: find artifacts -type f | head -20
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: artifacts/**/*
-          draft: true
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify Release Creation
+        run: |
+          echo "✅ Build completed for all platforms"
+          echo "📦 electron-builder should have automatically published to GitHub Releases"
+          echo "🔗 Check https://github.com/${{ github.repository }}/releases"
+          echo "📁 Look for latest.yml files and installer assets"

@@ -1,5 +1,5 @@
 import { SiInstagram } from "react-icons/si";
-import { Book, Coffee } from "lucide-react";
+import { Book, Coffee, Download, RefreshCw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,8 +9,67 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import enclosureProIcon from "@/../../images/EnclosureProIcon.svg";
+import { useEffect, useState } from "react";
 
 export default function AppIconMenu() {
+  const [appVersion, setAppVersion] = useState('1.0.0');
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+
+  useEffect(() => {
+    // Get version from Electron
+    if (window.electronAPI) {
+      window.electronAPI.getAppVersion().then(version => {
+        setAppVersion(version);
+      });
+
+      // Listen for update events
+      const removeUpdateAvailable = window.electronAPI.onUpdateAvailable((event, info) => {
+        setUpdateAvailable(true);
+      });
+
+      const removeUpdateDownloaded = window.electronAPI.onUpdateDownloaded((event, info) => {
+        // Update is ready to install
+      });
+
+      return () => {
+        removeUpdateAvailable();
+        removeUpdateDownloaded();
+      };
+    }
+  }, []);
+
+  const handleCheckForUpdates = async () => {
+    if (!window.electronAPI) return;
+    
+    setIsChecking(true);
+    try {
+      await window.electronAPI.checkForUpdates();
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const handleSimulateUpdate = async () => {
+    if (!window.electronAPI) {
+      console.log('❌ electronAPI not available');
+      return;
+    }
+    
+    console.log('🎭 Starting simulate update...');
+    try {
+      const result = await window.electronAPI.simulateUpdate();
+      console.log('✅ Simulate update result:', result);
+    } catch (error) {
+      console.error('❌ Simulate update failed:', error);
+    }
+  };
+
+  // Simple development detection - always show test option when running locally
+  const isDevelopment = true; // Set this to false when building for production
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -23,24 +82,17 @@ export default function AppIconMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56" data-testid="menu-app-dropdown">
+        {/* 1. App Info (First) */}
         <DropdownMenuItem disabled className="flex flex-col items-start gap-1 py-3">
           <div className="font-semibold text-base">Enclosure Pro</div>
-          <div className="text-xs text-muted-foreground">Version 1.0.0</div>
+          <div className="text-xs text-muted-foreground">Version {appVersion}</div>
+          {updateAvailable && (
+            <div className="text-xs text-green-600 font-medium">Update Available!</div>
+          )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <a
-            href="https://github.com/timsamoff/enclosure-pro/blob/main/docs/DOCUMENTATION.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 cursor-pointer"
-            data-testid="link-documentation"
-          >
-            <Book className="w-4 h-4" />
-            <span>Documentation</span>
-          </a>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        
+        {/* 2. Created By (Second) */}
         <div className="px-2 py-3">
           <div className="text-xs text-muted-foreground mb-2">Created by Tim Samoff</div>
           <a
@@ -54,6 +106,53 @@ export default function AppIconMenu() {
             <SiInstagram className="w-4 h-4" />
           </a>
         </div>
+        
+        <DropdownMenuSeparator />
+        
+        {/* 3. Documentation (Third) */}
+        <DropdownMenuItem asChild>
+          <a
+            href="https://samoff.com/enclosure-pro/documentation.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 cursor-pointer"
+            data-testid="link-documentation"
+          >
+            <Book className="w-4 h-4" />
+            <span>Documentation</span>
+          </a>
+        </DropdownMenuItem>
+
+        {/* Test Simulate Update - Always show in development */}
+        {isDevelopment && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={handleSimulateUpdate}
+              className="flex items-center gap-2 cursor-pointer text-yellow-600"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>TEST: Simulate Update</span>
+            </DropdownMenuItem>
+          </>
+        )}
+
+        {/* Check for Updates (Second to Last) */}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem 
+          onClick={handleCheckForUpdates} 
+          disabled={isChecking}
+          className="flex items-center gap-2 cursor-pointer"
+        >
+          {isChecking ? (
+            <RefreshCw className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          <span>{isChecking ? 'Checking...' : 'Check for Updates'}</span>
+        </DropdownMenuItem>
+
+        {/* Buy Me a Cup of Coffee (Last) */}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <a

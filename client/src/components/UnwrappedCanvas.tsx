@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { PlacedComponent, ComponentType, COMPONENT_TYPES, EnclosureSide, MeasurementUnit, EnclosureType, getUnwrappedDimensions, CORNER_RADIUS } from "@/types/schema";
+import { PlacedComponent, ComponentType, COMPONENT_TYPES, EnclosureSide, MeasurementUnit, EnclosureType, getUnwrappedDimensions, CORNER_RADIUS, ENCLOSURE_TYPES } from "@/types/schema";
 import { mmToFraction } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -57,8 +57,32 @@ export default function UnwrappedCanvas({
     }
   };
 
+  // Helper function to check if point is within trapezoid
+  const isPointInTrapezoid = (
+    x: number, 
+    y: number, 
+    backWidth: number, 
+    frontWidth: number, 
+    height: number
+  ): boolean => {
+    // Convert from center-relative to top-left relative coordinates
+    const absX = x + backWidth / 2;
+    const absY = y + height / 2;
+    
+    // Calculate the valid x range at this y position (interpolate between back and front)
+    const widthAtY = backWidth - (backWidth - frontWidth) * (absY / height);
+    const leftEdge = (backWidth - widthAtY) / 2;
+    const rightEdge = leftEdge + widthAtY;
+    
+    return absX >= leftEdge && absX <= rightEdge && absY >= 0 && absY <= height;
+  };
+
   // Calculate layout offsets for each side in the cross pattern
   const getLayout = () => {
+    const enc = ENCLOSURE_TYPES[enclosureType];
+    const cornerStyle = enc.cornerStyle || "rounded";
+    const isTrapezoidal = enc.isTrapezoidal || false;
+    
     const frontW = dimensions.front.width * mmToPixels;
     const frontH = dimensions.front.height * mmToPixels;
     const topW = dimensions.top.width * mmToPixels;
@@ -70,15 +94,39 @@ export default function UnwrappedCanvas({
     const rightW = dimensions.right.width * mmToPixels;
     const rightH = dimensions.right.height * mmToPixels;
 
-    // Calculate total canvas size
-    const totalWidth = leftW + frontW + rightW;
-    const totalHeight = topH + frontH + bottomH;
+    if (isTrapezoidal) {
+      // Special layout for trapezoidal enclosures
+      // The narrow end of left/right sides should align with bottom height
+      const narrowWidth = dimensions.bottom.height * mmToPixels;
+      
+      const totalWidth = frontW + leftW + rightW;
+      const totalHeight = frontH + topH + bottomH;
+      
+      return {
+        front: { x: leftW, y: topH, width: frontW, height: frontH },
+        top: { x: leftW, y: 0, width: frontW, height: topH },
+        bottom: { x: leftW, y: topH + frontH, width: frontW, height: bottomH },
+        left: { x: 0, y: topH, width: leftW, height: leftH },
+        right: { x: leftW + frontW, y: topH, width: rightW, height: rightH },
+        totalWidth,
+        totalHeight,
+      };
+    }
 
-    // Center top/bottom horizontally with front, center left/right vertically with front
+    // Original rectangular layout logic
+    const totalWidth = cornerStyle === "sharp" 
+      ? Math.max(leftW + frontW + rightW, topW, bottomW)
+      : leftW + frontW + rightW;
+      
+    const totalHeight = cornerStyle === "sharp"
+      ? Math.max(topH + frontH + bottomH, leftH, rightH)
+      : topH + frontH + bottomH;
+
     const topOffsetX = (frontW - topW) / 2;
     const bottomOffsetX = (frontW - bottomW) / 2;
-    const leftOffsetY = (frontH - leftH) / 2;
-    const rightOffsetY = (frontH - rightH) / 2;
+    
+    const leftOffsetY = cornerStyle === "sharp" ? 0 : (frontH - leftH) / 2;
+    const rightOffsetY = cornerStyle === "sharp" ? 0 : (frontH - rightH) / 2;
 
     return {
       front: { x: leftW, y: topH, width: frontW, height: frontH },
@@ -132,13 +180,12 @@ export default function UnwrappedCanvas({
 
       // Draw grid if enabled
       if (gridEnabled && gridSize > 0) {
-        ctx.strokeStyle = "rgba(128, 128, 128, 0.5)";  // 50% gray with some transparency
+        ctx.strokeStyle = "rgba(128, 128, 128, 0.5)";
         ctx.lineWidth = 0.5 / zoom;
         
         const gridPixels = gridSize * mmToPixels;
-        const edgeMargin = 2 * mmToPixels; // 2mm buffer from edges
+        const edgeMargin = 2 * mmToPixels;
         
-        // Check if we have room for edge margins
         const hasRoomForMargins = sideLayout.width > edgeMargin * 2 && sideLayout.height > edgeMargin * 2;
         
         ctx.beginPath();
@@ -146,9 +193,8 @@ export default function UnwrappedCanvas({
           const posX = sideLayout.width / 2 + x;
           const negX = sideLayout.width / 2 - x;
           
-          // Always draw center line (x === 0), otherwise check margins if applicable
           if (x === 0 || !hasRoomForMargins || (posX > edgeMargin && posX < sideLayout.width - edgeMargin)) {
-            if (x === 0 || posX < sideLayout.width) { // Center or within bounds
+            if (x === 0 || posX < sideLayout.width) {
               ctx.moveTo(posX, 0);
               ctx.lineTo(posX, sideLayout.height);
             }
@@ -164,7 +210,6 @@ export default function UnwrappedCanvas({
           const posY = sideLayout.height / 2 + y;
           const negY = sideLayout.height / 2 - y;
           
-          // Always draw center line (y === 0), otherwise check margins if applicable
           if (y === 0 || !hasRoomForMargins || (posY > edgeMargin && posY < sideLayout.height - edgeMargin)) {
             if (y === 0 || posY < sideLayout.height) {
               ctx.moveTo(0, posY);
@@ -181,7 +226,7 @@ export default function UnwrappedCanvas({
         ctx.stroke();
 
         // Center lines
-        ctx.strokeStyle = "rgba(128, 128, 128, 0.8)";  // Slightly darker 50% gray for center lines
+        ctx.strokeStyle = "rgba(128, 128, 128, 0.8)";
         ctx.lineWidth = 1.5 / zoom;
         ctx.beginPath();
         ctx.moveTo(sideLayout.width / 2, 0);
@@ -191,28 +236,75 @@ export default function UnwrappedCanvas({
         ctx.stroke();
       }
 
-      // Draw side border with corner radii for front face
+      // Draw side border with corner style handling
       ctx.strokeStyle = "hsl(var(--foreground))";
       ctx.lineWidth = 2 / zoom;
       
       if (side === 'front') {
-        // Add corner radii to front face (5mm standard for Hammond enclosures)
-        const cornerRadius = 5 * mmToPixels;
+        if (sideData.cornerStyle === "rounded") {
+          // Hammond-style with corner radii
+          const cornerRadius = CORNER_RADIUS * mmToPixels;
+          ctx.beginPath();
+          ctx.roundRect(0, 0, sideLayout.width, sideLayout.height, cornerRadius);
+          ctx.stroke();
+        } else {
+          // Sharp corners
+          ctx.strokeRect(0, 0, sideLayout.width, sideLayout.height);
+        }
+      // In your drawSide function, replace the trapezoid drawing section with:
+
+} else if ((side === 'left' || side === 'right') && sideData.isTrapezoidal && sideData.frontWidth) {
+  // Draw trapezoid for trapezoidal left/right sides
+  const backWidth = sideLayout.width; // Wide end at top (56mm)
+  const frontWidth = sideData.frontWidth * mmToPixels; // Narrow end at bottom (13mm)
+  const height = sideLayout.height;
+  
+  console.log(`${side} side trapezoid:`, {
+    backWidthMM: backWidth / mmToPixels,
+    frontWidthMM: frontWidth / mmToPixels, 
+    heightMM: height / mmToPixels
+  });
+  
+  ctx.beginPath();
+  if (side === 'left') {
+    // Left side: wide at top (back), narrow at bottom (front)
+    // Should connect to front panel on the RIGHT edge
+    // Horizontally mirrored: draw from RIGHT to LEFT
+    ctx.moveTo(backWidth, 0);           // Top RIGHT (back, wide end - 56mm)
+    ctx.lineTo(0, 0);                   // Top LEFT (back, wide end - 0mm)  
+    ctx.lineTo(backWidth - frontWidth, height); // Bottom LEFT (front, narrow end - 43mm)
+    ctx.lineTo(backWidth, height);      // Bottom RIGHT (front, narrow end - 56mm)
+  } else {
+    // Right side: wide at top (back), narrow at bottom (front)  
+    // Should connect to front panel on the LEFT edge
+    // Normal orientation: draw from LEFT to RIGHT
+    ctx.moveTo(0, 0);                   // Top LEFT (back, wide end - 0mm)
+    ctx.lineTo(backWidth, 0);           // Top RIGHT (back, wide end - 56mm)
+    ctx.lineTo(frontWidth, height);     // Bottom RIGHT (front, narrow end - 13mm)
+    ctx.lineTo(0, height);              // Bottom LEFT (front, narrow end - 0mm)
+  }
+  ctx.closePath();
+  ctx.stroke();
+        
+        // Draw centerline for reference
+        ctx.save();
+        ctx.strokeStyle = "rgba(128, 128, 128, 0.5)";
+        ctx.setLineDash([5 / zoom, 5 / zoom]);
+        ctx.lineWidth = 1 / zoom;
         ctx.beginPath();
-        ctx.roundRect(0, 0, sideLayout.width, sideLayout.height, cornerRadius);
+        ctx.moveTo(backWidth / 2, 0);
+        ctx.lineTo(backWidth / 2, height);
         ctx.stroke();
+        ctx.restore();
       } else {
         ctx.strokeRect(0, 0, sideLayout.width, sideLayout.height);
       }
 
       // DRAW SIDE LABEL - with rotation compensation to keep readable
       ctx.save();
-      // Translate to center of side
       ctx.translate(sideLayout.width / 2, sideLayout.height / 2);
-      // Rotate back to cancel out the enclosure rotation
       const rotRad = (-rotation * Math.PI) / 180;
       ctx.rotate(rotRad);
-      // Now draw the text at origin (which is now the center)
       ctx.fillStyle = "hsl(var(--foreground))";
       ctx.font = `${14 / zoom}px Arial`;
       ctx.textAlign = "center";
@@ -221,17 +313,33 @@ export default function UnwrappedCanvas({
       ctx.restore();
 
       // Draw components for this side
-      const sideName = (label) as EnclosureSide; // label is already capitalized (e.g., "Front")
+      const sideName = (label) as EnclosureSide;
       const sideComponents = components.filter(c => c.side === sideName);
       sideComponents.forEach(component => {
         const compData = COMPONENT_TYPES[component.type];
-        // Guard against unknown component types (backward compatibility)
         if (!compData) return;
-        // Always use metric drillSize for radius to keep circles constant
+        
         const radius = (compData.drillSize / 2) * mmToPixels;
-
         const centerX = sideLayout.width / 2 + component.x;
         const centerY = sideLayout.height / 2 + component.y;
+
+        // Check if component is in warning zone for trapezoidal sides
+        let showWarning = false;
+        if ((sideName === 'Left' || sideName === 'Right') && sideData.isTrapezoidal && sideData.frontWidth) {
+          const backWidth = sideLayout.width;
+          const frontWidth = sideData.frontWidth * mmToPixels;
+          const height = sideLayout.height;
+          const minDistFromEdge = 5 * mmToPixels; // 5mm safety margin
+          
+          const absY = component.y + height / 2;
+          const widthAtY = backWidth - (backWidth - frontWidth) * (absY / height);
+          const distFromLeft = (component.x + backWidth / 2) - ((backWidth - widthAtY) / 2);
+          const distFromRight = ((backWidth - widthAtY) / 2 + widthAtY) - (component.x + backWidth / 2);
+          
+          if (distFromLeft < minDistFromEdge || distFromRight < minDistFromEdge) {
+            showWarning = true;
+          }
+        }
 
         // Highlight selected component
         if (selectedComponent === component.id) {
@@ -248,6 +356,15 @@ export default function UnwrappedCanvas({
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
         ctx.fill();
+        
+        // Draw warning ring if needed
+        if (showWarning) {
+          ctx.strokeStyle = "#fbbf24"; // yellow
+          ctx.lineWidth = 2 / zoom;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius + 5 / zoom, 0, 2 * Math.PI);
+          ctx.stroke();
+        }
         
         // Draw stroke on fresh path
         ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--foreground))";
@@ -271,14 +388,13 @@ export default function UnwrappedCanvas({
         const labelText = unit === "metric" 
           ? `${compData.drillSize.toFixed(1)}mm`
           : compData.imperialLabel;
-        const labelOffset = radius + 15 / zoom; // Increased from 8 to 15 to prevent overlap
+        const labelOffset = radius + 15 / zoom;
         
         ctx.save();
-        // Translate to component center, rotate back to keep text readable, then offset down
         ctx.translate(centerX, centerY);
         const rotRad = (-rotation * Math.PI) / 180;
         ctx.rotate(rotRad);
-        ctx.translate(0, labelOffset); // Now translate down in the rotated coordinate system
+        ctx.translate(0, labelOffset);
         
         ctx.font = `${10 / zoom}px monospace`;
         const textMetrics = ctx.measureText(labelText);
@@ -329,7 +445,7 @@ export default function UnwrappedCanvas({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Mouse wheel zoom handler (use ref to avoid recreating handler on every zoom change)
+  // Mouse wheel zoom handler
   const zoomRef = useRef(zoom);
   const onZoomChangeRef = useRef(onZoomChange);
   
@@ -343,7 +459,6 @@ export default function UnwrappedCanvas({
       e.preventDefault();
       
       const currentZoom = zoomRef.current;
-      // Use additive ±0.1 for true 10% increments with snapZoom helper
       const increment = e.deltaY > 0 ? -0.1 : 0.1;
       const newZoom = snapZoom(currentZoom + increment);
       
@@ -357,7 +472,7 @@ export default function UnwrappedCanvas({
       container.addEventListener('wheel', handleWheel, { passive: false });
       return () => container.removeEventListener('wheel', handleWheel);
     }
-  }, []); // Empty deps - handler uses refs
+  }, []);
 
   // Mouse event handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -368,21 +483,20 @@ export default function UnwrappedCanvas({
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Right-click (button 2) starts panning
+    // Right-click starts panning
     if (e.button === 2) {
       setIsPanning(true);
       setDragStart({ x: mouseX - panOffset.x, y: mouseY - panOffset.y });
       return;
     }
 
-    // Left-click (button 0) for component selection/dragging
+    // Left-click for component selection/dragging
     if (e.button !== 0) return;
 
     // Convert to canvas coordinates with inverse rotation
     const centerX = rect.width / 2 + panOffset.x;
     const centerY = rect.height / 2 + panOffset.y;
     
-    // Apply inverse rotation transform
     const rotRad = (-rotation * Math.PI) / 180;
     const dx = mouseX - centerX;
     const dy = mouseY - centerY;
@@ -392,12 +506,11 @@ export default function UnwrappedCanvas({
     const canvasX = rotatedX / zoom + layout.totalWidth / 2;
     const canvasY = rotatedY / zoom + layout.totalHeight / 2;
 
-    // Check if clicked on any component (regardless of side boundaries)
+    // Check if clicked on any component
     let clickedComponent: PlacedComponent | null = null;
     let clickedSideX = 0;
     let clickedSideY = 0;
 
-    // Check all sides for components at this position
     for (const [side, sideLayout] of Object.entries(layout)) {
       if (side === 'totalWidth' || side === 'totalHeight') continue;
       if (typeof sideLayout === 'number') continue;
@@ -405,13 +518,11 @@ export default function UnwrappedCanvas({
       const sideName = (side.charAt(0).toUpperCase() + side.slice(1)) as EnclosureSide;
       const sideComponents = components.filter(c => c.side === sideName);
       
-      // Calculate position relative to this side's center
       const sideX = canvasX - sideLayout.x - sideLayout.width / 2;
       const sideY = canvasY - sideLayout.y - sideLayout.height / 2;
 
       for (const component of sideComponents) {
         const compData = COMPONENT_TYPES[component.type];
-        // Always use metric drillSize for radius (hit detection)
         const radius = (compData.drillSize / 2) * mmToPixels;
 
         const dx = sideX - component.x;
@@ -434,7 +545,6 @@ export default function UnwrappedCanvas({
       setDragStart({ x: clickedSideX, y: clickedSideY });
       setIsDragging(true);
     } else {
-      // Clear selection on empty click (trash button uses stopPropagation to prevent this)
       onSelectComponent(null);
       onCanvasClick?.();
     }
@@ -460,20 +570,18 @@ export default function UnwrappedCanvas({
       const component = components.find(c => c.id === draggedComponent);
       if (!component) return;
       
-      // Convert mouse position to canvas center-relative coordinates
       const centerX = rect.width / 2;
       const centerY = rect.height / 2;
       const dx = (mouseX - centerX - panOffset.x) / zoom;
       const dy = (mouseY - centerY - panOffset.y) / zoom;
       
-      // Apply inverse rotation to get unwrapped layout coordinates
       const rotRad = (-rotation * Math.PI) / 180;
       const cos = Math.cos(rotRad);
       const sin = Math.sin(rotRad);
       const layoutX = dx * cos - dy * sin + layout.totalWidth / 2;
       const layoutY = dx * sin + dy * cos + layout.totalHeight / 2;
 
-      // Detect which side contains the cursor position in layout space
+      // Detect which side contains the cursor position
       let currentSide: EnclosureSide | null = null;
       let currentSideLayout: { x: number; y: number; width: number; height: number } | null = null;
       
@@ -499,7 +607,6 @@ export default function UnwrappedCanvas({
         }
       }
       
-      // If cursor is outside all sides, keep current side but don't update position
       if (!currentSide || !currentSideLayout) {
         return;
       }
@@ -508,6 +615,20 @@ export default function UnwrappedCanvas({
       let newX = layoutX - currentSideLayout.x - currentSideLayout.width / 2;
       let newY = layoutY - currentSideLayout.y - currentSideLayout.height / 2;
 
+      // Check if position is valid for trapezoidal sides
+      if (currentSide === 'Left' || currentSide === 'Right') {
+        const sideData = dimensions[currentSide.toLowerCase() as 'left' | 'right'];
+        if (sideData.isTrapezoidal && sideData.frontWidth) {
+          const backWidth = sideData.width * mmToPixels;
+          const frontWidth = sideData.frontWidth * mmToPixels;
+          const height = sideData.height * mmToPixels;
+          
+          if (!isPointInTrapezoid(newX, newY, backWidth, frontWidth, height)) {
+            return;
+          }
+        }
+      }
+
       // Apply grid snapping if enabled
       if (gridEnabled && gridSize > 0) {
         const gridPixels = gridSize * mmToPixels;
@@ -515,7 +636,6 @@ export default function UnwrappedCanvas({
         newY = Math.round(newY / gridPixels) * gridPixels;
       }
 
-      // Update component position and side (only if side changed or it's a different value)
       onComponentMove(
         draggedComponent, 
         newX, 
@@ -526,27 +646,23 @@ export default function UnwrappedCanvas({
   };
 
   const handleMouseUp = () => {
-    // Keep the component selected if we were dragging
     const wasDragging = isDragging;
     
     setIsDragging(false);
     setDraggedComponent(null);
     setIsPanning(false);
     
-    // Set flag AFTER clearing drag state to ensure it's checked correctly
     if (wasDragging) {
       setJustFinishedDrag(true);
-      // Use longer timeout to ensure all synthetic events are caught
       setTimeout(() => setJustFinishedDrag(false), 300);
     }
   };
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    // Prevent click events right after dragging
     if (justFinishedDrag) {
       e.preventDefault();
       e.stopPropagation();
-      setJustFinishedDrag(false); // Clear immediately after catching the click
+      setJustFinishedDrag(false);
       return;
     }
   };

@@ -15,6 +15,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Window operations
   closeWindow: () => ipcRenderer.invoke('window:close'),
   
+  // ADDED: Auto-updater functions
+  getAppVersion: () => ipcRenderer.invoke('app:get-version'),
+  checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),
+  restartAndUpdate: () => ipcRenderer.invoke('app:restart-and-update'),
+  simulateUpdate: () => ipcRenderer.invoke('test:simulate-update'),
+  
   // Event listeners
   onCloseRequested: (callback) => {
     ipcRenderer.on('window-close-requested', callback);
@@ -24,6 +30,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onFileOpenRequest: (callback) => {
     ipcRenderer.on('file-open-request', callback);
     return () => ipcRenderer.removeListener('file-open-request', callback);
+  },
+
+  // ADDED: Update event listeners
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on('update-available', callback);
+    return () => ipcRenderer.removeListener('update-available', callback);
+  },
+  
+  onUpdateDownloaded: (callback) => {
+    ipcRenderer.on('update-downloaded', callback);
+    return () => ipcRenderer.removeListener('update-downloaded', callback);
+  },
+  
+  onUpdateError: (callback) => {
+    ipcRenderer.on('update-error', callback);
+    return () => ipcRenderer.removeListener('update-error', callback);
+  },
+  
+  onDownloadProgress: (callback) => {
+    ipcRenderer.on('download-progress', callback);
+    return () => ipcRenderer.removeListener('download-progress', callback);
   },
 
   // Menu event listeners for the native menu shortcuts
