@@ -96,7 +96,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      devTools: true
+      devTools: isDevelopment,
     },
     title: 'Enclosure Pro',
     icon: path.join(__dirname, '../images/EnclosureProIcon.png'),
@@ -106,8 +106,10 @@ function createWindow() {
   // Set up auto-updater
   setupAutoUpdater();
 
-  // FORCE DevTools to open for debugging
-  mainWindow.webContents.openDevTools();
+  // Only open DevTools in development
+  if (isDevelopment) {
+    mainWindow.webContents.openDevTools();
+  }
 
   // Prevent window from closing, let renderer handle it
   mainWindow.on('close', (e) => {
