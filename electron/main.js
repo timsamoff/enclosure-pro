@@ -89,6 +89,8 @@ function checkForUpdates() {
 }
 
 function createWindow() {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
