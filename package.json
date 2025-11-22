@@ -1,6 +1,6 @@
 {
   "name": "enclosure-pro",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "description": "Professional effects pedal enclosure drill hole designer",
   "main": "electron/main.js",
   "license": "GPL-3.0",
@@ -22,7 +22,8 @@
     "publish": {
       "provider": "github",
       "owner": "timsamoff",
-      "repo": "enclosure-pro"
+      "repo": "enclosure-pro",
+      "releaseType": "release"
     },
     "files": [
       "dist/**/*",
