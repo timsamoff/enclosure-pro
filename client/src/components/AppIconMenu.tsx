@@ -68,7 +68,7 @@ export default function AppIconMenu() {
   };
 
   // Simple development detection - always show test option when running locally
-  const isDevelopment = true; // Set this to false when building for production
+  const isDevelopment = false; // Set this to false when building for production
 
   return (
     <DropdownMenu>
