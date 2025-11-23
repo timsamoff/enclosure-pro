@@ -106,6 +106,5 @@ jobs:
           prerelease: ${{ github.ref == 'refs/heads/maintenance/v1.0.0' }}
           generate_release_notes: true
           tag_name: ${{ github.ref == 'refs/heads/maintenance/v1.0.0' && 'v1.0.0-patch.latest' || github.ref_name }}
-          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
