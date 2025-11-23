@@ -44,6 +44,8 @@ jobs:
         run: npm run electron:build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Prevent electron-builder from publishing (GitHub Action will handle it)
+          PUBLISH: never
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
