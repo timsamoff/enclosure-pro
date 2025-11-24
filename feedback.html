@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enclosure Pro - Feedback</title>
+    <link rel="icon" href="https://github.com/timsamoff/enclosure-pro/blob/main/images/EnclosureProIcon.png?raw=true" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+<body>
+    <div class="container">
+        <header class="feedback-header"> 
+            <img src="https://github.com/timsamoff/enclosure-pro/blob/main/images/EnclosureProIcon.png?raw=true" width="128px" alt="Enclosure Pro Icon">
+            <h1>Enclosure Pro</h1>
+            <h2>Feedback</h2> 
+            <p><a href="index.html"><i class="fas fa-home icon-text"></i>Back to Home</a></p>
+        </header>
+
+        <section>
+            <h2><i class="fas fa-bug icon-text"></i>Help Improve Enclosure Pro!</h2>
+            <p>Help out by reporting bugs, requesting features, or suggesting documentation improvements.</p>
+            
+            <form id="issueForm">
+                <label for="name">Name <span class="required">*</span></label>
+                <input type="text" id="name" required placeholder="Your name">
+                
+                <label for="email">Email <span class="required">*</span></label>
+                <input type="email" id="email" required placeholder="your.email@example.com">
+                
+                <label for="issueType">Feedback<span class="required">*</span></label>
+                <select id="issueType" required>
+                    <option value="">Select a feedback type...</option>
+                    <option value="bug">Bug Report</option>
+                    <option value="enhancement">Feature Request</option>
+                    <option value="documentation">Documentation Issue</option>
+                </select>
+                
+                <label for="details">Details <span class="required">*</span></label>
+                <textarea id="details" required placeholder="Please provide as much detail as possible..."></textarea>
+                
+                <div class="g-recaptcha" data-sitekey="6LfyVRYsAAAAALfDl-9J6h8ibsSs5g-K51qhCC6S"></div>
+                
+                <button type="submit">Submit Feedback</button>
+            </form>
+            
+            <div id="message" class="message"></div>
+        </section>
+    </div>
+
+    <script>
+        // Configuration - REPLACE THESE VALUES
+        const GITHUB_TOKEN = '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';
+        const REPO_OWNER = 'timsamoff';
+        const REPO_NAME = 'enclosure-pro';
+
+        const issueTypeLabels = {
+            'bug': 'bug',
+            'enhancement': 'enhancement',
+            'documentation': 'documentation'
+        };
+
+        const issueTypeTitles = {
+            'bug': 'Bug Report',
+            'enhancement': 'Feature Request',
+            'documentation': 'Documentation Issue'
+        };
+
+        document.getElementById('issueForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const button = e.target.querySelector('button');
+            const messageDiv = document.getElementById('message');
+            
+            // Check reCAPTCHA
+            const recaptchaResponse = grecaptcha.getResponse();
+            if (!recaptchaResponse) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = '✗ Please complete the reCAPTCHA verification.';
+                return;
+            }
+            
+            // Get form values
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const issueType = document.getElementById('issueType').value;
+            const details = document.getElementById('details').value.trim();
+            
+            // Disable button and show loading
+            button.disabled = true;
+            button.textContent = 'Submitting...';
+            messageDiv.style.display = 'none';
+            
+            // Build issue body
+            const issueBody = `**Submitted by:** ${name}
+**Email:** ${email}
+
+${details}`;
+            
+            // Build issue title
+            const issueTitle = `[${issueTypeTitles[issueType]}] ${details.substring(0, 50)}${details.length > 50 ? '...' : ''}`;
+            
+            try {
+                const response = await fetch(
+                    `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `token ${GITHUB_TOKEN}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            title: issueTitle,
+                            body: issueBody,
+                            labels: [issueTypeLabels[issueType]]
+                        })
+                    }
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('issueForm').reset();
+                    grecaptcha.reset();
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = 'Thank you for your submission! I hope you\u2019re enjoying Enclosure Pro!';
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = `✗ Error: ${error.message}`;
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Submit Feedback';
+            }
+        });
+    </script>
+</body>
+</html>
