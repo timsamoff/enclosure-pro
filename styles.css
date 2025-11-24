@@ -78,6 +78,11 @@ h2 {
     padding-bottom: 10px;
     margin-top: 40px;
 }
+/* Adjust h2 spacing for documentation/main content sections */
+.container > section > h2 { 
+    margin-top: 30px; 
+}
+
 
 h3 {
     font-size: 1.6em;
@@ -93,6 +98,41 @@ h4 {
     margin-top: 20px;
 }
 
+/* Styling for the horizontal rule to match the design */
+hr {
+    border: none;
+    height: 1px;
+    background-color: #e0e0e0; /* Light grey rule */
+    margin: 40px 0; /* Add generous vertical spacing */
+}
+
+/* --- FEEDBACK/DOCUMENTATION PAGE HEADER OVERRIDES --- */
+/* 1. Remove the general border on the feedback/documentation page header */
+.feedback-header {
+    border-bottom: none;
+    margin-bottom: 30px; 
+}
+
+/* 2. Style the H2 subtitle for these pages */
+.feedback-header h2 {
+    font-size: 1.5em; 
+    color: var(--secondary-color); 
+    margin-top: -10px; 
+    padding: 0;
+    margin-bottom: 10px;
+    border-bottom: none; 
+}
+
+/* 3. Apply the single 5px border to the <p> containing "Back to Home" */
+.feedback-header p {
+    margin-top: 0;
+    padding-bottom: 25px; 
+    border-bottom: 5px solid var(--primary-color); 
+}
+
+/* --- END FEEDBACK/DOCUMENTATION PAGE HEADER OVERRIDES --- */
+
+
 /* Shared Components */
 .icon-text {
     margin-right: 8px;
@@ -107,16 +147,16 @@ h4 {
 
 /* FIGURE AND CAPTION STYLES */
 figure {
-    margin: 30px 0; /* Add margin around the figure */
+    margin: 30px 0; 
     padding: 0;
-    text-align: center; /* Centers the image and caption */
+    text-align: center; 
 }
 
 figcaption {
     margin-top: 10px;
     font-style: italic;
-    color: #555; /* Medium gray for captions */
-    font-size: 0.85em; /* Updated for smaller size */
+    color: #555; 
+    font-size: 0.85em; 
 }
 /* END FIGURE AND CAPTION STYLES */
 
@@ -130,19 +170,66 @@ figure img {
 
 
 /* Index.html Specific Styles */
+
+/* Container to center and space the two buttons/links */
+.header-links {
+    display: flex;
+    justify-content: center;
+    gap: 20px; 
+    margin-top: 25px; 
+}
+
+/* Media Query to stack header buttons on small screens */
+@media (max-width: 550px) { 
+    .header-links {
+        flex-direction: column; 
+        align-items: center; 
+        gap: 10px;
+    }
+}
+
+/* Style for the new orange Feedback button (made round, fixed width, text stays white) */
+.feedback-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 220px; 
+    padding: 10px 20px;
+    background-color: var(--primary-color); 
+    color: white;
+    border: 2px solid var(--primary-color); 
+    border-radius: 30px; 
+    font-weight: bold;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.feedback-link:hover {
+    background-color: #a34400; 
+    border-color: #a34400;
+    text-decoration: none;
+    color: white; /* Keep text white on hover */
+}
+.feedback-link i {
+    color: white;
+    margin-right: 8px;
+}
+
+
+/* Updated .coffee-link for consistent width and centering */
 .coffee-link {
     display: inline-flex;
     align-items: center;
-    margin-top: 15px;
+    justify-content: center; 
+    min-width: 220px; 
     padding: 10px 20px;
     border: 2px solid var(--primary-color);
-    border-radius: 30px;
-    background-color: #fff; /* White to pop against Tan body background */
+    border-radius: 30px; 
+    background-color: #fff; 
     transition: all 0.3s;
 }
 .coffee-link:hover {
     background-color: var(--primary-color);
-    color: #fff; /* White text on orange hover */
+    color: #fff; 
     text-decoration: none;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
@@ -151,7 +238,7 @@ figure img {
     margin-right: 8px;
 }
 .coffee-link:hover i {
-    color: #fff; /* White icon on orange hover */
+    color: #fff; 
 }
 
 
@@ -164,7 +251,7 @@ figure img {
     margin-top: 20px;
 }
 .features-list li {
-    background: #f0f0f0; /* Light Grey to distinguish from tan background */
+    background: #f0f0f0; 
     padding: 15px;
     border-radius: 8px;
     font-weight: 500;
@@ -172,17 +259,17 @@ figure img {
 }
 .features-list li:hover {
     transform: translateY(-5px);
-    background: #d4d4d4; /* Slightly darker grey on hover */
+    background: #d4d4d4; 
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 .features-list i {
     margin-right: 10px;
-    color: var(--primary-color); /* Orange icons */
+    color: var(--primary-color); 
 }
 
 .downloads-note {
-    background-color: #f7e9d7; /* Lighter tan for note box */
-    color: #7b4400; /* Dark brown/orange text for contrast */
+    background-color: #f7e9d7; 
+    color: #7b4400; 
     padding: 15px;
     border: 1px solid #e0d3b6;
     border-radius: 5px;
@@ -197,11 +284,11 @@ figure img {
     margin-bottom: 15px;
 }
 .downloads-list a {
-    /* Set dimensions and alignment for the overall button */
+    /* This is the large screen default width */
     display: inline-flex; 
     width: 220px; 
-    flex-direction: column; /* Stacks the primary text and the small text */
-    align-items: flex-start; /* Left-aligns content inside the button */
+    flex-direction: column; 
+    align-items: flex-start; 
     padding: 8px 25px; 
     background-color: var(--secondary-color); 
     color: white;
@@ -215,12 +302,12 @@ figure img {
 /* Container for icon and OS name (horizontal) */
 .downloads-list a .download-primary {
     display: flex;
-    align-items: center; /* Vertically centers the icon and text */
-    margin-bottom: 3px; /* Space between the primary label and file size */
+    align-items: center; 
+    margin-bottom: 3px; 
 }
 /* Icon styles, now horizontally aligned with span */
 .downloads-list a .download-primary i {
-    margin-right: 8px; /* Space to the right of the icon */
+    margin-right: 8px; 
     margin-bottom: 0; 
     font-size: 1.5em; 
 }
@@ -237,6 +324,14 @@ figure img {
     margin-top: 0; 
 }
 
+/* Media Query for Downloads list - makes buttons full width on small screens */
+@media (max-width: 550px) {
+    .downloads-list a {
+        width: 100%;
+        box-sizing: border-box; /* Includes padding/border in the 100% width, fixing overflow */
+    }
+}
+
 
 /* Documentation.html Specific Styles */
 
@@ -244,7 +339,7 @@ figure img {
     text-align: center;
     margin-bottom: 30px;
 }
-.video-overview iframe { /* Added styles for embedded video */
+.video-overview iframe { 
     max-width: 100%;
     height: auto;
     aspect-ratio: 16 / 9;
@@ -253,12 +348,125 @@ figure img {
 }
 
 .ui-image-list {
-    list-style-type: decimal; /* Enable 1, 2, 3 numbering */
+    list-style-type: decimal; 
     padding-left: 20px;
     margin-top: 20px;
 }
+/* Styling for nested list letters */
+.ui-image-list ol {
+    margin-top: 5px;
+}
 
+.printing-steps {
+    list-style: decimal;
+    padding-left: 20px;
+}
+.printing-steps li {
+    margin-bottom: 10px;
+}
 .printing-steps i {
     margin-right: 8px;
     color: var(--primary-color);
 }
+
+/* --- FORM STYLES for feedback.html --- */
+label {
+    display: block;
+    color: var(--text-color);
+    font-weight: bold;
+    margin-bottom: 5px;
+    margin-top: 15px; 
+}
+
+input[type="text"],
+input[type="email"],
+select,
+textarea {
+    box-sizing: border-box; 
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc; 
+    border-radius: 6px;
+    font-size: 1em;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(204, 85, 0, 0.1); 
+}
+
+textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+/* MODIFIED: Submit button styles for width consistency and alignment (desktop) */
+button[type="submit"] {
+    /* Desktop: Fixed width and Centered */
+    width: 220px; 
+    box-sizing: border-box; /* Ensures width calculation is consistent */
+    margin: 0 auto 20px auto; /* Centering for fixed width on desktop */
+    display: block; 
+    
+    background-color: var(--primary-color); 
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px; 
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button[type="submit"]:hover {
+    background-color: #a34400; 
+}
+
+/* MODIFIED: Media query for submit button on small screens */
+@media (max-width: 550px) {
+    button[type="submit"] {
+        width: 100%; /* Full width on small screens */
+        box-sizing: border-box; 
+        margin: 0 auto 20px auto; /* Use margin: auto to ensure consistent centering */
+    }
+}
+
+
+.required {
+    color: var(--primary-color);
+}
+
+.g-recaptcha {
+    margin-bottom: 20px;
+    display: flex; /* NEW: Use flexbox for centering */
+    justify-content: center; /* NEW: Center items horizontally */
+}
+
+/* Styles for the success/error messages */
+.message {
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 1em;
+    display: none;
+}
+
+.message.success {
+    background: #d4edda; 
+    color: #155724; 
+    border: 1px solid #c3e6cb;
+    display: block; 
+}
+
+.message.error {
+    background: #f8d7da; 
+    color: #721c24; 
+    border: 1px solid #f5c6cb;
+    display: block; 
+}
+/* --- END FORM STYLES --- */
