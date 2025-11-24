@@ -369,22 +369,83 @@ figure img {
     color: var(--primary-color);
 }
 
-/* --- FEEDBACK FORM STYLES (NEW) --- */
+/* --- FEEDBACK FORM STYLES (for Google Forms) --- */
 
-/* 1. Container for Google Form iframe */
 .form-embed-container {
-    /* REMOVED: max-width to allow it to span the full page width (up to the 1000px container max-width) */
     margin: 0 auto 30px auto; 
 }
 
-/* 2. Make the iframe responsive within its container */
 .form-embed-container iframe {
     width: 100%;
-    /* Removed min-height since height is set in HTML and scrolling is disabled */
 }
 
-/* Keeping only the required class for potential future use */
 .required {
     color: var(--primary-color);
 }
 /* --- END FEEDBACK FORM STYLES --- */
+
+
+/* --- NEW RELEASES PAGE STYLES --- */
+
+/* Style for the collapsible section titles */
+details {
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+}
+
+/* Style for the summary (the visible title bar) */
+summary {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: var(--secondary-color);
+    cursor: pointer;
+    padding: 5px 0;
+    /* Hide default triangle icon and use Font Awesome instead */
+    list-style: none; 
+}
+
+/* Custom icon for summary: use pseudo-element for the disclosure triangle */
+summary::before {
+    content: "\f0da"; /* Font Awesome solid right arrow */
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    margin-right: 10px;
+    color: var(--primary-color);
+    transition: transform 0.2s;
+}
+
+/* Rotate the icon when the details are open */
+details[open] summary::before {
+    transform: rotate(90deg); /* Down arrow when open */
+}
+
+/* Optional: Make the latest release (which is open by default) stand out */
+details[open] {
+    border-color: var(--primary-color);
+    background-color: #fff8f5; /* Very light orange background */
+}
+
+/* Content list styling */
+details ul {
+    list-style: disc;
+    padding-left: 25px;
+    margin-top: 10px;
+    padding-bottom: 10px;
+}
+details ul li {
+    margin-bottom: 5px;
+}
+
+/* Utility class for primary color text (used for the star icon) */
+.primary-color-text {
+    color: var(--primary-color);
+}
+
+/* Index.html - Link Spacing Fix for Documentation/Releases section */
+.docs-links a {
+    margin-right: 20px;
+}
+/* --- END NEW RELEASES PAGE STYLES --- */
