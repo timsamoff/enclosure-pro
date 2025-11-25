@@ -78,11 +78,6 @@ h2 {
     padding-bottom: 10px;
     margin-top: 40px;
 }
-/* Adjust h2 spacing for documentation/main content sections */
-.container > section > h2 { 
-    margin-top: 30px; 
-}
-
 
 h3 {
     font-size: 1.6em;
@@ -98,41 +93,6 @@ h4 {
     margin-top: 20px;
 }
 
-/* Styling for the horizontal rule to match the design */
-hr {
-    border: none;
-    height: 1px;
-    background-color: #e0e0e0; /* Light grey rule */
-    margin: 40px 0; /* Add generous vertical spacing */
-}
-
-/* --- FEEDBACK/DOCUMENTATION PAGE HEADER OVERRIDES --- */
-/* 1. Remove the general border on the feedback/documentation page header */
-.feedback-header {
-    border-bottom: none;
-    margin-bottom: 30px; 
-}
-
-/* 2. Style the H2 subtitle for these pages */
-.feedback-header h2 {
-    font-size: 1.5em; 
-    color: var(--secondary-color); 
-    margin-top: -10px; 
-    padding: 0;
-    margin-bottom: 10px;
-    border-bottom: none; 
-}
-
-/* 3. Apply the single 5px border to the <p> containing "Back to Home" */
-.feedback-header p {
-    margin-top: 0;
-    padding-bottom: 25px; 
-    border-bottom: 5px solid var(--primary-color); 
-}
-
-/* --- END FEEDBACK/DOCUMENTATION PAGE HEADER OVERRIDES --- */
-
-
 /* Shared Components */
 .icon-text {
     margin-right: 8px;
@@ -147,16 +107,16 @@ hr {
 
 /* FIGURE AND CAPTION STYLES */
 figure {
-    margin: 30px 0; 
+    margin: 30px 0; /* Add margin around the figure */
     padding: 0;
-    text-align: center; 
+    text-align: center; /* Centers the image and caption */
 }
 
 figcaption {
     margin-top: 10px;
     font-style: italic;
-    color: #555; 
-    font-size: 0.85em; 
+    color: #555; /* Medium gray for captions */
+    font-size: 0.85em; /* Updated for smaller size */
 }
 /* END FIGURE AND CAPTION STYLES */
 
@@ -170,66 +130,29 @@ figure img {
 
 
 /* Index.html Specific Styles */
-
-/* Container to center and space the two buttons/links */
-.header-links {
-    display: flex;
+/* NEW: Container for Header Buttons */
+.header-buttons {
+    display: flex; 
     justify-content: center;
-    gap: 20px; 
-    margin-top: 25px; 
+    gap: 15px; 
+    margin-top: 15px;
+    flex-wrap: wrap; 
 }
-
-/* Media Query to stack header buttons on small screens */
-@media (max-width: 550px) { 
-    .header-links {
-        flex-direction: column; 
-        align-items: center; 
-        gap: 10px;
-    }
-}
-
-/* Style for the new orange Feedback button (made round, fixed width, text stays white) */
-.feedback-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 220px; 
-    padding: 10px 20px;
-    background-color: var(--primary-color); 
-    color: white;
-    border: 2px solid var(--primary-color); 
-    border-radius: 30px; 
-    font-weight: bold;
-    transition: background-color 0.3s, border-color 0.3s;
-}
-
-.feedback-link:hover {
-    background-color: #a34400; 
-    border-color: #a34400;
-    text-decoration: none;
-    color: white; /* Keep text white on hover */
-}
-.feedback-link i {
-    color: white;
-    margin-right: 8px;
-}
-
-
-/* Updated .coffee-link for consistent width and centering */
 .coffee-link {
     display: inline-flex;
     align-items: center;
-    justify-content: center; 
-    min-width: 220px; 
+    justify-content: center; /* Centered content */
+    width: 250px; /* Fixed width for consistency */
+    box-sizing: border-box; /* Includes padding/border in width */
     padding: 10px 20px;
     border: 2px solid var(--primary-color);
-    border-radius: 30px; 
-    background-color: #fff; 
+    border-radius: 30px;
+    background-color: #fff; /* White to pop against Tan body background */
     transition: all 0.3s;
 }
 .coffee-link:hover {
     background-color: var(--primary-color);
-    color: #fff; 
+    color: #fff; /* White text on orange hover */
     text-decoration: none;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
@@ -238,7 +161,7 @@ figure img {
     margin-right: 8px;
 }
 .coffee-link:hover i {
-    color: #fff; 
+    color: #fff; /* White icon on orange hover */
 }
 
 
@@ -251,7 +174,7 @@ figure img {
     margin-top: 20px;
 }
 .features-list li {
-    background: #f0f0f0; 
+    background: #f0f0f0; /* Light Grey to distinguish from tan background */
     padding: 15px;
     border-radius: 8px;
     font-weight: 500;
@@ -259,17 +182,17 @@ figure img {
 }
 .features-list li:hover {
     transform: translateY(-5px);
-    background: #d4d4d4; 
+    background: #d4d4d4; /* Slightly darker grey on hover */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 .features-list i {
     margin-right: 10px;
-    color: var(--primary-color); 
+    color: var(--primary-color); /* Orange icons */
 }
 
 .downloads-note {
-    background-color: #f7e9d7; 
-    color: #7b4400; 
+    background-color: #f7e9d7; /* Lighter tan for note box */
+    color: #7b4400; /* Dark brown/orange text for contrast */
     padding: 15px;
     border: 1px solid #e0d3b6;
     border-radius: 5px;
@@ -284,11 +207,11 @@ figure img {
     margin-bottom: 15px;
 }
 .downloads-list a {
-    /* This is the large screen default width */
+    /* Set dimensions and alignment for the overall button */
     display: inline-flex; 
     width: 220px; 
-    flex-direction: column; 
-    align-items: flex-start; 
+    flex-direction: column; /* Stacks the primary text and the small text */
+    align-items: flex-start; /* Left-aligns content inside the button */
     padding: 8px 25px; 
     background-color: var(--secondary-color); 
     color: white;
@@ -302,12 +225,12 @@ figure img {
 /* Container for icon and OS name (horizontal) */
 .downloads-list a .download-primary {
     display: flex;
-    align-items: center; 
-    margin-bottom: 3px; 
+    align-items: center; /* Vertically centers the icon and text */
+    margin-bottom: 3px; /* Space between the primary label and file size */
 }
 /* Icon styles, now horizontally aligned with span */
 .downloads-list a .download-primary i {
-    margin-right: 8px; 
+    margin-right: 8px; /* Space to the right of the icon */
     margin-bottom: 0; 
     font-size: 1.5em; 
 }
@@ -324,14 +247,6 @@ figure img {
     margin-top: 0; 
 }
 
-/* Media Query for Downloads list - makes buttons full width on small screens */
-@media (max-width: 550px) {
-    .downloads-list a {
-        width: 100%;
-        box-sizing: border-box; /* Includes padding/border in the 100% width, fixing overflow */
-    }
-}
-
 
 /* Documentation.html Specific Styles */
 
@@ -339,7 +254,7 @@ figure img {
     text-align: center;
     margin-bottom: 30px;
 }
-.video-overview iframe { 
+.video-overview iframe { /* Added styles for embedded video */
     max-width: 100%;
     height: auto;
     aspect-ratio: 16 / 9;
@@ -348,104 +263,90 @@ figure img {
 }
 
 .ui-image-list {
-    list-style-type: decimal; 
+    list-style-type: decimal; /* Enable 1, 2, 3 numbering */
     padding-left: 20px;
     margin-top: 20px;
 }
-/* Styling for nested list letters */
-.ui-image-list ol {
-    margin-top: 5px;
-}
 
-.printing-steps {
-    list-style: decimal;
-    padding-left: 20px;
-}
-.printing-steps li {
-    margin-bottom: 10px;
-}
 .printing-steps i {
     margin-right: 8px;
     color: var(--primary-color);
 }
 
-/* --- FEEDBACK FORM STYLES (for Google Forms) --- */
+/* --- Documentation and History Link Styles --- */
 
-.form-embed-container {
-    margin: 0 auto 30px auto; 
+.docs-list {
+    list-style: none;
+    padding-left: 0;
+}
+.docs-list li {
+    margin-bottom: 15px;
 }
 
-.form-embed-container iframe {
-    width: 100%;
+.doc-link {
+    /* Set dimensions and alignment for the overall button, mirroring downloads */
+    display: inline-flex; 
+    width: 220px; 
+    flex-direction: column; /* Stacks the primary text and the small text */
+    align-items: flex-start; /* Left-aligns content inside the button */
+    padding: 8px 25px; 
+    
+    /* Use Primary Color (Feedback/Accent Color) */
+    background-color: var(--primary-color); 
+    color: white; 
+    border-radius: 8px; /* Sharp corners like downloads */
+    transition: background-color 0.3s;
 }
 
-.required {
-    color: var(--primary-color);
-}
-/* --- END FEEDBACK FORM STYLES --- */
-
-
-/* --- NEW RELEASES PAGE STYLES --- */
-
-/* Style for the collapsible section titles */
-details {
-    margin-bottom: 20px;
-    padding: 10px 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    background-color: #f9f9f9;
+.doc-link:hover {
+    background-color: #a34400; /* Darker orange on hover */
+    text-decoration: none;
+    color: white; /* Keep text white on hover */
 }
 
-/* Style for the summary (the visible title bar) */
-summary {
-    font-size: 1.2em;
+/* Container for icon and primary label (horizontal) */
+.doc-link .doc-primary {
+    display: flex;
+    align-items: center; /* Vertically centers the icon and text */
+    margin-bottom: 3px; /* Space between the primary label and descriptive text */
+}
+
+/* Icon styles */
+.doc-link .doc-primary i {
+    color: white;
+    margin-right: 8px; /* Space to the right of the icon */
+    font-size: 1.5em; 
+}
+
+/* Primary text (label) */
+.doc-link .doc-primary span {
     font-weight: bold;
-    color: var(--secondary-color);
-    cursor: pointer;
-    padding: 5px 0;
-    /* Hide default triangle icon and use Font Awesome instead */
-    list-style: none; 
+    margin-bottom: 0; 
 }
 
-/* Custom icon for summary: use pseudo-element for the disclosure triangle */
-summary::before {
-    content: "\f0da"; /* Font Awesome solid right arrow */
-    font-family: "Font Awesome 5 Free";
-    font-weight: 900;
-    margin-right: 10px;
-    color: var(--primary-color);
-    transition: transform 0.2s;
+/* Descriptive text (small) */
+.docs-list small {
+    font-size: 0.75em; 
+    opacity: 0.8; 
+    font-weight: normal; 
+    margin-top: 0; 
 }
 
-/* Rotate the icon when the details are open */
-details[open] summary::before {
-    transform: rotate(90deg); /* Down arrow when open */
-}
+/* --- Media Queries (Responsiveness) --- */
 
-/* Optional: Make the latest release (which is open by default) stand out */
-details[open] {
-    border-color: var(--primary-color);
-    background-color: #fff8f5; /* Very light orange background */
+@media (max-width: 550px) {
+    /* Header Buttons Stack and Go Full Width */
+    .header-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    .coffee-link {
+        width: 100%; /* Full width on small screens */
+        margin-bottom: 10px; /* Add spacing between stacked buttons */
+    }
+    /* Downloads and Documentation Links Go Full Width */
+    .downloads-list a, .doc-link { 
+        width: 100%;
+        box-sizing: border-box; 
+    }
 }
-
-/* Content list styling */
-details ul {
-    list-style: disc;
-    padding-left: 25px;
-    margin-top: 10px;
-    padding-bottom: 10px;
-}
-details ul li {
-    margin-bottom: 5px;
-}
-
-/* Utility class for primary color text (used for the star icon) */
-.primary-color-text {
-    color: var(--primary-color);
-}
-
-/* Index.html - Link Spacing Fix for Documentation/Releases section */
-.docs-links a {
-    margin-right: 20px;
-}
-/* --- END NEW RELEASES PAGE STYLES --- */
