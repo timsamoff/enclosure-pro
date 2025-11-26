@@ -11,13 +11,21 @@ let isWindowReady = false;
 function setupAutoUpdater() {
   // Configure auto-updater for proper restart behavior
   autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.autoInstallOnAppQuit = true; // Changed to true for proper restart
   autoUpdater.allowPrerelease = false;
+
+  // Add update-not-available event for better feedback
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('No updates available');
+    mainWindow?.webContents.send('update-not-available');
+  });
 
   autoUpdater.on('update-available', (info) => {
     console.log('Update available:', info.version);
+    // Notify renderer that an update is available
     mainWindow?.webContents.send('update-available', info);
     
+    // Ask user if they want to download
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Update Available',
@@ -27,32 +35,42 @@ function setupAutoUpdater() {
       cancelId: 1
     }).then((result) => {
       if (result.response === 0) {
+        console.log('User chose to download update');
+        // Notify renderer that download is starting
         mainWindow?.webContents.send('download-started');
         autoUpdater.downloadUpdate();
+      } else {
+        console.log('User chose to download later');
       }
     });
   });
 
   autoUpdater.on('download-progress', (progressObj) => {
     console.log('Download progress:', progressObj.percent);
+    // Send progress to renderer
     mainWindow?.webContents.send('download-progress', progressObj);
   });
 
   autoUpdater.on('update-downloaded', (info) => {
     console.log('Update downloaded:', info.version);
+    // Force a sync to ensure the event is processed
     mainWindow?.webContents.send('update-downloaded', info);
     
+    // Show restart dialog immediately
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Update Ready',
-      message: `Version ${info.version} has been downloaded. Restart the application to apply the update?`,
+      message: `Version ${info.version} has been downloaded and is ready to install. Restart the application to apply the update?`,
       buttons: ['Restart Now', 'Later'],
       defaultId: 0,
       cancelId: 1
     }).then((result) => {
       if (result.response === 0) {
-        console.log('Quitting and installing update...');
-        autoUpdater.quitAndInstall(true, true);
+        console.log('User chose to restart, calling quitAndInstall...');
+        // Use isSilent=false to show install progress, isForceRunAfter=true to restart
+        autoUpdater.quitAndInstall(false, true);
+      } else {
+        console.log('User chose to restart later');
       }
     });
   });
@@ -60,6 +78,14 @@ function setupAutoUpdater() {
   autoUpdater.on('error', (error) => {
     console.error('Auto-updater error:', error);
     mainWindow?.webContents.send('update-error', error.message);
+    
+    // Show error to user
+    dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: 'Update Error',
+      message: `Failed to update: ${error.message}`,
+      buttons: ['OK']
+    });
   });
 }
 
@@ -101,27 +127,34 @@ function createWindow() {
     autoHideMenuBar: true,
   });
 
+  // Set up auto-updater
   setupAutoUpdater();
 
+  // Only open DevTools in development
   if (isDevelopment) {
     mainWindow.webContents.openDevTools();
   }
 
+  // Prevent window from closing, let renderer handle it
   mainWindow.on('close', (e) => {
     e.preventDefault();
     mainWindow.webContents.send('window-close-requested');
   });
 
+  // Handle window being destroyed
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 
+  // Always load from built files (standalone Electron app)
   mainWindow.loadFile(path.join(__dirname, '../dist/public/index.html'));
   
+  // When window is ready, check if there's a file to open
   mainWindow.webContents.once('did-finish-load', () => {
     isWindowReady = true;
     
     if (fileToOpen) {
+      // Give React time to initialize
       setTimeout(() => {
         mainWindow.webContents.send('file-open-request', fileToOpen);
         fileToOpen = null;
@@ -148,10 +181,12 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, focus our window instead
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
       
+      // Check for file path in command line
       const filePath = getFilePathFromArgs(commandLine);
       if (filePath) {
         if (isWindowReady) {
@@ -165,6 +200,7 @@ if (!gotTheLock) {
 }
 
 app.whenReady().then(() => {
+  // Check for file path in initial launch (Windows/Linux)
   const filePath = getFilePathFromArgs(process.argv);
   if (filePath) {
     fileToOpen = filePath;
@@ -172,8 +208,14 @@ app.whenReady().then(() => {
   
   createWindow();
 
+  // Check for updates 5 seconds after app starts with better logging
   setTimeout(() => {
-    autoUpdater.checkForUpdates();
+    console.log('🔍 Checking for updates...');
+    autoUpdater.checkForUpdates().then(result => {
+      console.log('✅ Update check completed:', result);
+    }).catch(error => {
+      console.error('❌ Update check failed:', error);
+    });
   }, 5000);
 
   app.on('activate', () => {
@@ -184,19 +226,23 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  // On macOS, quit the app when all windows are closed
   app.quit();
 });
 
 // Helper function to extract file path from command line arguments
 function getFilePathFromArgs(args) {
   if (process.platform === 'win32') {
+    // On Windows, look for .enc files in all arguments
     const potentialFiles = args.slice(1).filter(arg => 
       arg.endsWith('.enc') && !arg.startsWith('--')
     );
     return potentialFiles[0] || null;
   } else if (process.platform === 'darwin') {
+    // macOS - we use the 'open-file' event instead
     return null;
   } else {
+    // Linux - look for .enc files in arguments
     const fileArg = args.find(arg => arg.endsWith('.enc') && !arg.startsWith('-'));
     return fileArg;
   }
@@ -214,6 +260,7 @@ function getNextVersion(currentVersion) {
 ipcMain.handle('window:close', () => {
   if (mainWindow) {
     mainWindow.destroy();
+    // After destroying the window, quit the app
     app.quit();
   }
 });
@@ -229,7 +276,37 @@ ipcMain.handle('app:check-for-updates', () => {
 
 ipcMain.handle('app:restart-and-update', () => {
   console.log('Restarting and updating application...');
-  autoUpdater.quitAndInstall(true, true);
+  autoUpdater.quitAndInstall(false, true);
+});
+
+// Manual update check with better feedback
+ipcMain.handle('app:manual-check-updates', async () => {
+  try {
+    console.log('🔍 Manual update check requested');
+    const result = await autoUpdater.checkForUpdates();
+    console.log('✅ Manual update check result:', result);
+    
+    if (!result?.updateInfo) {
+      // No update available
+      return { 
+        success: true, 
+        updateAvailable: false,
+        message: 'You are running the latest version.'
+      };
+    }
+    
+    return {
+      success: true,
+      updateAvailable: true,
+      version: result.updateInfo.version
+    };
+  } catch (error) {
+    console.error('❌ Manual update check failed:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 });
 
 // TEST: Simulate update handler - FIXED WITH DYNAMIC VERSION
@@ -293,6 +370,7 @@ ipcMain.handle('test:simulate-update', () => {
             }).then((restartResult) => {
               if (restartResult.response === 0) {
                 console.log('🔧 User chose to restart (simulation only - no actual restart)');
+                // In simulation, we don't actually restart
                 dialog.showMessageBox(mainWindow, {
                   type: 'info',
                   title: 'TEST - Simulation Complete',
@@ -303,7 +381,7 @@ ipcMain.handle('test:simulate-update', () => {
             });
           }, 1000);
         }
-      }, 300);
+      }, 300); // Slower progress for better visibility
     }
   });
   
