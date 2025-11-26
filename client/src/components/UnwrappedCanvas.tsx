@@ -40,6 +40,28 @@ const getRotatedSideLabel = (side: EnclosureSide, rotation: number, rotatesLabel
   return rotationMap[side];
 };
 
+// Fix the helper function to handle side mapping with rotation correctly
+const getActualSideForDrag = (
+  canvasSide: EnclosureSide, 
+  currentRotation: number, 
+  rotatesLabels: boolean
+): EnclosureSide => {
+  if (!rotatesLabels || currentRotation === 0) {
+    return canvasSide;
+  }
+  
+  // Correct reverse mapping for 90° clockwise rotation
+  const reverseMap: Record<EnclosureSide, EnclosureSide> = {
+    'Front': 'Front',
+    'Top': 'Right',     // Top becomes Right
+    'Right': 'Bottom',  // Right becomes Bottom  
+    'Bottom': 'Left',   // Bottom becomes Left
+    'Left': 'Top'       // Left becomes Top
+  };
+  
+  return reverseMap[canvasSide];
+};
+
 export default function UnwrappedCanvas({
   enclosureType,
   components,
@@ -74,6 +96,41 @@ export default function UnwrappedCanvas({
       return `${mm.toFixed(1)}mm`;
     } else {
       return mmToFraction(mm);
+    }
+  };
+
+  // Helper function to get rotated dimensions for utility guides
+  const getRotatedDimensions = (compData: any, currentRotation: number) => {
+    if (compData.category !== "Utility Guides (not printed)" || currentRotation === 0) {
+      return { width: compData.width, height: compData.height };
+    }
+    
+    // Swap dimensions for 90° rotation
+    if (currentRotation === 90) {
+      return { width: compData.height, height: compData.width };
+    }
+    
+    return { width: compData.width, height: compData.height };
+  };
+
+  // Helper function to get rotated label text for utility guides
+  const getRotatedLabelText = (compData: any, currentRotation: number) => {
+    if (compData.category !== "Utility Guides (not printed)") {
+      return unit === "metric" 
+        ? `${compData.drillSize.toFixed(1)}mm`
+        : compData.imperialLabel;
+    }
+
+    if (compData.shape === 'rectangle' || compData.shape === 'square') {
+      const rotatedDims = getRotatedDimensions(compData, currentRotation);
+      return unit === "metric" 
+        ? `${rotatedDims.width}×${rotatedDims.height}mm`
+        : compData.imperialLabel;
+    } else {
+      // For circles, just show diameter (doesn't change with rotation)
+      return unit === "metric" 
+        ? `${compData.drillSize}mm`
+        : compData.imperialLabel;
     }
   };
 
@@ -339,13 +396,17 @@ export default function UnwrappedCanvas({
       // Draw components for this side
       const sideName = (label) as EnclosureSide;
       const sideComponents = components.filter(c => c.side === sideName);
+      
+      // FIXED: Updated component rendering to support utility guides with rectangles and circles
       sideComponents.forEach(component => {
         const compData = COMPONENT_TYPES[component.type];
         if (!compData) return;
         
-        const radius = (compData.drillSize / 2) * mmToPixels;
         const centerX = sideLayout.width / 2 + component.x;
         const centerY = sideLayout.height / 2 + component.y;
+
+        // Check if this is a utility guide (not printed)
+        const isUtilityGuide = compData.category === "Utility Guides (not printed)";
 
         // Check if component is in warning zone for trapezoidal sides
         let showWarning = false;
@@ -353,7 +414,7 @@ export default function UnwrappedCanvas({
           const backWidth = sideLayout.width;
           const frontWidth = sideData.frontWidth * mmToPixels;
           const height = sideLayout.height;
-          const minDistFromEdge = 5 * mmToPixels; // 5mm safety margin
+          const minDistFromEdge = 5 * mmToPixels;
           
           const absY = component.y + height / 2;
           const widthAtY = backWidth - (backWidth - frontWidth) * (absY / height);
@@ -370,81 +431,213 @@ export default function UnwrappedCanvas({
           ctx.fillStyle = "#ff8c42";
           ctx.globalAlpha = 0.2;
           ctx.beginPath();
-          ctx.arc(centerX, centerY, radius + 10 / zoom, 0, 2 * Math.PI);
+          
+          if (compData.shape === 'rectangle' || compData.shape === 'square') {
+            const rotatedDims = getRotatedDimensions(compData, rotation);
+            const rectWidth = (rotatedDims.width || 10) * mmToPixels;
+            const rectHeight = (rotatedDims.height || 10) * mmToPixels;
+            ctx.rect(
+              centerX - rectWidth / 2 - 10 / zoom,
+              centerY - rectHeight / 2 - 10 / zoom,
+              rectWidth + 20 / zoom,
+              rectHeight + 20 / zoom
+            );
+          } else {
+            const radius = (compData.drillSize / 2) * mmToPixels;
+            ctx.arc(centerX, centerY, radius + 10 / zoom, 0, 2 * Math.PI);
+          }
           ctx.fill();
           ctx.globalAlpha = 1;
         }
 
-        // Draw drill hole with white fill
-        ctx.fillStyle = "white";
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-        ctx.fill();
-        
-        // Draw warning ring if needed
-        if (showWarning) {
-          ctx.strokeStyle = "#fbbf24"; // yellow
-          ctx.lineWidth = 2 / zoom;
+        // Draw the component based on shape
+        if (compData.shape === 'rectangle' || compData.shape === 'square') {
+          // Get rotated dimensions for utility guides
+          const rotatedDims = getRotatedDimensions(compData, rotation);
+          const rectWidth = (rotatedDims.width || 10) * mmToPixels;
+          const rectHeight = (rotatedDims.height || 10) * mmToPixels;
+          
+          // Draw fill - transparent for utility guides, white for regular components
+          if (isUtilityGuide) {
+            ctx.fillStyle = "transparent";
+          } else {
+            ctx.fillStyle = "white";
+          }
+          ctx.fillRect(
+            centerX - rectWidth / 2,
+            centerY - rectHeight / 2,
+            rectWidth,
+            rectHeight
+          );
+          
+          // Draw warning outline if needed (only for non-utility guides)
+          if (showWarning && !isUtilityGuide) {
+            ctx.strokeStyle = "#fbbf24";
+            ctx.lineWidth = 2 / zoom;
+            ctx.strokeRect(
+              centerX - rectWidth / 2 - 5 / zoom,
+              centerY - rectHeight / 2 - 5 / zoom,
+              rectWidth + 10 / zoom,
+              rectHeight + 10 / zoom
+            );
+          }
+          
+          // Draw main outline with dotted lines for utility guides
+          ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--foreground))";
+          ctx.lineWidth = (selectedComponent === component.id ? 2.5 : 2) / zoom;
+          
+          if (isUtilityGuide) {
+            ctx.setLineDash([5 / zoom, 5 / zoom]);
+          }
+          
+          ctx.strokeRect(
+            centerX - rectWidth / 2,
+            centerY - rectHeight / 2,
+            rectWidth,
+            rectHeight
+          );
+          
+          if (isUtilityGuide) {
+            ctx.setLineDash([]);
+          }
+          
+          // Draw crosshair (only for non-utility guides)
+          if (!isUtilityGuide) {
+            const crosshairSize = Math.max(rectWidth / 2, rectHeight / 2);
+            ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--muted-foreground))";
+            ctx.lineWidth = 1 / zoom;
+            ctx.beginPath();
+            ctx.moveTo(centerX - crosshairSize, centerY);
+            ctx.lineTo(centerX + crosshairSize, centerY);
+            ctx.moveTo(centerX, centerY - crosshairSize);
+            ctx.lineTo(centerX, centerY + crosshairSize);
+            ctx.stroke();
+          }
+          
+          // Draw dimension label with rotated dimensions
+          const labelText = getRotatedLabelText(compData, rotation);
+          const labelOffset = Math.max(rectHeight / 2, rectWidth / 2) + 15 / zoom;
+          
+          ctx.save();
+          ctx.translate(centerX, centerY);
+          const rotRad = (-rotation * Math.PI) / 180;
+          ctx.rotate(rotRad);
+          ctx.translate(0, labelOffset);
+          
+          ctx.font = `${10 / zoom}px monospace`;
+          const textMetrics = ctx.measureText(labelText);
+          const textWidth = textMetrics.width;
+          const textHeight = 10 / zoom;
+          const padding = 4 / zoom;
+          
+          // Draw pill background
+          ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
           ctx.beginPath();
-          ctx.arc(centerX, centerY, radius + 5 / zoom, 0, 2 * Math.PI);
+          ctx.roundRect(
+            -textWidth / 2 - padding,
+            -textHeight / 2 - padding,
+            textWidth + padding * 2,
+            textHeight + padding * 2,
+            (textHeight + padding * 2) / 2
+          );
+          ctx.fill();
+          
+          // Draw text
+          ctx.fillStyle = "black";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(labelText, 0, 0);
+          
+          ctx.restore();
+          
+        } else {
+          // CIRCLE RENDERING (for both regular components and utility guides)
+          const radius = (compData.drillSize / 2) * mmToPixels;
+          
+          // Draw drill hole - transparent for utility guides, white for regular components
+          if (isUtilityGuide) {
+            ctx.fillStyle = "transparent";
+          } else {
+            ctx.fillStyle = "white";
+          }
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+          ctx.fill();
+          
+          // Draw warning ring if needed (only for non-utility guides)
+          if (showWarning && !isUtilityGuide) {
+            ctx.strokeStyle = "#fbbf24";
+            ctx.lineWidth = 2 / zoom;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius + 5 / zoom, 0, 2 * Math.PI);
+            ctx.stroke();
+          }
+          
+          // Draw stroke with dotted lines for utility guides
+          ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--foreground))";
+          ctx.lineWidth = (selectedComponent === component.id ? 2.5 : 2) / zoom;
+          
+          if (isUtilityGuide) {
+            ctx.setLineDash([5 / zoom, 5 / zoom]);
+          }
+          
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
           ctx.stroke();
+          
+          if (isUtilityGuide) {
+            ctx.setLineDash([]);
+          }
+
+          // Draw crosshair (only for non-utility guides)
+          if (!isUtilityGuide) {
+            const crosshairSize = radius;
+            ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--muted-foreground))";
+            ctx.lineWidth = 1 / zoom;
+            ctx.beginPath();
+            ctx.moveTo(centerX - crosshairSize, centerY);
+            ctx.lineTo(centerX + crosshairSize, centerY);
+            ctx.moveTo(centerX, centerY - crosshairSize);
+            ctx.lineTo(centerX, centerY + crosshairSize);
+            ctx.stroke();
+          }
+
+          // Draw label with rotated dimensions for utility guides
+          const labelText = getRotatedLabelText(compData, rotation);
+          const labelOffset = radius + 15 / zoom;
+          
+          ctx.save();
+          ctx.translate(centerX, centerY);
+          const rotRad = (-rotation * Math.PI) / 180;
+          ctx.rotate(rotRad);
+          ctx.translate(0, labelOffset);
+          
+          ctx.font = `${10 / zoom}px monospace`;
+          const textMetrics = ctx.measureText(labelText);
+          const textWidth = textMetrics.width;
+          const textHeight = 10 / zoom;
+          const padding = 4 / zoom;
+          
+          // Draw pill background
+          ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+          ctx.beginPath();
+          ctx.roundRect(
+            -textWidth / 2 - padding,
+            -textHeight / 2 - padding,
+            textWidth + padding * 2,
+            textHeight + padding * 2,
+            (textHeight + padding * 2) / 2
+          );
+          ctx.fill();
+          
+          // Draw text
+          ctx.fillStyle = "black";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(labelText, 0, 0);
+          
+          ctx.restore();
         }
-        
-        // Draw stroke on fresh path
-        ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--foreground))";
-        ctx.lineWidth = (selectedComponent === component.id ? 2.5 : 2) / zoom;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-        ctx.stroke();
-
-        // Draw crosshair
-        const crosshairSize = radius;
-        ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--muted-foreground))";
-        ctx.lineWidth = 1 / zoom;
-        ctx.beginPath();
-        ctx.moveTo(centerX - crosshairSize, centerY);
-        ctx.lineTo(centerX + crosshairSize, centerY);
-        ctx.moveTo(centerX, centerY - crosshairSize);
-        ctx.lineTo(centerX, centerY + crosshairSize);
-        ctx.stroke();
-
-        // Draw label with white pill background below component
-        const labelText = unit === "metric" 
-          ? `${compData.drillSize.toFixed(1)}mm`
-          : compData.imperialLabel;
-        const labelOffset = radius + 15 / zoom;
-        
-        ctx.save();
-        ctx.translate(centerX, centerY);
-        const rotRad = (-rotation * Math.PI) / 180;
-        ctx.rotate(rotRad);
-        ctx.translate(0, labelOffset);
-        
-        ctx.font = `${10 / zoom}px monospace`;
-        const textMetrics = ctx.measureText(labelText);
-        const textWidth = textMetrics.width;
-        const textHeight = 10 / zoom;
-        const padding = 4 / zoom;
-        
-        // Draw translucent white pill background for measurement
-        ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-        ctx.beginPath();
-        ctx.roundRect(
-          -textWidth / 2 - padding,
-          -textHeight / 2 - padding,
-          textWidth + padding * 2,
-          textHeight + padding * 2,
-          (textHeight + padding * 2) / 2
-        );
-        ctx.fill();
-        
-        // Draw text in black
-        ctx.fillStyle = "black";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(labelText, 0, 0);
-        
-        ctx.restore();
       });
 
       ctx.restore();
@@ -547,13 +740,33 @@ export default function UnwrappedCanvas({
 
       for (const component of sideComponents) {
         const compData = COMPONENT_TYPES[component.type];
-        const radius = (compData.drillSize / 2) * mmToPixels;
+        let isClicked = false;
 
-        const dx = sideX - component.x;
-        const dy = sideY - component.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (compData.shape === 'rectangle' || compData.shape === 'square') {
+          // Check rectangle/square click - use rotated dimensions for accurate hit detection
+          const rotatedDims = getRotatedDimensions(compData, rotation);
+          const rectWidth = (rotatedDims.width || 10) * mmToPixels;
+          const rectHeight = (rotatedDims.height || 10) * mmToPixels;
+          
+          const dx = Math.abs(sideX - component.x);
+          const dy = Math.abs(sideY - component.y);
+          
+          if (dx <= rectWidth / 2 && dy <= rectHeight / 2) {
+            isClicked = true;
+          }
+        } else {
+          // Check circle click
+          const radius = (compData.drillSize / 2) * mmToPixels;
+          const dx = sideX - component.x;
+          const dy = sideY - component.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance <= radius + 10) {
+          if (distance <= radius + 10) {
+            isClicked = true;
+          }
+        }
+
+        if (isClicked) {
           clickedComponent = component;
           clickedSideX = sideX;
           clickedSideY = sideY;
@@ -605,8 +818,8 @@ export default function UnwrappedCanvas({
       const layoutX = dx * cos - dy * sin + layout.totalWidth / 2;
       const layoutY = dx * sin + dy * cos + layout.totalHeight / 2;
 
-      // Detect which side contains the cursor position
-      let currentSide: EnclosureSide | null = null;
+      // Detect which side contains the cursor position (in CANVAS coordinates)
+      let canvasSide: EnclosureSide | null = null;
       let currentSideLayout: { x: number; y: number; width: number; height: number } | null = null;
       
       const sides: Array<{ side: EnclosureSide; layout: typeof layout.front }> = [
@@ -625,23 +838,26 @@ export default function UnwrappedCanvas({
           layoutY >= sideLayout.y &&
           layoutY <= sideLayout.y + sideLayout.height
         ) {
-          currentSide = side;
+          canvasSide = side;
           currentSideLayout = sideLayout;
           break;
         }
       }
       
-      if (!currentSide || !currentSideLayout) {
+      if (!canvasSide || !currentSideLayout) {
         return;
       }
+
+      // Convert canvas side to actual side based on rotation
+      const actualSide = getActualSideForDrag(canvasSide, rotation, rotatesLabels);
 
       // Calculate position relative to detected side's center
       let newX = layoutX - currentSideLayout.x - currentSideLayout.width / 2;
       let newY = layoutY - currentSideLayout.y - currentSideLayout.height / 2;
 
       // Check if position is valid for trapezoidal sides
-      if (currentSide === 'Left' || currentSide === 'Right') {
-        const sideData = dimensions[currentSide.toLowerCase() as 'left' | 'right'];
+      if (actualSide === 'Left' || actualSide === 'Right') {
+        const sideData = dimensions[actualSide.toLowerCase() as 'left' | 'right'];
         if (sideData.isTrapezoidal && sideData.frontWidth) {
           const backWidth = sideData.width * mmToPixels;
           const frontWidth = sideData.frontWidth * mmToPixels;
@@ -664,7 +880,7 @@ export default function UnwrappedCanvas({
         draggedComponent, 
         newX, 
         newY, 
-        currentSide !== component.side ? currentSide : undefined
+        actualSide !== component.side ? actualSide : undefined
       );
     }
   };
