@@ -100,7 +100,7 @@ h4 {
 }
 
 .asterisk {
-    color: orange;
+    color: var(--primary-color); /* CHANGE 1: Use the Dark Orange variable for consistency */
     font-weight: bold;
     font-size: 1.2em;
 }
@@ -262,12 +262,7 @@ figure img {
     border-radius: 5px;
 }
 
-.ui-image-list {
-    list-style-type: decimal; /* Enable 1, 2, 3 numbering */
-    padding-left: 20px;
-    margin-top: 20px;
-}
-
+.ui-image-list i,
 .printing-steps i {
     margin-right: 8px;
     color: var(--primary-color);
@@ -330,6 +325,40 @@ figure img {
     opacity: 0.8; 
     font-weight: normal; 
     margin-top: 0; 
+}
+
+/* --- Releases Styles --- */
+
+/* Star Icon Color */
+.primary-color-text {
+    color: var(--primary-color) !important;
+    margin-left: 5px;
+}
+
+/* Collapse Arrow Color and Rotation Fix */
+details summary {
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--text-color);
+    list-style: none;
+    display: flex;
+    align-items: center;
+}
+
+/* Re-adds the regular triangle icon and makes it orange */
+details summary::before {
+    content: "\f0da";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-right: 10px;
+    transition: transform 0.2s ease-in-out;
+    color: var(--primary-color);
+    display: inline-block;
+}
+
+/* Rotates the triangle 90 degrees when the details are open (collapsed) */
+details[open] summary::before {
+    transform: rotate(90deg);
 }
 
 /* --- Media Queries (Responsiveness) --- */
