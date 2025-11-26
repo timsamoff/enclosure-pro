@@ -19,12 +19,6 @@
   "build": {
     "appId": "com.enclosurepro.app",
     "productName": "Enclosure Pro",
-    "publish": {
-      "provider": "github",
-      "owner": "timsamoff",
-      "repo": "enclosure-pro",
-      "releaseType": "release"
-    },
     "files": [
       "dist/**/*",
       "electron/**/*",
