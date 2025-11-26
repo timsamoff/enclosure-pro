@@ -22,6 +22,7 @@ export default function ComponentPalette({
     LEDs: [] as ComponentType[],
     Fixtures: [] as ComponentType[],
     Screws: [] as ComponentType[],
+    // "Utility Guides (not printed)": [] as ComponentType[],
   };
 
   Object.entries(COMPONENT_TYPES).forEach(([key, value]) => {

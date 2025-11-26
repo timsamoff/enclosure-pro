@@ -1,5 +1,5 @@
 import { SiInstagram } from "react-icons/si";
-import { Book, Coffee, Download, RefreshCw } from "lucide-react";
+import { Book, Coffee, Download, RefreshCw, MessageSquare } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -104,7 +104,7 @@ export default function AppIconMenu() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56" data-testid="menu-app-dropdown">
-          {/* 1. App Info (First) */}
+          {/* App Info */}
           <DropdownMenuItem disabled className="flex flex-col items-start gap-1 py-3">
             <div className="font-semibold text-base">Enclosure Pro</div>
             <div className="text-xs text-muted-foreground">Version {appVersion}</div>
@@ -114,7 +114,7 @@ export default function AppIconMenu() {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           
-          {/* 2. Created By (Second) */}
+          {/* Created By */}
           <div className="px-2 py-3">
             <div className="text-xs text-muted-foreground mb-2">Created by Tim Samoff</div>
             <a
@@ -131,7 +131,7 @@ export default function AppIconMenu() {
           
           <DropdownMenuSeparator />
           
-          {/* 3. Documentation (Third) */}
+          {/* Documentation */}
           <DropdownMenuItem asChild>
             <a
               href="https://samoff.com/enclosure-pro/documentation.html"
@@ -142,6 +142,22 @@ export default function AppIconMenu() {
             >
               <Book className="w-4 h-4" />
               <span>Documentation</span>
+            </a>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+            {/* Feedback */}
+          <DropdownMenuItem asChild>
+            <a
+              href="https://samoff.com/enclosure-pro/feedback.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 cursor-pointer"
+              data-testid="link-documentation"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>Feedback</span>
             </a>
           </DropdownMenuItem>
 
@@ -159,7 +175,7 @@ export default function AppIconMenu() {
             </>
           )}
 
-          {/* Check for Updates (Second to Last) */}
+          {/* Check for Updates */}
           <DropdownMenuSeparator />
           <DropdownMenuItem 
             onClick={handleCheckForUpdates} 
@@ -174,7 +190,7 @@ export default function AppIconMenu() {
             <span>{isChecking ? 'Checking...' : 'Check for Updates'}</span>
           </DropdownMenuItem>
 
-          {/* Buy Me a Cup of Coffee (Last) */}
+          {/* Buy Me a Cup of Coffee */}
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <a

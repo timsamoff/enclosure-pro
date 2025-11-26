@@ -411,147 +411,213 @@ export default function Designer() {
   };
 
   const renderForPrintExport = useCallback((
-    currentEnclosureType: EnclosureType, 
-    shouldRotate: boolean = false, 
-    currentRotation: number = 0
-  ): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      try {
-        const dimensions = getUnwrappedDimensions(currentEnclosureType);
-        const currentUnit = unitRef.current;
-        const rotatesLabels = ENCLOSURE_TYPES[currentEnclosureType].rotatesLabels || false;
-        const currentComponents = componentsRef.current;
+  currentEnclosureType: EnclosureType, 
+  shouldRotate: boolean = false, 
+  currentRotation: number = 0
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    try {
+      const dimensions = getUnwrappedDimensions(currentEnclosureType);
+      const currentUnit = unitRef.current;
+      const rotatesLabels = ENCLOSURE_TYPES[currentEnclosureType].rotatesLabels || false;
+      const currentComponents = componentsRef.current;
 
-        const frontW = dimensions.front.width;
-        const frontH = dimensions.front.height;
-        const topW = dimensions.top.width;
-        const topH = dimensions.top.height;
-        const bottomW = dimensions.bottom.width;
-        const bottomH = dimensions.bottom.height;
-        const leftW = dimensions.left.width;
-        const leftH = dimensions.left.height;
-        const rightW = dimensions.right.width;
-        const rightH = dimensions.right.height;
+      const frontW = dimensions.front.width;
+      const frontH = dimensions.front.height;
+      const topW = dimensions.top.width;
+      const topH = dimensions.top.height;
+      const bottomW = dimensions.bottom.width;
+      const bottomH = dimensions.bottom.height;
+      const leftW = dimensions.left.width;
+      const leftH = dimensions.left.height;
+      const rightW = dimensions.right.width;
+      const rightH = dimensions.right.height;
 
-        let totalWidthMM = leftW + frontW + rightW;
-        let totalHeightMM = topH + frontH + bottomH;
+      let totalWidthMM = leftW + frontW + rightW;
+      let totalHeightMM = topH + frontH + bottomH;
 
-        if (shouldRotate) {
-          [totalWidthMM, totalHeightMM] = [totalHeightMM, totalWidthMM];
-        }
+      if (shouldRotate) {
+        [totalWidthMM, totalHeightMM] = [totalHeightMM, totalWidthMM];
+      }
 
-        const pixelsPerMM = 3.7795275591;
+      const pixelsPerMM = 3.7795275591;
+      
+      const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
+      const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      if (shouldRotate) {
+        ctx.translate(canvasWidth / 2, canvasHeight / 2);
+        ctx.rotate(Math.PI / 2);
+        ctx.translate(-canvasHeight / 2, -canvasWidth / 2);
         
-        const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
-        const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
+        [totalWidthMM, totalHeightMM] = [totalHeightMM, totalWidthMM];
+      }
 
-        const canvas = document.createElement('canvas');
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-        const ctx = canvas.getContext('2d');
+      const topOffsetX = (frontW - topW) / 2 * pixelsPerMM;
+      const bottomOffsetX = (frontW - bottomW) / 2 * pixelsPerMM;
+      const leftOffsetY = (frontH - leftH) / 2 * pixelsPerMM;
+      const rightOffsetY = (frontH - rightH) / 2 * pixelsPerMM;
+
+      const layout = {
+        front: { 
+          x: leftW * pixelsPerMM, 
+          y: topH * pixelsPerMM, 
+          width: frontW * pixelsPerMM, 
+          height: frontH * pixelsPerMM 
+        },
+        top: { 
+          x: leftW * pixelsPerMM + topOffsetX, 
+          y: 0, 
+          width: topW * pixelsPerMM, 
+          height: topH * pixelsPerMM 
+        },
+        bottom: { 
+          x: leftW * pixelsPerMM + bottomOffsetX, 
+          y: (topH + frontH) * pixelsPerMM, 
+          width: bottomW * pixelsPerMM, 
+          height: bottomH * pixelsPerMM 
+        },
+        left: { 
+          x: 0, 
+          y: topH * pixelsPerMM + leftOffsetY, 
+          width: leftW * pixelsPerMM, 
+          height: leftH * pixelsPerMM 
+        },
+        right: { 
+          x: (leftW + frontW) * pixelsPerMM, 
+          y: topH * pixelsPerMM + rightOffsetY, 
+          width: rightW * pixelsPerMM, 
+          height: rightH * pixelsPerMM 
+        },
+      };
+
+      const drawSide = (sideKey: keyof typeof layout, originalLabel: string) => {
+        const side = layout[sideKey];
+        const x = side.x;
+        const y = side.y;
+        const w = side.width;
+        const h = side.height;
+
+        const displayLabel = rotatesLabels 
+          ? getRotatedSideLabel(originalLabel as EnclosureSide, currentRotation, rotatesLabels)
+          : originalLabel;
+
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
         
-        if (!ctx) {
-          reject(new Error('Could not get canvas context'));
-          return;
+        if (sideKey === 'front') {
+          const cornerRadius = 5 * pixelsPerMM;
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, h, cornerRadius);
+          ctx.stroke();
+        } else {
+          ctx.strokeRect(x, y, w, h);
         }
 
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-        if (shouldRotate) {
-          ctx.translate(canvasWidth / 2, canvasHeight / 2);
-          ctx.rotate(Math.PI / 2);
-          ctx.translate(-canvasHeight / 2, -canvasWidth / 2);
-          
-          [totalWidthMM, totalHeightMM] = [totalHeightMM, totalWidthMM];
+        // Draw side label
+        ctx.save();
+        ctx.fillStyle = 'black';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Use the same rotation logic for both print and PDF export
+        if (rotatesLabels && currentRotation !== 0) {
+          ctx.translate(x + w / 2, y + h / 2);
+          ctx.rotate(-Math.PI / 2); // 90° counter-clockwise
+          ctx.fillText(displayLabel, 0, 0);
+        } else {
+          ctx.fillText(displayLabel, x + w / 2, y + h / 2);
         }
+        ctx.restore();
 
-        const topOffsetX = (frontW - topW) / 2 * pixelsPerMM;
-        const bottomOffsetX = (frontW - bottomW) / 2 * pixelsPerMM;
-        const leftOffsetY = (frontH - leftH) / 2 * pixelsPerMM;
-        const rightOffsetY = (frontH - rightH) / 2 * pixelsPerMM;
+        const sideComponents = currentComponents.filter(c => c.side === originalLabel);
 
-        const layout = {
-          front: { 
-            x: leftW * pixelsPerMM, 
-            y: topH * pixelsPerMM, 
-            width: frontW * pixelsPerMM, 
-            height: frontH * pixelsPerMM 
-          },
-          top: { 
-            x: leftW * pixelsPerMM + topOffsetX, 
-            y: 0, 
-            width: topW * pixelsPerMM, 
-            height: topH * pixelsPerMM 
-          },
-          bottom: { 
-            x: leftW * pixelsPerMM + bottomOffsetX, 
-            y: (topH + frontH) * pixelsPerMM, 
-            width: bottomW * pixelsPerMM, 
-            height: bottomH * pixelsPerMM 
-          },
-          left: { 
-            x: 0, 
-            y: topH * pixelsPerMM + leftOffsetY, 
-            width: leftW * pixelsPerMM, 
-            height: leftH * pixelsPerMM 
-          },
-          right: { 
-            x: (leftW + frontW) * pixelsPerMM, 
-            y: topH * pixelsPerMM + rightOffsetY, 
-            width: rightW * pixelsPerMM, 
-            height: rightH * pixelsPerMM 
-          },
-        };
-
-        const drawSide = (sideKey: keyof typeof layout, originalLabel: string) => {
-          const side = layout[sideKey];
-          const x = side.x;
-          const y = side.y;
-          const w = side.width;
-          const h = side.height;
-
-          const displayLabel = rotatesLabels 
-            ? getRotatedSideLabel(originalLabel as EnclosureSide, currentRotation, rotatesLabels)
-            : originalLabel;
-
-          ctx.strokeStyle = 'black';
-          ctx.lineWidth = 2;
+        sideComponents.forEach(component => {
+          const compData = COMPONENT_TYPES[component.type];
           
-          if (sideKey === 'front') {
-            const cornerRadius = 5 * pixelsPerMM;
+          // Skip utility guides (they're not printed)
+          if (compData.category === "Utility Guides (not printed)") {
+            return;
+          }
+
+          const centerX = x + (w / 2) + component.x;
+          const centerY = y + (h / 2) + component.y;
+
+          // Handle rectangles and squares
+          if (compData.shape === 'rectangle' || compData.shape === 'square') {
+            const rectWidth = (compData.width || 10) * pixelsPerMM;
+            const rectHeight = (compData.height || 10) * pixelsPerMM;
+            
+            // Draw white fill
+            ctx.fillStyle = 'white';
+            ctx.fillRect(
+              centerX - rectWidth / 2,
+              centerY - rectHeight / 2,
+              rectWidth,
+              rectHeight
+            );
+            
+            // Draw black outline
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(
+              centerX - rectWidth / 2,
+              centerY - rectHeight / 2,
+              rectWidth,
+              rectHeight
+            );
+            
+            // Draw crosshair
+            const crosshairSizeH = Math.max(rectWidth / 2, 10);
+            const crosshairSizeV = Math.max(rectHeight / 2, 10);
             ctx.beginPath();
-            ctx.roundRect(x, y, w, h, cornerRadius);
+            ctx.moveTo(centerX - crosshairSizeH, centerY);
+            ctx.lineTo(centerX + crosshairSizeH, centerY);
+            ctx.moveTo(centerX, centerY - crosshairSizeV);
+            ctx.lineTo(centerX, centerY + crosshairSizeV);
             ctx.stroke();
+
+            // Draw dimensions label
+            const dimText = currentUnit === "metric"
+              ? `${compData.width}×${compData.height}mm`
+              : compData.imperialLabel;
+            
+            const labelOffset = Math.max(rectHeight / 2, rectWidth / 2) + 15;
+            
+            ctx.font = '12px Arial';
+            const textMetrics = ctx.measureText(dimText);
+            const textWidth = textMetrics.width;
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(
+              centerX - textWidth / 2 - 3,
+              centerY + labelOffset - 8,
+              textWidth + 6,
+              16
+            );
+            
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(dimText, centerX, centerY + labelOffset);
+            
           } else {
-            ctx.strokeRect(x, y, w, h);
-          }
-
-          // Draw side label
-          ctx.save();
-          ctx.fillStyle = 'black';
-          ctx.font = '16px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          
-          // Use the same rotation logic for both print and PDF export
-          if (rotatesLabels && currentRotation !== 0) {
-            ctx.translate(x + w / 2, y + h / 2);
-            ctx.rotate(-Math.PI / 2); // 90° counter-clockwise
-            ctx.fillText(displayLabel, 0, 0);
-          } else {
-            ctx.fillText(displayLabel, x + w / 2, y + h / 2);
-          }
-          ctx.restore();
-
-          const sideComponents = currentComponents.filter(c => c.side === originalLabel);
-
-          sideComponents.forEach(component => {
-            const compData = COMPONENT_TYPES[component.type];
+            // Existing circle drawing code
             const radius = (compData.drillSize / 2) * pixelsPerMM;
-
-            const centerX = x + (w / 2) + component.x;
-            const centerY = y + (h / 2) + component.y;
 
             ctx.fillStyle = 'white';
             ctx.beginPath();
@@ -594,22 +660,23 @@ export default function Designer() {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(drillText, centerX, centerY + labelOffset);
-          });
-        };
+          }
+        });
+      };
 
-        drawSide('front', 'Front');
-        drawSide('top', 'Top');
-        drawSide('bottom', 'Bottom');
-        drawSide('left', 'Left');
-        drawSide('right', 'Right');
+      drawSide('front', 'Front');
+      drawSide('top', 'Top');
+      drawSide('bottom', 'Bottom');
+      drawSide('left', 'Left');
+      drawSide('right', 'Right');
 
-        const dataUrl = canvas.toDataURL('image/png', 1.0);
-        resolve(dataUrl);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }, []);
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      resolve(dataUrl);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}, []);
 
   const generatePDF = async (
     currentEnclosureType: EnclosureType, 
