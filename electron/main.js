@@ -9,16 +9,15 @@ let isWindowReady = false;
 
 // Auto-updater setup
 function setupAutoUpdater() {
-  // Don't auto-download, let user control it
+  // Configure auto-updater for proper restart behavior
   autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowPrerelease = false;
 
   autoUpdater.on('update-available', (info) => {
     console.log('Update available:', info.version);
-    // Notify renderer that an update is available
     mainWindow?.webContents.send('update-available', info);
     
-    // Ask user if they want to download
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Update Available',
@@ -28,7 +27,6 @@ function setupAutoUpdater() {
       cancelId: 1
     }).then((result) => {
       if (result.response === 0) {
-        // Notify renderer that download is starting
         mainWindow?.webContents.send('download-started');
         autoUpdater.downloadUpdate();
       }
@@ -37,26 +35,24 @@ function setupAutoUpdater() {
 
   autoUpdater.on('download-progress', (progressObj) => {
     console.log('Download progress:', progressObj.percent);
-    // Send progress to renderer
     mainWindow?.webContents.send('download-progress', progressObj);
   });
 
   autoUpdater.on('update-downloaded', (info) => {
     console.log('Update downloaded:', info.version);
-    // Notify renderer that update is ready
     mainWindow?.webContents.send('update-downloaded', info);
     
-    // Ask user to restart
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Update Ready',
       message: `Version ${info.version} has been downloaded. Restart the application to apply the update?`,
-      buttons: ['Restart', 'Later'],
+      buttons: ['Restart Now', 'Later'],
       defaultId: 0,
       cancelId: 1
     }).then((result) => {
       if (result.response === 0) {
-        autoUpdater.quitAndInstall();
+        console.log('Quitting and installing update...');
+        autoUpdater.quitAndInstall(true, true);
       }
     });
   });
@@ -91,8 +87,6 @@ function checkForUpdates() {
 function createWindow() {
   const isDevelopment = process.env.NODE_ENV === 'development';
 
-  //const isDevelopment = true;
-
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -107,34 +101,27 @@ function createWindow() {
     autoHideMenuBar: true,
   });
 
-  // Set up auto-updater
   setupAutoUpdater();
 
-  // Only open DevTools in development
   if (isDevelopment) {
     mainWindow.webContents.openDevTools();
   }
 
-  // Prevent window from closing, let renderer handle it
   mainWindow.on('close', (e) => {
     e.preventDefault();
     mainWindow.webContents.send('window-close-requested');
   });
 
-  // Handle window being destroyed
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 
-  // Always load from built files (standalone Electron app)
   mainWindow.loadFile(path.join(__dirname, '../dist/public/index.html'));
   
-  // When window is ready, check if there's a file to open
   mainWindow.webContents.once('did-finish-load', () => {
     isWindowReady = true;
     
     if (fileToOpen) {
-      // Give React time to initialize
       setTimeout(() => {
         mainWindow.webContents.send('file-open-request', fileToOpen);
         fileToOpen = null;
@@ -161,12 +148,10 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    // Someone tried to run a second instance, focus our window instead
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
       
-      // Check for file path in command line
       const filePath = getFilePathFromArgs(commandLine);
       if (filePath) {
         if (isWindowReady) {
@@ -180,7 +165,6 @@ if (!gotTheLock) {
 }
 
 app.whenReady().then(() => {
-  // Check for file path in initial launch (Windows/Linux)
   const filePath = getFilePathFromArgs(process.argv);
   if (filePath) {
     fileToOpen = filePath;
@@ -188,7 +172,6 @@ app.whenReady().then(() => {
   
   createWindow();
 
-  // Check for updates 5 seconds after app starts
   setTimeout(() => {
     autoUpdater.checkForUpdates();
   }, 5000);
@@ -201,33 +184,36 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  // On macOS, quit the app when all windows are closed
   app.quit();
 });
 
 // Helper function to extract file path from command line arguments
 function getFilePathFromArgs(args) {
   if (process.platform === 'win32') {
-    // On Windows, look for .enc files in all arguments
     const potentialFiles = args.slice(1).filter(arg => 
       arg.endsWith('.enc') && !arg.startsWith('--')
     );
     return potentialFiles[0] || null;
   } else if (process.platform === 'darwin') {
-    // macOS - we use the 'open-file' event instead
     return null;
   } else {
-    // Linux - look for .enc files in arguments
     const fileArg = args.find(arg => arg.endsWith('.enc') && !arg.startsWith('-'));
     return fileArg;
   }
+}
+
+// Helper function to calculate next version for simulation
+function getNextVersion(currentVersion) {
+  const parts = currentVersion.split('.');
+  const lastPart = parseInt(parts[parts.length - 1]);
+  parts[parts.length - 1] = (lastPart + 1).toString();
+  return parts.join('.');
 }
 
 // IPC handler to actually close the window (called after save check)
 ipcMain.handle('window:close', () => {
   if (mainWindow) {
     mainWindow.destroy();
-    // After destroying the window, quit the app
     app.quit();
   }
 });
@@ -242,19 +228,22 @@ ipcMain.handle('app:check-for-updates', () => {
 });
 
 ipcMain.handle('app:restart-and-update', () => {
-  autoUpdater.quitAndInstall();
+  console.log('Restarting and updating application...');
+  autoUpdater.quitAndInstall(true, true);
 });
 
-// TEST: Simulate update handler - ALWAYS ALLOW FOR TESTING
+// TEST: Simulate update handler - FIXED WITH DYNAMIC VERSION
 ipcMain.handle('test:simulate-update', () => {
   console.log('🎭 test:simulate-update IPC handler called');
   
-  // Always allow simulation for testing (remove the development check)
-  console.log('🔧 Simulating update available...');
+  const currentVersion = app.getVersion();
+  const nextVersion = getNextVersion(currentVersion);
   
-  // Simulate update-available event
+  console.log(`🔧 Simulating update from ${currentVersion} to ${nextVersion}...`);
+  
+  // Simulate update-available event with dynamic version
   mainWindow?.webContents.send('update-available', {
-    version: '1.0.1',
+    version: nextVersion,
     releaseDate: new Date().toISOString()
   });
   
@@ -262,7 +251,7 @@ ipcMain.handle('test:simulate-update', () => {
   dialog.showMessageBox(mainWindow, {
     type: 'info',
     title: 'TEST - Update Available',
-    message: 'Simulated: Version 1.0.1 is available! Would you like to download it now?',
+    message: `Simulated: Version ${nextVersion} is available! Would you like to download it now?`,
     buttons: ['Download', 'Later'],
     defaultId: 0,
     cancelId: 1
@@ -290,32 +279,31 @@ ipcMain.handle('test:simulate-update', () => {
           // Simulate update downloaded
           setTimeout(() => {
             mainWindow?.webContents.send('update-downloaded', {
-              version: '1.0.1'
+              version: nextVersion
             });
             
             // Show the restart dialog
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'TEST - Update Ready',
-              message: 'Simulated: Update downloaded. Would you like to restart to apply the update?',
+              message: `Simulated: Version ${nextVersion} has been downloaded. Would you like to restart to apply the update?`,
               buttons: ['Restart', 'Later'],
               defaultId: 0,
               cancelId: 1
             }).then((restartResult) => {
               if (restartResult.response === 0) {
                 console.log('🔧 User chose to restart (simulation only - no actual restart)');
-                // In simulation, we don't actually restart
                 dialog.showMessageBox(mainWindow, {
                   type: 'info',
                   title: 'TEST - Simulation Complete',
-                  message: 'In a real update, the app would now restart with the new version.',
+                  message: `In a real update, the app would now restart with version ${nextVersion}.`,
                   buttons: ['OK']
                 });
               }
             });
           }, 1000);
         }
-      }, 300); // Slower progress for better visibility
+      }, 300);
     }
   });
   
