@@ -101,7 +101,7 @@ export default function UnwrappedCanvas({
 
   // Helper function to get rotated dimensions for utility guides (for labels only)
   const getRotatedDimensions = (compData: any, currentRotation: number) => {
-    if (compData.category !== "Utility Guides (not printed)" || currentRotation === 0) {
+    if (compData.category !== "Footprint Guides (not printed)" || currentRotation === 0) {
       return { width: compData.width, height: compData.height };
     }
     
@@ -115,7 +115,7 @@ export default function UnwrappedCanvas({
 
   // Helper function to get rotated label text for utility guides
   const getRotatedLabelText = (compData: any, currentRotation: number) => {
-    if (compData.category !== "Utility Guides (not printed)") {
+    if (compData.category !== "Footprint Guides (not printed)") {
       return unit === "metric" 
         ? `${compData.drillSize.toFixed(1)}mm`
         : compData.imperialLabel;
@@ -399,10 +399,10 @@ export default function UnwrappedCanvas({
       
       // Separate utility guides from regular components for proper z-ordering
       const utilityGuides = sideComponents.filter(c => 
-        COMPONENT_TYPES[c.type].category === "Utility Guides (not printed)"
+        COMPONENT_TYPES[c.type].category === "Footprint Guides (not printed)"
       );
       const regularComponents = sideComponents.filter(c => 
-        COMPONENT_TYPES[c.type].category !== "Utility Guides (not printed)"
+        COMPONENT_TYPES[c.type].category !== "Footprint Guides (not printed)"
       );
 
       // Draw utility guides first (behind regular components)
@@ -414,7 +414,7 @@ export default function UnwrappedCanvas({
         const centerY = sideLayout.height / 2 + component.y;
 
         // Check if this is a utility guide (not printed)
-        const isUtilityGuide = compData.category === "Utility Guides (not printed)";
+        const isUtilityGuide = compData.category === "Footprint Guides (not printed)";
 
         // Check if component is in warning zone for trapezoidal sides
         let showWarning = false;
@@ -614,7 +614,7 @@ ctx.restore();
             ctx.stroke();
           }
 
-          // Draw label with rotated dimensions for utility guides
+          // Draw label with rotated dimensions for Footprint guides
           const labelText = getRotatedLabelText(compData, rotation);
           const labelOffset = radius + 15 / zoom;
           
@@ -745,8 +745,8 @@ ctx.restore();
     
     // Sort components by type - regular components first for hit detection
     allComponents.sort((a, b) => {
-      const aIsUtility = COMPONENT_TYPES[a.type].category === "Utility Guides (not printed)";
-      const bIsUtility = COMPONENT_TYPES[b.type].category === "Utility Guides (not printed)";
+      const aIsUtility = COMPONENT_TYPES[a.type].category === "Footprint Guides (not printed)";
+      const bIsUtility = COMPONENT_TYPES[b.type].category === "Footprint Guides (not printed)";
       if (aIsUtility && !bIsUtility) return 1; // Utilities after regular
       if (!aIsUtility && bIsUtility) return -1; // Regular before utilities
       return 0;

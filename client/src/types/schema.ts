@@ -65,71 +65,53 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "screw-4": { name: "M4 Screw", drillSize: 4, imperialLabel: '5/32"', category: "Screws" },
   
   // Foorprint Guides (not printed)
-  "rectangle-10x10": { 
-    name: "10mm × 10mm Rectangle", 
+  "3pdt-1": { 
+    name: "Generic 3PDT Footprint", 
     drillSize: 0, 
-    imperialLabel: '13/32" × 13/32"', 
+    imperialLabel: '45/64" × 43/64"', 
+    category: "Footprint Guides (not printed)", 
+    shape: "rectangle", 
+    width: 18, 
+    height: 17.1 
+  },
+  "3pdt-2": { 
+    name: "Gorva 3PDT Footprint", 
+    drillSize: 0, 
+    imperialLabel: '43/64" × 21/32"', 
+    category: "Footprint Guides (not printed)", 
+    shape: "rectangle", 
+    width: 17, 
+    height: 16.7 
+  },
+  "3pdt-3": { 
+    name: "3PDT Toggle Footprint", 
+    drillSize: 0, 
+    imperialLabel: '25/64" × 33/64"', 
     category: "Footprint Guides (not printed)", 
     shape: "rectangle", 
     width: 10, 
-    height: 10 
+    height: 13.2 
   },
-  "rectangle-15x10": { 
-    name: "15mm × 10mm Rectangle", 
+  "dpdt-1": { 
+    name: "Generic DPDT Footprint", 
     drillSize: 0, 
-    imperialLabel: '19/32" × 13/32"', 
+    imperialLabel: '29/64" × 1/2"', 
     category: "Footprint Guides (not printed)", 
     shape: "rectangle", 
-    width: 15, 
-    height: 10 
+    width: 11.43, 
+    height: 12.7
   },
-  "rectangle-20x15": { 
-    name: "20mm × 15mm Rectangle", 
+  "spdt-1": { 
+    name: "Generic SPDT Footprint", 
     drillSize: 0, 
-    imperialLabel: '25/32" × 19/32"', 
+    imperialLabel: '17/64" × 1/2"', 
     category: "Footprint Guides (not printed)", 
     shape: "rectangle", 
-    width: 20, 
-    height: 15 
-  },
-  "rectangle-25x15": { 
-    name: "25mm × 15mm Rectangle", 
-    drillSize: 0, 
-    imperialLabel: '1" × 19/32"', 
-    category: "Footprint Guides (not printed)", 
-    shape: "rectangle", 
-    width: 25, 
-    height: 15 
-  },
-  "square-10": { 
-    name: "10mm Square", 
-    drillSize: 0, 
-    imperialLabel: '13/32" sq', 
-    category: "Footprint Guides (not printed)", 
-    shape: "square", 
-    width: 10, 
-    height: 10 
-  },
-  "square-15": { 
-    name: "15mm Square", 
-    drillSize: 0, 
-    imperialLabel: '19/32" sq', 
-    category: "Footprint Guides (not printed)", 
-    shape: "square", 
-    width: 15, 
-    height: 15 
-  },
-  "square-20": { 
-    name: "20mm Square", 
-    drillSize: 0, 
-    imperialLabel: '25/32" sq', 
-    category: "Footprint Guides (not printed)", 
-    shape: "square", 
-    width: 20, 
-    height: 20 
+    width: 6.8, 
+    height: 12.8
   },
   
-  // Circle utility guides
+  // Circle Footprint guides
   "circle-10": { 
     name: "10mm Circle", 
     drillSize: 10, 
