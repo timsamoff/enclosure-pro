@@ -99,13 +99,13 @@ export default function UnwrappedCanvas({
     }
   };
 
-  // Helper function to get rotated dimensions for utility guides
+  // Helper function to get rotated dimensions for utility guides (for labels only)
   const getRotatedDimensions = (compData: any, currentRotation: number) => {
     if (compData.category !== "Utility Guides (not printed)" || currentRotation === 0) {
       return { width: compData.width, height: compData.height };
     }
     
-    // Swap dimensions for 90° rotation
+    // Swap dimensions for 90° rotation (for labels only)
     if (currentRotation === 90) {
       return { width: compData.height, height: compData.width };
     }
@@ -124,7 +124,7 @@ export default function UnwrappedCanvas({
     if (compData.shape === 'rectangle' || compData.shape === 'square') {
       const rotatedDims = getRotatedDimensions(compData, currentRotation);
       return unit === "metric" 
-        ? `${rotatedDims.width}×${rotatedDims.height}mm`
+        ? `${rotatedDims.width}mm×${rotatedDims.height}mm`
         : compData.imperialLabel;
     } else {
       // For circles, just show diameter (doesn't change with rotation)
@@ -397,8 +397,16 @@ export default function UnwrappedCanvas({
       const sideName = (label) as EnclosureSide;
       const sideComponents = components.filter(c => c.side === sideName);
       
-      // FIXED: Updated component rendering to support utility guides with rectangles and circles
-      sideComponents.forEach(component => {
+      // Separate utility guides from regular components for proper z-ordering
+      const utilityGuides = sideComponents.filter(c => 
+        COMPONENT_TYPES[c.type].category === "Utility Guides (not printed)"
+      );
+      const regularComponents = sideComponents.filter(c => 
+        COMPONENT_TYPES[c.type].category !== "Utility Guides (not printed)"
+      );
+
+      // Draw utility guides first (behind regular components)
+      [...utilityGuides, ...regularComponents].forEach(component => {
         const compData = COMPONENT_TYPES[component.type];
         if (!compData) return;
         
@@ -433,9 +441,9 @@ export default function UnwrappedCanvas({
           ctx.beginPath();
           
           if (compData.shape === 'rectangle' || compData.shape === 'square') {
-            const rotatedDims = getRotatedDimensions(compData, rotation);
-            const rectWidth = (rotatedDims.width || 10) * mmToPixels;
-            const rectHeight = (rotatedDims.height || 10) * mmToPixels;
+            // Use original dimensions for selection highlight (not rotated)
+            const rectWidth = (compData.width || 10) * mmToPixels;
+            const rectHeight = (compData.height || 10) * mmToPixels;
             ctx.rect(
               centerX - rectWidth / 2 - 10 / zoom,
               centerY - rectHeight / 2 - 10 / zoom,
@@ -452,10 +460,9 @@ export default function UnwrappedCanvas({
 
         // Draw the component based on shape
         if (compData.shape === 'rectangle' || compData.shape === 'square') {
-          // Get rotated dimensions for utility guides
-          const rotatedDims = getRotatedDimensions(compData, rotation);
-          const rectWidth = (rotatedDims.width || 10) * mmToPixels;
-          const rectHeight = (rotatedDims.height || 10) * mmToPixels;
+          // FIX: Always use original dimensions for drawing, only swap for label
+          const rectWidth = (compData.width || 10) * mmToPixels;
+          const rectHeight = (compData.height || 10) * mmToPixels;
           
           // Draw fill - transparent for utility guides, white for regular components
           if (isUtilityGuide) {
@@ -514,41 +521,46 @@ export default function UnwrappedCanvas({
             ctx.stroke();
           }
           
-          // Draw dimension label with rotated dimensions
+          // Draw dimension label with rotated dimensions (label only changes, not the rectangle)
           const labelText = getRotatedLabelText(compData, rotation);
-          const labelOffset = Math.max(rectHeight / 2, rectWidth / 2) + 15 / zoom;
-          
-          ctx.save();
-          ctx.translate(centerX, centerY);
-          const rotRad = (-rotation * Math.PI) / 180;
-          ctx.rotate(rotRad);
-          ctx.translate(0, labelOffset);
-          
-          ctx.font = `${10 / zoom}px monospace`;
-          const textMetrics = ctx.measureText(labelText);
-          const textWidth = textMetrics.width;
-          const textHeight = 10 / zoom;
-          const padding = 4 / zoom;
-          
-          // Draw pill background
-          ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-          ctx.beginPath();
-          ctx.roundRect(
-            -textWidth / 2 - padding,
-            -textHeight / 2 - padding,
-            textWidth + padding * 2,
-            textHeight + padding * 2,
-            (textHeight + padding * 2) / 2
-          );
-          ctx.fill();
-          
-          // Draw text
-          ctx.fillStyle = "black";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(labelText, 0, 0);
-          
-          ctx.restore();
+
+// FIX: Calculate label offset based on the actual bottom edge distance after rotation
+// After 90° rotation, the bottom edge is what was previously the right edge
+const rotatedDims = getRotatedDimensions(compData, rotation);
+const bottomEdgeDistance = (rotatedDims.height / 2) * mmToPixels;
+const labelOffset = bottomEdgeDistance + 15 / zoom;
+
+ctx.save();
+ctx.translate(centerX, centerY);
+const rotRad = (-rotation * Math.PI) / 180;
+ctx.rotate(rotRad);
+ctx.translate(0, labelOffset);
+
+ctx.font = `${10 / zoom}px monospace`;
+const textMetrics = ctx.measureText(labelText);
+const textWidth = textMetrics.width;
+const textHeight = 10 / zoom;
+const padding = 4 / zoom;
+
+// Draw pill background
+ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+ctx.beginPath();
+ctx.roundRect(
+  -textWidth / 2 - padding,
+  -textHeight / 2 - padding,
+  textWidth + padding * 2,
+  textHeight + padding * 2,
+  (textHeight + padding * 2) / 2
+);
+ctx.fill();
+
+// Draw text
+ctx.fillStyle = "black";
+ctx.textAlign = "center";
+ctx.textBaseline = "middle";
+ctx.fillText(labelText, 0, 0);
+
+ctx.restore();
           
         } else {
           // CIRCLE RENDERING (for both regular components and utility guides)
@@ -728,12 +740,24 @@ export default function UnwrappedCanvas({
     let clickedSideX = 0;
     let clickedSideY = 0;
 
+    // Check regular components first, then utility guides (reverse draw order)
+    const allComponents = [...components];
+    
+    // Sort components by type - regular components first for hit detection
+    allComponents.sort((a, b) => {
+      const aIsUtility = COMPONENT_TYPES[a.type].category === "Utility Guides (not printed)";
+      const bIsUtility = COMPONENT_TYPES[b.type].category === "Utility Guides (not printed)";
+      if (aIsUtility && !bIsUtility) return 1; // Utilities after regular
+      if (!aIsUtility && bIsUtility) return -1; // Regular before utilities
+      return 0;
+    });
+
     for (const [side, sideLayout] of Object.entries(layout)) {
       if (side === 'totalWidth' || side === 'totalHeight') continue;
       if (typeof sideLayout === 'number') continue;
 
       const sideName = (side.charAt(0).toUpperCase() + side.slice(1)) as EnclosureSide;
-      const sideComponents = components.filter(c => c.side === sideName);
+      const sideComponents = allComponents.filter(c => c.side === sideName);
       
       const sideX = canvasX - sideLayout.x - sideLayout.width / 2;
       const sideY = canvasY - sideLayout.y - sideLayout.height / 2;
@@ -743,10 +767,9 @@ export default function UnwrappedCanvas({
         let isClicked = false;
 
         if (compData.shape === 'rectangle' || compData.shape === 'square') {
-          // Check rectangle/square click - use rotated dimensions for accurate hit detection
-          const rotatedDims = getRotatedDimensions(compData, rotation);
-          const rectWidth = (rotatedDims.width || 10) * mmToPixels;
-          const rectHeight = (rotatedDims.height || 10) * mmToPixels;
+          // FIX: Use original dimensions for hit detection, not rotated ones
+          const rectWidth = (compData.width || 10) * mmToPixels;
+          const rectHeight = (compData.height || 10) * mmToPixels;
           
           const dx = Math.abs(sideX - component.x);
           const dy = Math.abs(sideY - component.y);
@@ -770,6 +793,7 @@ export default function UnwrappedCanvas({
           clickedComponent = component;
           clickedSideX = sideX;
           clickedSideY = sideY;
+          break; // Found a component, stop checking this side
         }
       }
       

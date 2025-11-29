@@ -593,8 +593,8 @@ export default function Designer() {
 
             // Draw dimensions label
             const dimText = currentUnit === "metric"
-              ? `${compData.width}×${compData.height}mm`
-              : compData.imperialLabel;
+            ? `${compData.width}mm×${compData.height}mm`  // Add units to both dimensions
+            : compData.imperialLabel;
             
             const labelOffset = Math.max(rectHeight / 2, rectWidth / 2) + 15;
             

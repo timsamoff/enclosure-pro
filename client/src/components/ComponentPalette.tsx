@@ -22,7 +22,7 @@ export default function ComponentPalette({
     LEDs: [] as ComponentType[],
     Fixtures: [] as ComponentType[],
     Screws: [] as ComponentType[],
-    // "Utility Guides (not printed)": [] as ComponentType[],
+    "Footprint Guides (not printed)": [] as ComponentType[],
   };
 
   Object.entries(COMPONENT_TYPES).forEach(([key, value]) => {
@@ -33,13 +33,33 @@ export default function ComponentPalette({
   });
 
   const formatDrillSize = (type: ComponentType) => {
-    const compData = COMPONENT_TYPES[type];
-    if (unit === "metric") {
-      return `${compData.drillSize.toFixed(1)}mm`;
+  const compData = COMPONENT_TYPES[type];
+  
+  // Handle Footprint guides specially
+  if (compData.category === "Footprint Guides (not printed)") {
+    if (compData.shape === 'rectangle' || compData.shape === 'square') {
+      if (unit === "metric") {
+        return `${compData.width}mm×${compData.height}mm`;
+      } else {
+        return compData.imperialLabel;
+      }
     } else {
-      return compData.imperialLabel;
+      // Circles
+      if (unit === "metric") {
+        return `${compData.drillSize}mm`;
+      } else {
+        return compData.imperialLabel;
+      }
     }
-  };
+  }
+  
+  // Regular components
+  if (unit === "metric") {
+    return `${compData.drillSize.toFixed(1)}mm`;
+  } else {
+    return compData.imperialLabel;
+  }
+};
 
   return (
     <div className="absolute right-4 top-20 w-80 bg-background/95 backdrop-blur-md border border-border rounded-lg shadow-lg z-50 flex flex-col">

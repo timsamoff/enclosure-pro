@@ -30,7 +30,7 @@ export type EnclosureType = keyof typeof ENCLOSURE_TYPES;
 
 export interface ComponentTypeData {
   name: string;
-  drillSize: number;
+  drillSize: number;drillSize
   imperialLabel: string;
   category: string;
   shape?: "circle" | "rectangle" | "square";
@@ -64,20 +64,100 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "screw-6": { name: "#6-32 Screw", drillSize: 3.5, imperialLabel: '5/8"', category: "Screws" },
   "screw-4": { name: "M4 Screw", drillSize: 4, imperialLabel: '5/32"', category: "Screws" },
   
-  // Utility Guides (not printed)
-  // "rectangle-10x10": { name: "10mm × 10mm Rectangle", drillSize: 0, imperialLabel: '13/32" × 13/32"', category: "Utility Guides (not printed)", shape: "rectangle", width: 10, height: 10 },
-  // "rectangle-15x10": { name: "15mm × 10mm Rectangle", drillSize: 0, imperialLabel: '19/32" × 13/32"', category: "Utility Guides (not printed)", shape: "rectangle", width: 15, height: 10 },
-  // "rectangle-20x15": { name: "20mm × 15mm Rectangle", drillSize: 0, imperialLabel: '25/32" × 19/32"', category: "Utility Guides (not printed)", shape: "rectangle", width: 20, height: 15 },
-  // "rectangle-25x15": { name: "25mm × 15mm Rectangle", drillSize: 0, imperialLabel: '1" × 19/32"', category: "Utility Guides (not printed)", shape: "rectangle", width: 25, height: 15 },
-  // "square-10": { name: "10mm Square", drillSize: 0, imperialLabel: '13/32" sq', category: "Utility Guides (not printed)", shape: "square", width: 10, height: 10 },
-  // "square-15": { name: "15mm Square", drillSize: 0, imperialLabel: '19/32" sq', category: "Utility Guides (not printed)", shape: "square", width: 15, height: 15 },
-  // "square-20": { name: "20mm Square", drillSize: 0, imperialLabel: '25/32" sq', category: "Utility Guides (not printed)", shape: "square", width: 20, height: 20 },
+  // Foorprint Guides (not printed)
+  "rectangle-10x10": { 
+    name: "10mm × 10mm Rectangle", 
+    drillSize: 0, 
+    imperialLabel: '13/32" × 13/32"', 
+    category: "Footprint Guides (not printed)", 
+    shape: "rectangle", 
+    width: 10, 
+    height: 10 
+  },
+  "rectangle-15x10": { 
+    name: "15mm × 10mm Rectangle", 
+    drillSize: 0, 
+    imperialLabel: '19/32" × 13/32"', 
+    category: "Footprint Guides (not printed)", 
+    shape: "rectangle", 
+    width: 15, 
+    height: 10 
+  },
+  "rectangle-20x15": { 
+    name: "20mm × 15mm Rectangle", 
+    drillSize: 0, 
+    imperialLabel: '25/32" × 19/32"', 
+    category: "Footprint Guides (not printed)", 
+    shape: "rectangle", 
+    width: 20, 
+    height: 15 
+  },
+  "rectangle-25x15": { 
+    name: "25mm × 15mm Rectangle", 
+    drillSize: 0, 
+    imperialLabel: '1" × 19/32"', 
+    category: "Footprint Guides (not printed)", 
+    shape: "rectangle", 
+    width: 25, 
+    height: 15 
+  },
+  "square-10": { 
+    name: "10mm Square", 
+    drillSize: 0, 
+    imperialLabel: '13/32" sq', 
+    category: "Footprint Guides (not printed)", 
+    shape: "square", 
+    width: 10, 
+    height: 10 
+  },
+  "square-15": { 
+    name: "15mm Square", 
+    drillSize: 0, 
+    imperialLabel: '19/32" sq', 
+    category: "Footprint Guides (not printed)", 
+    shape: "square", 
+    width: 15, 
+    height: 15 
+  },
+  "square-20": { 
+    name: "20mm Square", 
+    drillSize: 0, 
+    imperialLabel: '25/32" sq', 
+    category: "Footprint Guides (not printed)", 
+    shape: "square", 
+    width: 20, 
+    height: 20 
+  },
   
-  // NEW: Circle utility guides
-  // "circle-10": { name: "10mm Circle", drillSize: 10, imperialLabel: '13/32"', category: "Utility Guides (not printed)", shape: "circle" },
-  // "circle-15": { name: "15mm Circle", drillSize: 15, imperialLabel: '19/32"', category: "Utility Guides (not printed)", shape: "circle" },
-  // "circle-20": { name: "20mm Circle", drillSize: 20, imperialLabel: '25/32"', category: "Utility Guides (not printed)", shape: "circle" },
-  // "circle-25": { name: "25mm Circle", drillSize: 25, imperialLabel: '1"', category: "Utility Guides (not printed)", shape: "circle" },
+  // Circle utility guides
+  "circle-10": { 
+    name: "10mm Circle", 
+    drillSize: 10, 
+    imperialLabel: '13/32"', 
+    category: "Footprint Guides (not printed)", 
+    shape: "circle" 
+  },
+  "circle-15": { 
+    name: "15mm Circle", 
+    drillSize: 15, 
+    imperialLabel: '19/32"', 
+    category: "Footprint Guides (not printed)", 
+    shape: "circle" 
+  },
+  "circle-20": { 
+    name: "20mm Circle", 
+    drillSize: 20, 
+    imperialLabel: '25/32"', 
+    category: "Footprint Guides (not printed)", 
+    shape: "circle" 
+  },
+  "circle-25": { 
+    name: "25mm Circle", 
+    drillSize: 25, 
+    imperialLabel: '1"', 
+    category: "Footprint Guides (not printed)", 
+    shape: "circle" 
+  },
 } as const;
 
 export type ComponentType = keyof typeof COMPONENT_TYPES;
