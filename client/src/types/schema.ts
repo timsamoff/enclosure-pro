@@ -84,7 +84,7 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     height: 9.5
   },
   "slide-slide": { 
-    name: "SPDT Slide Switch", 
+    name: "SPDT Slide", 
     drillSize: 0, 
     imperialLabel: '15/64" × 1/2"', 
     category: "Footprint Guides (not printed)", 
@@ -111,7 +111,7 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     height: 14
   },
   "dpdt-slide": { 
-    name: "Mini DPDT Slide Switch", 
+    name: "Mini DPDT Slide", 
     drillSize: 0, 
     imperialLabel: '2/5" x 63/100"', 
     category: "Footprint Guides (not printed)", 
@@ -174,7 +174,7 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     height: 17
   },
   "dip-2": { 
-    name: "2-Pos DIP Switch", 
+    name: "2-Pos DIP", 
     drillSize: 0, 
     imperialLabel: '0.44" x 0.24"', 
     category: "Footprint Guides (not printed)", 
@@ -183,7 +183,7 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     height: 6.2 
   },
 "dip-4": { 
-    name: "4-Pos DIP Switch", 
+    name: "4-Pos DIP", 
     drillSize: 0, 
     imperialLabel: '0.44" x 0.24"', 
     category: "Footprint Guides (not printed)", 
@@ -192,7 +192,7 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     height: 6.2 
   },
 "rotary-1": { 
-    name: "1P4T Rotary Switch", 
+    name: "1P4T Rotary", 
     drillSize: 0, 
     imperialLabel: '25/64" × 25/64"', 
     category: "Footprint Guides (not printed)", 
@@ -201,7 +201,7 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     height: 10
   },
   "rotary-2": { 
-    name: "2P6T Rotary Switch", 
+    name: "2P6T Rotary", 
     drillSize: 0, 
     imperialLabel: '33/64" × 33/64"', 
     category: "Footprint Guides (not printed)", 
