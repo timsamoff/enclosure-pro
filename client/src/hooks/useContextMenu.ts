@@ -104,10 +104,11 @@ export function useContextMenu({
       setPreventCanvasClick(false);
     });
     
-    toast({
-      title: "Component Duplicated",
-      description: "Component duplicated and selected",
-    });
+    // Toast notification commented out
+    // toast({
+    //   title: "Component Duplicated",
+    //   description: "Component duplicated and selected",
+    // });
   };
 
   const handleRotate = () => {
@@ -131,12 +132,13 @@ export function useContextMenu({
     markDirty();
     
     const currentComponent = components.find(c => c.id === contextMenu.componentId);
-    const newRotation = currentComponent?.rotation === 0 ? 90 : 0;
+    const newRotation = currentComponent?.rotation === 0 ? 90 : 90;
     
-    toast({
-      title: "Component Rotated",
-      description: `Component rotated ${newRotation}°`,
-    });
+    // Toast notification commented out
+    // toast({
+    //   title: "Component Rotated",
+    //   description: `Component rotated`,
+    // });
   };
 
   const handleTogglePrint = () => {
@@ -160,10 +162,11 @@ export function useContextMenu({
     
     markDirty();
     
-    toast({
-      title: "Print Setting Updated",
-      description: `Component will ${newExcludeFromPrint ? 'not print' : 'print'}`,
-    });
+    // Toast notification commented out
+    // toast({
+    //   title: "Print Setting Updated",
+    //   description: `Component will ${newExcludeFromPrint ? 'not print' : 'print'}`,
+    // });
   };
 
   const closeContextMenu = () => {

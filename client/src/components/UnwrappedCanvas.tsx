@@ -550,6 +550,9 @@ export default function UnwrappedCanvas({
           }
         }
 
+        // Start a new drawing context for this component
+        ctx.save();
+
         // Highlight selected component
         if (selectedComponent === component.id) {
           ctx.save();
@@ -604,6 +607,7 @@ export default function UnwrappedCanvas({
           
           // Draw warning outline if needed (only for non-utility guides)
           if (showWarning && !isUtilityGuide) {
+            ctx.save();
             ctx.strokeStyle = "#fbbf24";
             ctx.lineWidth = 2 / zoom;
             ctx.strokeRect(
@@ -612,10 +616,12 @@ export default function UnwrappedCanvas({
               rectWidthPx + 10 / zoom,
               rectHeightPx + 10 / zoom
             );
+            ctx.restore();
           }
           
-          // Draw main outline with dotted lines for utility guides
-          ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--foreground))";
+          // Draw main outline - ALWAYS set stroke style explicitly
+          const componentStrokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--foreground))";
+          ctx.strokeStyle = componentStrokeStyle;
           ctx.lineWidth = (selectedComponent === component.id ? 2.5 : 2) / zoom;
           
           if (isUtilityGuide) {
@@ -636,7 +642,9 @@ export default function UnwrappedCanvas({
           // Draw crosshair (only for non-utility guides)
           if (!isUtilityGuide) {
             const crosshairSize = Math.max(rectWidthPx / 2, rectHeightPx / 2);
-            ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--muted-foreground))";
+            // ALWAYS set crosshair stroke style explicitly
+            const crosshairStrokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--muted-foreground))";
+            ctx.strokeStyle = crosshairStrokeStyle;
             ctx.lineWidth = 1 / zoom;
             ctx.beginPath();
             ctx.moveTo(-crosshairSize, 0);
@@ -707,15 +715,18 @@ export default function UnwrappedCanvas({
           
           // Draw warning ring if needed (only for non-utility guides)
           if (showWarning && !isUtilityGuide) {
+            ctx.save();
             ctx.strokeStyle = "#fbbf24";
             ctx.lineWidth = 2 / zoom;
             ctx.beginPath();
             ctx.arc(centerX, centerY, radiusPx + 5 / zoom, 0, 2 * Math.PI);
             ctx.stroke();
+            ctx.restore();
           }
           
-          // Draw stroke with dotted lines for utility guides
-          ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--foreground))";
+          // Draw stroke - ALWAYS set stroke style explicitly
+          const componentStrokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--foreground))";
+          ctx.strokeStyle = componentStrokeStyle;
           ctx.lineWidth = (selectedComponent === component.id ? 2.5 : 2) / zoom;
           
           if (isUtilityGuide) {
@@ -733,7 +744,9 @@ export default function UnwrappedCanvas({
           // Draw crosshair (only for non-utility guides)
           if (!isUtilityGuide) {
             const crosshairSize = radiusPx;
-            ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--muted-foreground))";
+            // ALWAYS set crosshair stroke style explicitly
+            const crosshairStrokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--muted-foreground))";
+            ctx.strokeStyle = crosshairStrokeStyle;
             ctx.lineWidth = 1 / zoom;
             ctx.beginPath();
             ctx.moveTo(centerX - crosshairSize, centerY);
@@ -787,6 +800,9 @@ export default function UnwrappedCanvas({
           
           ctx.restore();
         }
+
+        // Restore the drawing context for this component
+        ctx.restore();
       });
 
       ctx.restore();
