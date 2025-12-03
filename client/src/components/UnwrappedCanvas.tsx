@@ -112,20 +112,20 @@ const getRotatedLabelText = (compData: any, componentRotation: number, unit: Mea
       : compData.imperialLabel;
   }
 
-  // Rectangular footprint guides show width×height
+  // Rectangular footprint guides
   if (compData.shape === 'rectangle' || compData.shape === 'square') {
-    // At 90° rotation, dimensions are swapped visually
-    if (componentRotation === 90 || componentRotation === -90 || componentRotation === 270) {
+    // For 90° component rotation, swap width and height
+    if (componentRotation === 90) {
       return unit === "metric" 
         ? `${compData.height}mm×${compData.width}mm`
         : mmToFraction(compData.height) + "×" + mmToFraction(compData.width);
-    } else {
+    } else { // 0° component rotation
       return unit === "metric" 
         ? `${compData.width}mm×${compData.height}mm`
         : mmToFraction(compData.width) + "×" + mmToFraction(compData.height);
     }
   } else {
-    // Circular footprint guides show diameter (rotation doesn't matter)
+    // Circular footprint guides
     return unit === "metric" 
       ? `${compData.drillSize}mm`
       : mmToFraction(compData.drillSize);
@@ -147,8 +147,8 @@ const getRotatedLabelText = (compData: any, componentRotation: number, unit: Mea
 const calculateLabelPosition = (
   centerX: number,
   centerY: number,
-  componentRotation: number,
-  canvasRotation: number,
+  componentRotation: number, // Always 0° or 90°
+  canvasRotation: number,    // Always 0° or 90°
   zoom: number,
   isRectangular: boolean,
   rectWidthPx?: number,
@@ -159,41 +159,22 @@ const calculateLabelPosition = (
   const zoomedOffset = baseOffset / zoom;
   
   if (isRectangular && rectWidthPx !== undefined && rectHeightPx !== undefined) {
-    // Total visual rotation combines component rotation + canvas rotation
-    const totalRotation = componentRotation + canvasRotation;
+    // Determine visual orientation based on component rotation
+    const visualWidthPx = componentRotation === 0 ? rectWidthPx : rectHeightPx;
+    const visualHeightPx = componentRotation === 0 ? rectHeightPx : rectWidthPx;
     
-    // Normalize to 0-360 range
-    const normalizedRotation = ((totalRotation % 360) + 360) % 360;
+    let labelX = centerX;
+    let labelY = centerY;
     
-    // Determine which edge is visually at the bottom based on total rotation
-    // 0°: bottom edge is at bottom
-    // 90°: right edge is at bottom  
-    // 180°: top edge is at bottom
-    // 270°: left edge is at bottom
-    let offsetX = 0;
-    let offsetY = 0;
-    
-    if (normalizedRotation === 0) {
-      // Original bottom edge is at visual bottom
-      offsetX = 0;
-      offsetY = rectHeightPx / 2;
-    } else if (normalizedRotation === 90) {
-      // Original right edge is at visual bottom
-      offsetX = rectWidthPx / 2;
-      offsetY = 0;
-    } else if (normalizedRotation === 180) {
-      // Original top edge is at visual bottom
-      offsetX = 0;
-      offsetY = -rectHeightPx / 2;
-    } else if (normalizedRotation === 270) {
-      // Original left edge is at visual bottom
-      offsetX = -rectWidthPx / 2;
-      offsetY = 0;
+    if (canvasRotation === 0) {
+      // Canvas not rotated: label below rectangle
+      labelX = centerX;
+      labelY = centerY + visualHeightPx / 2 + zoomedOffset;
+    } else { // canvasRotation === 90
+      // Canvas rotated 90°: label to the right of rectangle (which is visual bottom)
+      labelX = centerX + visualWidthPx / 2 + zoomedOffset;
+      labelY = centerY;
     }
-    
-    // Add offset to position label below the visual bottom edge
-    const labelX = centerX + offsetX;
-    const labelY = centerY + offsetY + zoomedOffset;
     
     // Keep text horizontal (counter-rotate by canvas rotation only)
     const textAngle = (-canvasRotation * Math.PI) / 180;
@@ -201,7 +182,7 @@ const calculateLabelPosition = (
     return { x: labelX, y: labelY, textAngle };
     
   } else {
-    // Circles: label position depends only on canvas rotation since circles are rotationally symmetric
+    // Circles: label position depends only on canvas rotation
     const circleRadius = radiusPx || 0;
     
     if (canvasRotation === 0) {
@@ -211,8 +192,8 @@ const calculateLabelPosition = (
         y: centerY + circleRadius + zoomedOffset,
         textAngle: 0
       };
-    } else {
-      // Canvas rotated 90°: label to the right of circle (which is the visual bottom)
+    } else { // canvasRotation === 90
+      // Canvas rotated 90°: label to the right of circle
       return {
         x: centerX + circleRadius + zoomedOffset,
         y: centerY,
