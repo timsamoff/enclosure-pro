@@ -26,7 +26,7 @@ const PRINT_CONFIG = {
       color: '#000000'
     },
     componentLabel: {
-      size: 12,                   // Size for component dimension labels
+      size: 10,                   // Size for component dimension labels
       family: 'Arial',
       style: 'normal',
       color: '#000000'
@@ -113,7 +113,7 @@ export function useBaseExport({
   const getPrintableComponents = useCallback((components: any[]): any[] => {
     return components.filter(component => {
       const compData = COMPONENT_TYPES[component.type];
-      const isUtilityGuide = compData.category === "Footprint Guides (not printed)";
+      const isUtilityGuide = compData.category === "Footprint Guides";
       return !isUtilityGuide && !component.excludeFromPrint;
     });
   }, []);
@@ -273,21 +273,21 @@ export function useBaseExport({
                 ctx.rotate((component.rotation * Math.PI) / 180);
               }
               
-              const rectWidth = (compData.width || 10) * pixelsPerMM;
-              const rectHeight = (compData.height || 10) * pixelsPerMM;
+              const baseWidth = (compData.width || 10) * pixelsPerMM;
+              const baseHeight = (compData.height || 10) * pixelsPerMM;
               
-              const drawX = component.rotation ? -rectWidth / 2 : centerX - rectWidth / 2;
-              const drawY = component.rotation ? -rectHeight / 2 : centerY - rectHeight / 2;
+              const drawX = component.rotation ? -baseWidth / 2 : centerX - baseWidth / 2;
+              const drawY = component.rotation ? -baseHeight / 2 : centerY - baseHeight / 2;
               
               ctx.fillStyle = 'white';
-              ctx.fillRect(drawX, drawY, rectWidth, rectHeight);
+              ctx.fillRect(drawX, drawY, baseWidth, baseHeight);
               
               ctx.strokeStyle = config.fonts.sideLabel.color;
               ctx.lineWidth = config.lineWidths.componentBorder;
-              ctx.strokeRect(drawX, drawY, rectWidth, rectHeight);
+              ctx.strokeRect(drawX, drawY, baseWidth, baseHeight);
               
-              const crosshairSizeH = Math.max(rectWidth / 2, config.components.crosshairSize);
-              const crosshairSizeV = Math.max(rectHeight / 2, config.components.crosshairSize);
+              const crosshairSizeH = Math.max(baseWidth / 2, config.components.crosshairSize);
+              const crosshairSizeV = Math.max(baseHeight / 2, config.components.crosshairSize);
               
               ctx.lineWidth = config.lineWidths.componentCrosshair;
               ctx.beginPath();
@@ -306,31 +306,77 @@ export function useBaseExport({
 
               ctx.restore();
 
-              const dimText = currentUnit === "metric"
-                ? `${compData.width}mm×${compData.height}mm`
-                : compData.imperialLabel;
-              
-              const labelOffset = Math.max(rectHeight / 2, rectWidth / 2) + config.components.labelOffset;
-              
+              // Calculate visual dimensions after component rotation
+              const visualWidthPx = component.rotation === 90 ? baseHeight : baseWidth;
+              const visualHeightPx = component.rotation === 90 ? baseWidth : baseHeight;
+
+              // Determine label position based on canvas rotation
+              let labelX = centerX;
+              let labelY = centerY;
+
+              if (shouldRotate) {
+                // Canvas is rotated 90°: label goes to the right (visual bottom)
+                labelX = centerX + visualWidthPx / 2 + config.components.labelOffset;
+                labelY = centerY;
+              } else {
+                // Canvas not rotated: label goes below
+                labelX = centerX;
+                labelY = centerY + visualHeightPx / 2 + config.components.labelOffset;
+              }
+
+              // Generate label text (swap dimensions for 90° component rotation)
+              const labelText = component.rotation === 90 
+                ? currentUnit === "metric"
+                  ? `${compData.height}mm×${compData.width}mm`
+                  : compData.imperialLabel
+                : currentUnit === "metric"
+                  ? `${compData.width}mm×${compData.height}mm`
+                  : compData.imperialLabel;
+
               ctx.font = `${config.fonts.componentLabel.style} ${config.fonts.componentLabel.size}px ${config.fonts.componentLabel.family}`;
-              const textMetrics = ctx.measureText(dimText);
+              const textMetrics = ctx.measureText(labelText);
               const textWidth = textMetrics.width;
               const padding = config.components.labelBackgroundPadding;
-              
+
+              // Draw label background
               ctx.fillStyle = 'white';
-              ctx.fillRect(
-                centerX - textWidth / 2 - padding,
-                centerY + labelOffset - config.fonts.componentLabel.size / 2,
-                textWidth + padding * 2,
-                config.fonts.componentLabel.size + padding
-              );
               
-              ctx.fillStyle = config.fonts.componentLabel.color;
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText(dimText, centerX, centerY + labelOffset);
+              if (shouldRotate) {
+                // Rotate label text when canvas is rotated 90°
+                ctx.save();
+                ctx.translate(labelX, labelY);
+                ctx.rotate(Math.PI / 2);
+                ctx.translate(-labelX, -labelY);
+                
+                ctx.fillRect(
+                  labelX - textWidth / 2 - padding,
+                  labelY - config.fonts.componentLabel.size / 2 - padding,
+                  textWidth + padding * 2,
+                  config.fonts.componentLabel.size + padding * 2
+                );
+                
+                ctx.fillStyle = config.fonts.componentLabel.color;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(labelText, labelX, labelY);
+                
+                ctx.restore();
+              } else {
+                ctx.fillRect(
+                  labelX - textWidth / 2 - padding,
+                  labelY - config.fonts.componentLabel.size / 2 - padding,
+                  textWidth + padding * 2,
+                  config.fonts.componentLabel.size + padding * 2
+                );
+                
+                ctx.fillStyle = config.fonts.componentLabel.color;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(labelText, labelX, labelY);
+              }
               
             } else {
+              // CIRCLE COMPONENTS
               const radius = (compData.drillSize / 2) * pixelsPerMM;
 
               ctx.fillStyle = 'white';
@@ -353,29 +399,65 @@ export function useBaseExport({
               ctx.lineTo(centerX, centerY + crosshairSize);
               ctx.stroke();
 
+              // Determine label position based on canvas rotation
+              let labelX = centerX;
+              let labelY = centerY;
+
+              if (shouldRotate) {
+                // Canvas rotated 90°: label to the right
+                labelX = centerX + radius + config.components.labelOffset;
+                labelY = centerY;
+              } else {
+                // Canvas not rotated: label below
+                labelX = centerX;
+                labelY = centerY + radius + config.components.labelOffset;
+              }
+
               const drillText = currentUnit === "metric"
                 ? `${compData.drillSize.toFixed(1)}mm`
                 : compData.imperialLabel;
-              
-              const labelOffset = radius + config.components.labelOffset;
-              
+
               ctx.font = `${config.fonts.componentLabel.style} ${config.fonts.componentLabel.size}px ${config.fonts.componentLabel.family}`;
               const textMetrics = ctx.measureText(drillText);
               const textWidth = textMetrics.width;
               const padding = config.components.labelBackgroundPadding;
-              
+
+              // Draw label background
               ctx.fillStyle = 'white';
-              ctx.fillRect(
-                centerX - textWidth / 2 - padding,
-                centerY + labelOffset - config.fonts.componentLabel.size / 2,
-                textWidth + padding * 2,
-                config.fonts.componentLabel.size + padding
-              );
               
-              ctx.fillStyle = config.fonts.componentLabel.color;
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText(drillText, centerX, centerY + labelOffset);
+              if (shouldRotate) {
+                // Rotate label text when canvas is rotated 90°
+                ctx.save();
+                ctx.translate(labelX, labelY);
+                ctx.rotate(Math.PI / 2);
+                ctx.translate(-labelX, -labelY);
+                
+                ctx.fillRect(
+                  labelX - textWidth / 2 - padding,
+                  labelY - config.fonts.componentLabel.size / 2 - padding,
+                  textWidth + padding * 2,
+                  config.fonts.componentLabel.size + padding * 2
+                );
+                
+                ctx.fillStyle = config.fonts.componentLabel.color;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(drillText, labelX, labelY);
+                
+                ctx.restore();
+              } else {
+                ctx.fillRect(
+                  labelX - textWidth / 2 - padding,
+                  labelY - config.fonts.componentLabel.size / 2 - padding,
+                  textWidth + padding * 2,
+                  config.fonts.componentLabel.size + padding * 2
+                );
+                
+                ctx.fillStyle = config.fonts.componentLabel.color;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(drillText, labelX, labelY);
+              }
             }
           });
         };

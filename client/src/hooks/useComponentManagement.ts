@@ -81,14 +81,14 @@ export function useComponentManagement({
     }
     
     const compData = COMPONENT_TYPES[type];
-    const isFootprintGuide = compData.category === "Footprint Guides (not printed)";
+    const isFootprintGuide = compData.category === "Footprint Guides";
     
     // Create ID with timestamp for proper z-ordering
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substr(2, 9);
     
     const newComponent: PlacedComponent = {
-      id: `comp-${timestamp}-${randomStr}`, // FIXED: Include timestamp
+      id: `comp-${timestamp}-${randomStr}`, // Include timestamp
       type,
       x: initialX,
       y: initialY,
