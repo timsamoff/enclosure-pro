@@ -12,7 +12,7 @@ interface ComponentPaletteProps {
 }
 
 type Category = keyof typeof categories;
-type FootprintSubcategory = "potentiometers" | "switches" | "knobs";
+type FootprintSubcategory = "potentiometers" | "jacks" | "switches" | "knobs";
 
 export default function ComponentPalette({
   onComponentSelect,
@@ -29,22 +29,22 @@ export default function ComponentPalette({
     LEDs: [] as ComponentType[],
     Fixtures: [] as ComponentType[],
     Screws: [] as ComponentType[],
-    "Footprint Guides (not printed)": [] as ComponentType[],
+    "Footprint Guides": [] as ComponentType[],
   };
 
   Object.entries(COMPONENT_TYPES).forEach(([key, value]) => {
-    // Skip legacy components (kept for backward compatibility only)
     if (key === 'toggle-spdt' || key === 'potentiometer') return;
     const category = value.category as keyof typeof categories;
     categories[category].push(key as ComponentType);
   });
 
-  // Categorize footprint guides for the submenu
-  const categorizeFootprintGuides = (compType: ComponentType): "potentiometers" | "switches" | "knobs" | "other" => {
+  const categorizeFootprintGuides = (compType: ComponentType): "potentiometers" | "jacks" | "switches" | "knobs" | "other" => {
     const comp = COMPONENT_TYPES[compType];
     
     if (comp.name.toLowerCase().includes("potentiometer") || compType.includes("pot-")) {
       return "potentiometers";
+    } else if (comp.name.toLowerCase().includes("jack") || compType.includes("jack-")) {
+      return "jacks";
     } else if (
       comp.name.toLowerCase().includes("switch") || 
       comp.name.toLowerCase().includes("toggle") ||
@@ -66,8 +66,7 @@ export default function ComponentPalette({
   const formatDrillSize = (type: ComponentType) => {
     const compData = COMPONENT_TYPES[type];
     
-    // Handle Footprint guides specially
-    if (compData.category === "Footprint Guides (not printed)") {
+    if (compData.category === "Footprint Guides") {
       if (compData.shape === 'rectangle' || compData.shape === 'square') {
         if (unit === "metric") {
           return `${compData.width}mm×${compData.height}mm`;
@@ -75,7 +74,6 @@ export default function ComponentPalette({
           return compData.imperialLabel;
         }
       } else {
-        // Circles
         if (unit === "metric") {
           return `${compData.drillSize}mm`;
         } else {
@@ -84,7 +82,6 @@ export default function ComponentPalette({
       }
     }
     
-    // Regular components
     if (unit === "metric") {
       return `${compData.drillSize.toFixed(1)}mm`;
     } else {
@@ -103,7 +100,6 @@ export default function ComponentPalette({
 
   const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
-    // Reset subcategory when selecting a new category
     setSelectedFootprintSubcategory(null);
   };
 
@@ -116,9 +112,8 @@ export default function ComponentPalette({
     console.log(`Selected ${COMPONENT_TYPES[compType].name}`);
   };
 
-  // Filter footprint guides by subcategory
   const getFilteredFootprintGuides = () => {
-    const allFootprints = categories["Footprint Guides (not printed)"];
+    const allFootprints = categories["Footprint Guides"];
     
     if (!selectedFootprintSubcategory) {
       return allFootprints;
@@ -130,12 +125,12 @@ export default function ComponentPalette({
     });
   };
 
-  // Count items in each footprint subcategory
   const getFootprintSubcategoryCounts = () => {
-    const allFootprints = categories["Footprint Guides (not printed)"];
+    const allFootprints = categories["Footprint Guides"];
     
     return {
       potentiometers: allFootprints.filter(compType => categorizeFootprintGuides(compType) === "potentiometers").length,
+      jacks: allFootprints.filter(compType => categorizeFootprintGuides(compType) === "jacks").length,
       switches: allFootprints.filter(compType => categorizeFootprintGuides(compType) === "switches").length,
       knobs: allFootprints.filter(compType => categorizeFootprintGuides(compType) === "knobs").length,
     };
@@ -160,10 +155,12 @@ export default function ComponentPalette({
           <h3 className="font-semibold">
             {selectedFootprintSubcategory 
               ? selectedFootprintSubcategory === "potentiometers" 
-                ? "Potentiometers" 
+                ? "Potentiometers"
+                : selectedFootprintSubcategory === "jacks" 
+                ? "Jacks" 
                 : selectedFootprintSubcategory === "switches" 
-                  ? "Switches" 
-                  : "Knobs"
+                ? "Switches" 
+                : "Knobs"
               : selectedCategory 
                 ? selectedCategory 
                 : "Components"
@@ -183,7 +180,6 @@ export default function ComponentPalette({
       <ScrollArea className="h-[calc(100vh-200px)]">
         <div className="p-4 space-y-4">
           {!selectedCategory ? (
-            // Category List View
             Object.entries(categories).map(([category, components]) => (
               <button
                 key={category}
@@ -202,8 +198,7 @@ export default function ComponentPalette({
                 </div>
               </button>
             ))
-          ) : selectedCategory === "Footprint Guides (not printed)" && !selectedFootprintSubcategory ? (
-            // Footprint Guides Subcategory View
+          ) : selectedCategory === "Footprint Guides" && !selectedFootprintSubcategory ? (
             <div className="space-y-3">
               <button
                 onClick={() => handleFootprintSubcategorySelect("potentiometers")}
@@ -214,6 +209,18 @@ export default function ComponentPalette({
                 </span>
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {subcategoryCounts.potentiometers} items
+                </span>
+              </button>
+              
+              <button
+                onClick={() => handleFootprintSubcategorySelect("jacks")}
+                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left"
+              >
+                <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
+                  Jacks
+                </span>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {subcategoryCounts.jacks} items
                 </span>
               </button>
               
@@ -242,9 +249,8 @@ export default function ComponentPalette({
               </button>
             </div>
           ) : (
-            // Component List View for Selected Category/Subcategory
             <div className="space-y-1">
-              {(selectedCategory === "Footprint Guides (not printed)" 
+              {(selectedCategory === "Footprint Guides" 
                 ? getFilteredFootprintGuides() 
                 : categories[selectedCategory]
               ).map((compType) => {

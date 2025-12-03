@@ -20,17 +20,25 @@ interface UnwrappedCanvasProps {
   onCanvasClick?: () => void;
   onZoomChange?: (newZoom: number) => void;
   rotatesLabels?: boolean;
+  onRightClick?: (e: React.MouseEvent, componentId: string | null) => void;
 }
 
-// Helper function to get rotated side label
+/**
+ * Maps physical side labels when canvas is rotated.
+ * When canvas rotates 90° clockwise, the visual positions change:
+ * - Left side appears at Top
+ * - Top side appears at Right
+ * - Right side appears at Bottom
+ * - Bottom side appears at Left
+ * - Front stays as Front
+ */
 const getRotatedSideLabel = (side: EnclosureSide, rotation: number, rotatesLabels: boolean): EnclosureSide => {
   if (!rotatesLabels || rotation === 0) {
     return side;
   }
   
-  // 90° clockwise rotation mapping
   const rotationMap: Record<EnclosureSide, EnclosureSide> = {
-    'Front': 'Front', // Front stays the same
+    'Front': 'Front',
     'Left': 'Top',
     'Top': 'Right', 
     'Right': 'Bottom',
@@ -40,7 +48,12 @@ const getRotatedSideLabel = (side: EnclosureSide, rotation: number, rotatesLabel
   return rotationMap[side];
 };
 
-// Fix the helper function to handle side mapping with rotation correctly
+/**
+ * Converts visual canvas position back to actual enclosure side when dragging.
+ * This is the inverse of getRotatedSideLabel.
+ * When canvas is rotated 90° clockwise and user drags to what looks like "Top",
+ * they're actually placing on the "Right" side of the physical enclosure.
+ */
 const getActualSideForDrag = (
   canvasSide: EnclosureSide, 
   currentRotation: number, 
@@ -50,16 +63,163 @@ const getActualSideForDrag = (
     return canvasSide;
   }
   
-  // Correct reverse mapping for 90° clockwise rotation
   const reverseMap: Record<EnclosureSide, EnclosureSide> = {
     'Front': 'Front',
-    'Top': 'Right',     // Top becomes Right
-    'Right': 'Bottom',  // Right becomes Bottom  
-    'Bottom': 'Left',   // Bottom becomes Left
-    'Left': 'Top'       // Left becomes Top
+    'Top': 'Right',     // Visual Top = Actual Right
+    'Right': 'Bottom',  // Visual Right = Actual Bottom  
+    'Bottom': 'Left',   // Visual Bottom = Actual Left
+    'Left': 'Top'       // Visual Left = Actual Top
   };
   
   return reverseMap[canvasSide];
+};
+
+/**
+ * Calculate component z-order for rendering.
+ * Components are sorted by:
+ * 1. Type: Regular components render on top of utility guides
+ * 2. Timestamp: Newer components render on top of older ones
+ */
+const getComponentZOrder = (component: PlacedComponent) => {
+  const isUtility = COMPONENT_TYPES[component.type].category === "Footprint Guides";
+  
+  // Extract timestamp from component ID (format: "comp-1234567890-abc")
+  const parts = component.id.split('-');
+  let timestamp = 0;
+  
+  for (const part of parts) {
+    const num = parseInt(part, 10);
+    // Check if it looks like a timestamp (milliseconds since epoch)
+    if (!isNaN(num) && num > 1000000000000) {
+      timestamp = num;
+      break;
+    }
+  }
+  
+  return { isUtility, timestamp };
+};
+
+/**
+ * Generate label text showing component dimensions.
+ * For rectangular components rotated 90°, swap width/height in the label
+ * since what was width is now height visually.
+ */
+const getRotatedLabelText = (compData: any, componentRotation: number, unit: MeasurementUnit) => {
+  // Drill holes just show diameter
+  if (compData.category !== "Footprint Guides") {
+    return unit === "metric" 
+      ? `${compData.drillSize.toFixed(1)}mm`
+      : compData.imperialLabel;
+  }
+
+  // Rectangular footprint guides show width×height
+  if (compData.shape === 'rectangle' || compData.shape === 'square') {
+    // At 90° rotation, dimensions are swapped visually
+    if (componentRotation === 90 || componentRotation === -90 || componentRotation === 270) {
+      return unit === "metric" 
+        ? `${compData.height}mm×${compData.width}mm`
+        : mmToFraction(compData.height) + "×" + mmToFraction(compData.width);
+    } else {
+      return unit === "metric" 
+        ? `${compData.width}mm×${compData.height}mm`
+        : mmToFraction(compData.width) + "×" + mmToFraction(compData.height);
+    }
+  } else {
+    // Circular footprint guides show diameter (rotation doesn't matter)
+    return unit === "metric" 
+      ? `${compData.drillSize}mm`
+      : mmToFraction(compData.drillSize);
+  }
+};
+
+/**
+ * Calculate label position to always appear at the visual bottom of a component.
+ * 
+ * For rectangles:
+ * - At component 0° + canvas 0°: label below bottom edge (original bottom)
+ * - At component 90° + canvas 0°: label below right edge (rotated to bottom)
+ * - At component 0° + canvas 90°: label below right edge (canvas rotated)
+ * - At component 90° + canvas 90°: label below top edge (both rotations = 180° total)
+ * 
+ * The key insight: we need to find which edge is visually at the bottom after
+ * applying BOTH component rotation AND canvas rotation.
+ */
+const calculateLabelPosition = (
+  centerX: number,
+  centerY: number,
+  componentRotation: number,
+  canvasRotation: number,
+  zoom: number,
+  isRectangular: boolean,
+  rectWidthPx?: number,
+  rectHeightPx?: number,
+  radiusPx?: number
+): { x: number; y: number; textAngle: number } => {
+  const baseOffset = 15;
+  const zoomedOffset = baseOffset / zoom;
+  
+  if (isRectangular && rectWidthPx !== undefined && rectHeightPx !== undefined) {
+    // Total visual rotation combines component rotation + canvas rotation
+    const totalRotation = componentRotation + canvasRotation;
+    
+    // Normalize to 0-360 range
+    const normalizedRotation = ((totalRotation % 360) + 360) % 360;
+    
+    // Determine which edge is visually at the bottom based on total rotation
+    // 0°: bottom edge is at bottom
+    // 90°: right edge is at bottom  
+    // 180°: top edge is at bottom
+    // 270°: left edge is at bottom
+    let offsetX = 0;
+    let offsetY = 0;
+    
+    if (normalizedRotation === 0) {
+      // Original bottom edge is at visual bottom
+      offsetX = 0;
+      offsetY = rectHeightPx / 2;
+    } else if (normalizedRotation === 90) {
+      // Original right edge is at visual bottom
+      offsetX = rectWidthPx / 2;
+      offsetY = 0;
+    } else if (normalizedRotation === 180) {
+      // Original top edge is at visual bottom
+      offsetX = 0;
+      offsetY = -rectHeightPx / 2;
+    } else if (normalizedRotation === 270) {
+      // Original left edge is at visual bottom
+      offsetX = -rectWidthPx / 2;
+      offsetY = 0;
+    }
+    
+    // Add offset to position label below the visual bottom edge
+    const labelX = centerX + offsetX;
+    const labelY = centerY + offsetY + zoomedOffset;
+    
+    // Keep text horizontal (counter-rotate by canvas rotation only)
+    const textAngle = (-canvasRotation * Math.PI) / 180;
+    
+    return { x: labelX, y: labelY, textAngle };
+    
+  } else {
+    // Circles: label position depends only on canvas rotation since circles are rotationally symmetric
+    const circleRadius = radiusPx || 0;
+    
+    if (canvasRotation === 0) {
+      // Canvas not rotated: label below circle
+      return {
+        x: centerX,
+        y: centerY + circleRadius + zoomedOffset,
+        textAngle: 0
+      };
+    } else {
+      // Canvas rotated 90°: label to the right of circle (which is the visual bottom)
+      return {
+        x: centerX + circleRadius + zoomedOffset,
+        y: centerY,
+        textAngle: -Math.PI / 2
+      };
+    }
+  }
 };
 
 export default function UnwrappedCanvas({
@@ -77,6 +237,7 @@ export default function UnwrappedCanvas({
   onCanvasClick,
   onZoomChange,
   rotatesLabels = false,
+  onRightClick,
 }: UnwrappedCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -99,42 +260,10 @@ export default function UnwrappedCanvas({
     }
   };
 
-  // Helper function to get rotated dimensions for utility guides (for labels only)
-  const getRotatedDimensions = (compData: any, currentRotation: number) => {
-    if (compData.category !== "Footprint Guides (not printed)" || currentRotation === 0) {
-      return { width: compData.width, height: compData.height };
-    }
-    
-    // Swap dimensions for 90° rotation (for labels only)
-    if (currentRotation === 90) {
-      return { width: compData.height, height: compData.width };
-    }
-    
-    return { width: compData.width, height: compData.height };
-  };
-
-  // Helper function to get rotated label text for utility guides
-  const getRotatedLabelText = (compData: any, currentRotation: number) => {
-    if (compData.category !== "Footprint Guides (not printed)") {
-      return unit === "metric" 
-        ? `${compData.drillSize.toFixed(1)}mm`
-        : compData.imperialLabel;
-    }
-
-    if (compData.shape === 'rectangle' || compData.shape === 'square') {
-      const rotatedDims = getRotatedDimensions(compData, currentRotation);
-      return unit === "metric" 
-        ? `${rotatedDims.width}mm×${rotatedDims.height}mm`
-        : compData.imperialLabel;
-    } else {
-      // For circles, just show diameter (doesn't change with rotation)
-      return unit === "metric" 
-        ? `${compData.drillSize}mm`
-        : compData.imperialLabel;
-    }
-  };
-
-  // Helper function to check if point is within trapezoid
+  /**
+   * Check if a point is within a trapezoidal side boundary.
+   * Used for drag validation on trapezoidal enclosures.
+   */
   const isPointInTrapezoid = (
     x: number, 
     y: number, 
@@ -154,7 +283,10 @@ export default function UnwrappedCanvas({
     return absX >= leftEdge && absX <= rightEdge && absY >= 0 && absY <= height;
   };
 
-  // Calculate layout offsets for each side in the cross pattern
+  /**
+   * Calculate layout positions for all sides in the cross pattern.
+   * Returns x, y, width, height for each side plus total dimensions.
+   */
   const getLayout = () => {
     const enc = ENCLOSURE_TYPES[enclosureType];
     const cornerStyle = enc.cornerStyle || "rounded";
@@ -173,9 +305,6 @@ export default function UnwrappedCanvas({
 
     if (isTrapezoidal) {
       // Special layout for trapezoidal enclosures
-      // The narrow end of left/right sides should align with bottom height
-      const narrowWidth = dimensions.bottom.height * mmToPixels;
-      
       const totalWidth = frontW + leftW + rightW;
       const totalHeight = frontH + topH + bottomH;
       
@@ -190,7 +319,7 @@ export default function UnwrappedCanvas({
       };
     }
 
-    // Original rectangular layout logic
+    // Standard rectangular layout
     const totalWidth = cornerStyle === "sharp" 
       ? Math.max(leftW + frontW + rightW, topW, bottomW)
       : leftW + frontW + rightW;
@@ -333,33 +462,24 @@ export default function UnwrappedCanvas({
         }
       } else if ((side === 'left' || side === 'right') && sideData.isTrapezoidal && sideData.frontWidth) {
         // Draw trapezoid for trapezoidal left/right sides
-        const backWidth = sideLayout.width; // Wide end at top (56mm)
-        const frontWidth = sideData.frontWidth * mmToPixels; // Narrow end at bottom (13mm)
+        const backWidth = sideLayout.width;
+        const frontWidth = sideData.frontWidth * mmToPixels;
         const height = sideLayout.height;
-        
-        console.log(`${side} side trapezoid:`, {
-          backWidthMM: backWidth / mmToPixels,
-          frontWidthMM: frontWidth / mmToPixels, 
-          heightMM: height / mmToPixels
-        });
         
         ctx.beginPath();
         if (side === 'left') {
           // Left side: wide at top (back), narrow at bottom (front)
-          // Should connect to front panel on the RIGHT edge
-          // Horizontally mirrored: draw from RIGHT to LEFT
-          ctx.moveTo(backWidth, 0);           // Top RIGHT (back, wide end - 56mm)
-          ctx.lineTo(0, 0);                   // Top LEFT (back, wide end - 0mm)  
-          ctx.lineTo(backWidth - frontWidth, height); // Bottom LEFT (front, narrow end - 43mm)
-          ctx.lineTo(backWidth, height);      // Bottom RIGHT (front, narrow end - 56mm)
+          // Horizontally mirrored to connect to front panel correctly
+          ctx.moveTo(backWidth, 0);
+          ctx.lineTo(0, 0);
+          ctx.lineTo(backWidth - frontWidth, height);
+          ctx.lineTo(backWidth, height);
         } else {
-          // Right side: wide at top (back), narrow at bottom (front)  
-          // Should connect to front panel on the LEFT edge
-          // Normal orientation: draw from LEFT to RIGHT
-          ctx.moveTo(0, 0);                   // Top LEFT (back, wide end - 0mm)
-          ctx.lineTo(backWidth, 0);           // Top RIGHT (back, wide end - 56mm)
-          ctx.lineTo(frontWidth, height);     // Bottom RIGHT (front, narrow end - 13mm)
-          ctx.lineTo(0, height);              // Bottom LEFT (front, narrow end - 0mm)
+          // Right side: wide at top (back), narrow at bottom (front)
+          ctx.moveTo(0, 0);
+          ctx.lineTo(backWidth, 0);
+          ctx.lineTo(frontWidth, height);
+          ctx.lineTo(0, height);
         }
         ctx.closePath();
         ctx.stroke();
@@ -378,14 +498,10 @@ export default function UnwrappedCanvas({
         ctx.strokeRect(0, 0, sideLayout.width, sideLayout.height);
       }
 
-      // DRAW SIDE LABEL - FIXED: Always keep labels readable left-to-right
+      // Draw side label (always readable, counter-rotated from canvas rotation)
       ctx.save();
       ctx.translate(sideLayout.width / 2, sideLayout.height / 2);
-      
-      // Apply counter-rotation to keep labels readable regardless of canvas rotation
-      const rotRad = (-rotation * Math.PI) / 180;
-      ctx.rotate(rotRad);
-      
+      ctx.rotate((-rotation * Math.PI) / 180);
       ctx.fillStyle = "hsl(var(--foreground))";
       ctx.font = `${14 / zoom}px Arial`;
       ctx.textAlign = "center";
@@ -399,10 +515,10 @@ export default function UnwrappedCanvas({
       
       // Separate utility guides from regular components for proper z-ordering
       const utilityGuides = sideComponents.filter(c => 
-        COMPONENT_TYPES[c.type].category === "Footprint Guides (not printed)"
+        COMPONENT_TYPES[c.type].category === "Footprint Guides"
       );
       const regularComponents = sideComponents.filter(c => 
-        COMPONENT_TYPES[c.type].category !== "Footprint Guides (not printed)"
+        COMPONENT_TYPES[c.type].category !== "Footprint Guides"
       );
 
       // Draw utility guides first (behind regular components)
@@ -414,7 +530,7 @@ export default function UnwrappedCanvas({
         const centerY = sideLayout.height / 2 + component.y;
 
         // Check if this is a utility guide (not printed)
-        const isUtilityGuide = compData.category === "Footprint Guides (not printed)";
+        const isUtilityGuide = compData.category === "Footprint Guides";
 
         // Check if component is in warning zone for trapezoidal sides
         let showWarning = false;
@@ -436,17 +552,21 @@ export default function UnwrappedCanvas({
 
         // Highlight selected component
         if (selectedComponent === component.id) {
+          ctx.save();
           ctx.fillStyle = "#ff8c42";
           ctx.globalAlpha = 0.2;
           ctx.beginPath();
           
           if (compData.shape === 'rectangle' || compData.shape === 'square') {
-            // Use original dimensions for selection highlight (not rotated)
+            // Apply rotation for the highlight too
+            ctx.translate(centerX, centerY);
+            ctx.rotate((component.rotation * Math.PI) / 180);
+            
             const rectWidth = (compData.width || 10) * mmToPixels;
             const rectHeight = (compData.height || 10) * mmToPixels;
             ctx.rect(
-              centerX - rectWidth / 2 - 10 / zoom,
-              centerY - rectHeight / 2 - 10 / zoom,
+              -rectWidth / 2 - 10 / zoom,
+              -rectHeight / 2 - 10 / zoom,
               rectWidth + 20 / zoom,
               rectHeight + 20 / zoom
             );
@@ -455,14 +575,19 @@ export default function UnwrappedCanvas({
             ctx.arc(centerX, centerY, radius + 10 / zoom, 0, 2 * Math.PI);
           }
           ctx.fill();
+          ctx.restore();
           ctx.globalAlpha = 1;
         }
 
         // Draw the component based on shape
         if (compData.shape === 'rectangle' || compData.shape === 'square') {
-          // FIX: Always use original dimensions for drawing, only swap for label
-          const rectWidth = (compData.width || 10) * mmToPixels;
-          const rectHeight = (compData.height || 10) * mmToPixels;
+          // Apply rotation for rectangle components
+          ctx.save();
+          ctx.translate(centerX, centerY);
+          ctx.rotate((component.rotation * Math.PI) / 180);
+          
+          const rectWidthPx = (compData.width || 10) * mmToPixels;
+          const rectHeightPx = (compData.height || 10) * mmToPixels;
           
           // Draw fill - transparent for utility guides, white for regular components
           if (isUtilityGuide) {
@@ -471,10 +596,10 @@ export default function UnwrappedCanvas({
             ctx.fillStyle = "white";
           }
           ctx.fillRect(
-            centerX - rectWidth / 2,
-            centerY - rectHeight / 2,
-            rectWidth,
-            rectHeight
+            -rectWidthPx / 2,
+            -rectHeightPx / 2,
+            rectWidthPx,
+            rectHeightPx
           );
           
           // Draw warning outline if needed (only for non-utility guides)
@@ -482,10 +607,10 @@ export default function UnwrappedCanvas({
             ctx.strokeStyle = "#fbbf24";
             ctx.lineWidth = 2 / zoom;
             ctx.strokeRect(
-              centerX - rectWidth / 2 - 5 / zoom,
-              centerY - rectHeight / 2 - 5 / zoom,
-              rectWidth + 10 / zoom,
-              rectHeight + 10 / zoom
+              -rectWidthPx / 2 - 5 / zoom,
+              -rectHeightPx / 2 - 5 / zoom,
+              rectWidthPx + 10 / zoom,
+              rectHeightPx + 10 / zoom
             );
           }
           
@@ -498,10 +623,10 @@ export default function UnwrappedCanvas({
           }
           
           ctx.strokeRect(
-            centerX - rectWidth / 2,
-            centerY - rectHeight / 2,
-            rectWidth,
-            rectHeight
+            -rectWidthPx / 2,
+            -rectHeightPx / 2,
+            rectWidthPx,
+            rectHeightPx
           );
           
           if (isUtilityGuide) {
@@ -510,61 +635,65 @@ export default function UnwrappedCanvas({
           
           // Draw crosshair (only for non-utility guides)
           if (!isUtilityGuide) {
-            const crosshairSize = Math.max(rectWidth / 2, rectHeight / 2);
+            const crosshairSize = Math.max(rectWidthPx / 2, rectHeightPx / 2);
             ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--muted-foreground))";
             ctx.lineWidth = 1 / zoom;
             ctx.beginPath();
-            ctx.moveTo(centerX - crosshairSize, centerY);
-            ctx.lineTo(centerX + crosshairSize, centerY);
-            ctx.moveTo(centerX, centerY - crosshairSize);
-            ctx.lineTo(centerX, centerY + crosshairSize);
+            ctx.moveTo(-crosshairSize, 0);
+            ctx.lineTo(crosshairSize, 0);
+            ctx.moveTo(0, -crosshairSize);
+            ctx.lineTo(0, crosshairSize);
             ctx.stroke();
           }
           
-          // Draw dimension label with rotated dimensions (label only changes, not the rectangle)
-          const labelText = getRotatedLabelText(compData, rotation);
+          ctx.restore();
+          
+          // Draw label with positioning that accounts for both rotations
+          const labelPos = calculateLabelPosition(
+            centerX,
+            centerY,
+            component.rotation || 0,  // Component's own rotation (0° or 90°)
+            rotation,                  // Canvas rotation (0° or 90°)
+            zoom,
+            true,                      // Is rectangular
+            rectWidthPx,
+            rectHeightPx
+          );
+          
+          ctx.save();
+          ctx.translate(labelPos.x, labelPos.y);
+          ctx.rotate(labelPos.textAngle);
+          
+          const labelText = getRotatedLabelText(compData, component.rotation || 0, unit);
+          ctx.font = `${10 / zoom}px monospace`;
+          const textMetrics = ctx.measureText(labelText);
+          const textWidth = textMetrics.width;
+          const textHeight = 10 / zoom;
+          const padding = 4 / zoom;
 
-// FIX: Calculate label offset based on the actual bottom edge distance after rotation
-// After 90° rotation, the bottom edge is what was previously the right edge
-const rotatedDims = getRotatedDimensions(compData, rotation);
-const bottomEdgeDistance = (rotatedDims.height / 2) * mmToPixels;
-const labelOffset = bottomEdgeDistance + 15 / zoom;
+          // Draw pill background
+          ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+          ctx.beginPath();
+          ctx.roundRect(
+            -textWidth / 2 - padding,
+            -textHeight / 2 - padding,
+            textWidth + padding * 2,
+            textHeight + padding * 2,
+            (textHeight + padding * 2) / 2
+          );
+          ctx.fill();
 
-ctx.save();
-ctx.translate(centerX, centerY);
-const rotRad = (-rotation * Math.PI) / 180;
-ctx.rotate(rotRad);
-ctx.translate(0, labelOffset);
+          // Draw text
+          ctx.fillStyle = "black";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(labelText, 0, 0);
 
-ctx.font = `${10 / zoom}px monospace`;
-const textMetrics = ctx.measureText(labelText);
-const textWidth = textMetrics.width;
-const textHeight = 10 / zoom;
-const padding = 4 / zoom;
-
-// Draw pill background
-ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-ctx.beginPath();
-ctx.roundRect(
-  -textWidth / 2 - padding,
-  -textHeight / 2 - padding,
-  textWidth + padding * 2,
-  textHeight + padding * 2,
-  (textHeight + padding * 2) / 2
-);
-ctx.fill();
-
-// Draw text
-ctx.fillStyle = "black";
-ctx.textAlign = "center";
-ctx.textBaseline = "middle";
-ctx.fillText(labelText, 0, 0);
-
-ctx.restore();
+          ctx.restore();
           
         } else {
           // CIRCLE RENDERING (for both regular components and utility guides)
-          const radius = (compData.drillSize / 2) * mmToPixels;
+          const radiusPx = (compData.drillSize / 2) * mmToPixels;
           
           // Draw drill hole - transparent for utility guides, white for regular components
           if (isUtilityGuide) {
@@ -573,7 +702,7 @@ ctx.restore();
             ctx.fillStyle = "white";
           }
           ctx.beginPath();
-          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+          ctx.arc(centerX, centerY, radiusPx, 0, 2 * Math.PI);
           ctx.fill();
           
           // Draw warning ring if needed (only for non-utility guides)
@@ -581,7 +710,7 @@ ctx.restore();
             ctx.strokeStyle = "#fbbf24";
             ctx.lineWidth = 2 / zoom;
             ctx.beginPath();
-            ctx.arc(centerX, centerY, radius + 5 / zoom, 0, 2 * Math.PI);
+            ctx.arc(centerX, centerY, radiusPx + 5 / zoom, 0, 2 * Math.PI);
             ctx.stroke();
           }
           
@@ -594,7 +723,7 @@ ctx.restore();
           }
           
           ctx.beginPath();
-          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+          ctx.arc(centerX, centerY, radiusPx, 0, 2 * Math.PI);
           ctx.stroke();
           
           if (isUtilityGuide) {
@@ -603,7 +732,7 @@ ctx.restore();
 
           // Draw crosshair (only for non-utility guides)
           if (!isUtilityGuide) {
-            const crosshairSize = radius;
+            const crosshairSize = radiusPx;
             ctx.strokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--muted-foreground))";
             ctx.lineWidth = 1 / zoom;
             ctx.beginPath();
@@ -614,16 +743,24 @@ ctx.restore();
             ctx.stroke();
           }
 
-          // Draw label with rotated dimensions for Footprint guides
-          const labelText = getRotatedLabelText(compData, rotation);
-          const labelOffset = radius + 15 / zoom;
+          // Draw label with positioning that accounts for both rotations
+          const labelPos = calculateLabelPosition(
+            centerX,
+            centerY,
+            component.rotation || 0,  // Component's own rotation (0° or 90°)
+            rotation,                  // Canvas rotation (0° or 90°)
+            zoom,
+            false,                     // Is circular
+            undefined,
+            undefined,
+            radiusPx
+          );
           
           ctx.save();
-          ctx.translate(centerX, centerY);
-          const rotRad = (-rotation * Math.PI) / 180;
-          ctx.rotate(rotRad);
-          ctx.translate(0, labelOffset);
+          ctx.translate(labelPos.x, labelPos.y);
+          ctx.rotate(labelPos.textAngle);
           
+          const labelText = getRotatedLabelText(compData, component.rotation || 0, unit);
           ctx.font = `${10 / zoom}px monospace`;
           const textMetrics = ctx.measureText(labelText);
           const textWidth = textMetrics.width;
@@ -712,10 +849,106 @@ ctx.restore();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Right-click starts panning
-    if (e.button === 2) {
+    // Middle-click (button 1) starts panning
+    if (e.button === 1) {
+      e.preventDefault();
       setIsPanning(true);
       setDragStart({ x: mouseX - panOffset.x, y: mouseY - panOffset.y });
+      return;
+    }
+
+    // Right-click for context menu
+    if (e.button === 2) {
+      e.preventDefault();
+      
+      // Convert to canvas coordinates with inverse rotation
+      const centerX = rect.width / 2 + panOffset.x;
+      const centerY = rect.height / 2 + panOffset.y;
+      
+      const rotRad = (-rotation * Math.PI) / 180;
+      const dx = mouseX - centerX;
+      const dy = mouseY - centerY;
+      const rotatedX = dx * Math.cos(rotRad) - dy * Math.sin(rotRad);
+      const rotatedY = dx * Math.sin(rotRad) + dy * Math.cos(rotRad);
+      
+      const canvasX = rotatedX / zoom + layout.totalWidth / 2;
+      const canvasY = rotatedY / zoom + layout.totalHeight / 2;
+
+      // Check if clicked on any component
+      let clickedComponent: PlacedComponent | null = null;
+
+      // Sort components by type and z-order
+      const sortedComponents = [...components].sort((a, b) => {
+        const aZ = getComponentZOrder(a);
+        const bZ = getComponentZOrder(b);
+        
+        // First: Regular components before utility guides
+        if (aZ.isUtility && !bZ.isUtility) return 1;
+        if (!aZ.isUtility && bZ.isUtility) return -1;
+        
+        // Second: Both same type, newer components first (higher timestamp)
+        return bZ.timestamp - aZ.timestamp;
+      });
+
+      for (const [side, sideLayout] of Object.entries(layout)) {
+        if (side === 'totalWidth' || side === 'totalHeight') continue;
+        if (typeof sideLayout === 'number') continue;
+
+        const sideName = (side.charAt(0).toUpperCase() + side.slice(1)) as EnclosureSide;
+        const sideComponents = sortedComponents.filter(c => c.side === sideName);
+        
+        const sideX = canvasX - sideLayout.x - sideLayout.width / 2;
+        const sideY = canvasY - sideLayout.y - sideLayout.height / 2;
+
+        for (const component of sideComponents) {
+          const compData = COMPONENT_TYPES[component.type];
+          let isClicked = false;
+
+          if (compData.shape === 'rectangle' || compData.shape === 'square') {
+            const rectWidth = (compData.width || 10) * mmToPixels;
+            const rectHeight = (compData.height || 10) * mmToPixels;
+            const rotationRad = (component.rotation * Math.PI) / 180;
+            
+            // Transform click point to component's rotated coordinate system
+            const dx = sideX - component.x;
+            const dy = sideY - component.y;
+            
+            // Inverse rotation
+            const cos = Math.cos(-rotationRad);
+            const sin = Math.sin(-rotationRad);
+            const rotatedDx = dx * cos - dy * sin;
+            const rotatedDy = dx * sin + dy * cos;
+            
+            // Check if within original (unrotated) bounds
+            if (
+              Math.abs(rotatedDx) <= rectWidth / 2 && 
+              Math.abs(rotatedDy) <= rectHeight / 2
+            ) {
+              isClicked = true;
+            }
+          } else {
+            // Check circle click
+            const radius = (compData.drillSize / 2) * mmToPixels;
+            const dx = sideX - component.x;
+            const dy = sideY - component.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance <= radius + 10) {
+              isClicked = true;
+            }
+          }
+
+          if (isClicked) {
+            clickedComponent = component;
+            break;
+          }
+        }
+        
+        if (clickedComponent) break;
+      }
+
+      // Call the right-click handler
+      onRightClick?.(e, clickedComponent?.id || null);
       return;
     }
 
@@ -740,16 +973,17 @@ ctx.restore();
     let clickedSideX = 0;
     let clickedSideY = 0;
 
-    // Check regular components first, then utility guides (reverse draw order)
-    const allComponents = [...components];
-    
-    // Sort components by type - regular components first for hit detection
-    allComponents.sort((a, b) => {
-      const aIsUtility = COMPONENT_TYPES[a.type].category === "Footprint Guides (not printed)";
-      const bIsUtility = COMPONENT_TYPES[b.type].category === "Footprint Guides (not printed)";
-      if (aIsUtility && !bIsUtility) return 1; // Utilities after regular
-      if (!aIsUtility && bIsUtility) return -1; // Regular before utilities
-      return 0;
+    // Sort components by type and z-order
+    const sortedComponents = [...components].sort((a, b) => {
+      const aZ = getComponentZOrder(a);
+      const bZ = getComponentZOrder(b);
+      
+      // First: Regular components before utility guides
+      if (aZ.isUtility && !bZ.isUtility) return 1;
+      if (!aZ.isUtility && bZ.isUtility) return -1;
+      
+      // Second: Both same type, newer components first (higher timestamp)
+      return bZ.timestamp - aZ.timestamp;
     });
 
     for (const [side, sideLayout] of Object.entries(layout)) {
@@ -757,7 +991,7 @@ ctx.restore();
       if (typeof sideLayout === 'number') continue;
 
       const sideName = (side.charAt(0).toUpperCase() + side.slice(1)) as EnclosureSide;
-      const sideComponents = allComponents.filter(c => c.side === sideName);
+      const sideComponents = sortedComponents.filter(c => c.side === sideName);
       
       const sideX = canvasX - sideLayout.x - sideLayout.width / 2;
       const sideY = canvasY - sideLayout.y - sideLayout.height / 2;
@@ -767,14 +1001,25 @@ ctx.restore();
         let isClicked = false;
 
         if (compData.shape === 'rectangle' || compData.shape === 'square') {
-          // FIX: Use original dimensions for hit detection, not rotated ones
           const rectWidth = (compData.width || 10) * mmToPixels;
           const rectHeight = (compData.height || 10) * mmToPixels;
+          const rotationRad = (component.rotation * Math.PI) / 180;
           
-          const dx = Math.abs(sideX - component.x);
-          const dy = Math.abs(sideY - component.y);
+          // Transform click point to component's rotated coordinate system
+          const dx = sideX - component.x;
+          const dy = sideY - component.y;
           
-          if (dx <= rectWidth / 2 && dy <= rectHeight / 2) {
+          // Inverse rotation
+          const cos = Math.cos(-rotationRad);
+          const sin = Math.sin(-rotationRad);
+          const rotatedDx = dx * cos - dy * sin;
+          const rotatedDy = dx * sin + dy * cos;
+          
+          // Check if within original (unrotated) bounds
+          if (
+            Math.abs(rotatedDx) <= rectWidth / 2 && 
+            Math.abs(rotatedDy) <= rectHeight / 2
+          ) {
             isClicked = true;
           }
         } else {
@@ -793,7 +1038,7 @@ ctx.restore();
           clickedComponent = component;
           clickedSideX = sideX;
           clickedSideY = sideY;
-          break; // Found a component, stop checking this side
+          break;
         }
       }
       
@@ -842,7 +1087,7 @@ ctx.restore();
       const layoutX = dx * cos - dy * sin + layout.totalWidth / 2;
       const layoutY = dx * sin + dy * cos + layout.totalHeight / 2;
 
-      // Detect which side contains the cursor position (in CANVAS coordinates)
+      // Detect which side contains the cursor position
       let canvasSide: EnclosureSide | null = null;
       let currentSideLayout: { x: number; y: number; width: number; height: number } | null = null;
       

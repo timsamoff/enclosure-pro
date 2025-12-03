@@ -1,104 +1,60 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import UnwrappedCanvas from "@/components/UnwrappedCanvas";
 import TopControls from "@/components/TopControls";
 import BottomInfo from "@/components/BottomInfo";
 import ComponentPalette from "@/components/ComponentPalette";
 import EnclosureSelector from "@/components/EnclosureSelector";
 import GridSelector from "@/components/GridSelector";
+import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
+import { Copy, RotateCw, RotateCcw, Printer, Check, Square } from "lucide-react"; // Added RotateCcw
 
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  PlacedComponent,
-  ComponentType,
   EnclosureSide,
   MeasurementUnit,
   EnclosureType,
   ENCLOSURE_TYPES,
-  COMPONENT_TYPES,
-  ProjectState,
   getUnwrappedDimensions,
 } from "@/types/schema";
-import jsPDF from "jspdf";
-import { mmToFraction } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
 import { snapZoom } from "@/lib/zoom";
 
-// Helper functions for label rotation
-const getRotatedSideLabel = (side: EnclosureSide, rotation: number, rotatesLabels: boolean): EnclosureSide => {
-  if (!rotatesLabels || rotation === 0) {
-    return side;
-  }
-  
-  // 90° clockwise rotation mapping
-  const rotationMap: Record<EnclosureSide, EnclosureSide> = {
-    'Front': 'Front', // Front stays the same
-    'Left': 'Top',
-    'Top': 'Right', 
-    'Right': 'Bottom',
-    'Bottom': 'Left'
-  };
-  
-  return rotationMap[side];
-};
-
-const getReverseSideMapping = (rotation: number, rotatesLabels: boolean): Record<EnclosureSide, EnclosureSide> => {
-  if (!rotatesLabels || rotation === 0) {
-    return {
-      'Front': 'Front',
-      'Left': 'Left',
-      'Top': 'Top',
-      'Right': 'Right',
-      'Bottom': 'Bottom'
-    };
-  }
-  
-  return {
-    'Front': 'Front',
-    'Top': 'Left',
-    'Right': 'Top',
-    'Bottom': 'Right',
-    'Left': 'Bottom'
-  };
-};
+// Import modular hooks
+import { useFileOperations } from "@/hooks/useFileOperations";
+import { useContextMenu } from "@/hooks/useContextMenu";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { usePDFExport } from "@/hooks/usePDFExport";
+import { usePrint } from "@/hooks/usePrint";
+import { useComponentManagement } from "@/hooks/useComponentManagement";
+import { useConfirmDialogs } from "@/hooks/useConfirmDialogs";
 
 export default function Designer() {
   const { toast } = useToast();
+  
+  // State
   const [enclosureType, setEnclosureType] = useState<EnclosureType>("125B");
-  const [components, setComponents] = useState<PlacedComponent[]>([]);
+  const [components, setComponents] = useState<any[]>([]);
   const [gridEnabled, setGridEnabled] = useState(true);
   const [gridSize, setGridSize] = useState(5);
   const [unit, setUnit] = useState<MeasurementUnit>("metric");
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
+  
+  // Wrap setSelectedComponent to track who's calling it
+  const wrappedSetSelectedComponent = (id: string | null) => {
+    console.log("SET SELECTED COMPONENT CALLED:", id);
+    console.trace(); // This will show the call stack
+    setSelectedComponent(id);
+  };
+  
   const [showPalette, setShowPalette] = useState(false);
   const [showEnclosureSelector, setShowEnclosureSelector] = useState(false);
   const [showGridSelector, setShowGridSelector] = useState(false);
-  const [showNewConfirmDialog, setShowNewConfirmDialog] = useState(false);
-  const [showQuitConfirmDialog, setShowQuitConfirmDialog] = useState(false);
-  const [showOpenConfirmDialog, setShowOpenConfirmDialog] = useState(false);
-  
-  const isDirtyRef = useRef(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  const [projectName, setProjectName] = useState("");
-  const [projectFilePath, setProjectFilePath] = useState<string | null>(null);
-  const projectFilePathRef = useRef<string | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
   const [zoom, setZoom] = useState<number>(snapZoom(1));
   const [rotation, setRotation] = useState<number>(0);
   const [appIcon, setAppIcon] = useState<string | null>(null);
-  const [pendingFilePath, setPendingFilePath] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState("");
+  const [projectFilePath, setProjectFilePath] = useState<string | null>(null);
 
-  // Use refs to avoid stale closures in print functions
+  // Refs
   const enclosureTypeRef = useRef(enclosureType);
   const componentsRef = useRef(components);
   const unitRef = useRef(unit);
@@ -125,15 +81,12 @@ export default function Designer() {
   useEffect(() => {
     const loadIcon = async () => {
       try {
-        // In Electron production, files are served from dist/public
         const iconPath = window.electronAPI?.isElectron 
           ? './images/EnclosureProIcon.png'
           : '/images/EnclosureProIcon.png';
         
         const response = await fetch(iconPath);
-        if (!response.ok) {
-          return;
-        }
+        if (!response.ok) return;
         
         const blob = await response.blob();
         const reader = new FileReader();
@@ -142,210 +95,109 @@ export default function Designer() {
         };
         reader.readAsDataURL(blob);
       } catch (error) {
-        // Icon is optional, just log and continue
+        // Icon is optional
       }
     };
     loadIcon();
   }, []);
 
-  const enclosure = ENCLOSURE_TYPES[enclosureType];
-  
-  const getSideDimensions = (side: EnclosureSide) => {
-    const unwrapped = getUnwrappedDimensions(enclosureType);
-    return unwrapped[side.toLowerCase() as keyof ReturnType<typeof getUnwrappedDimensions>];
-  };
+  // Track selection changes
+  useEffect(() => {
+    console.log("SELECTION CHANGED:", selectedComponent);
+  }, [selectedComponent]);
 
-  const markDirty = () => {
-    setIsDirty(true);
-    isDirtyRef.current = true;
-  };
-  
-  const resetDirty = () => {
-    setIsDirty(false);
-    isDirtyRef.current = false;
-  };
+  // Also log when components change
+  useEffect(() => {
+    console.log("COMPONENTS UPDATED, count:", components.length);
+    console.log("Component IDs:", components.map(c => c.id));
+  }, [components]);
 
-  const performNewProject = () => {
-    setEnclosureType("125B");
-    setComponents([]);
-    setGridEnabled(true);
-    setGridSize(5);
-    setZoom(snapZoom(1));
-    setRotation(0);
-    setUnit("metric");
-    setSelectedComponent(null);
-    setProjectName("");
-    setProjectFilePath(null);
-    projectFilePathRef.current = null;
-    resetDirty();
-    toast({
-      title: "New Project",
-      description: "Started a new project",
-    });
-  };
+  // Use modular hooks
+  const fileOperations = useFileOperations({
+    enclosureType,
+    components,
+    gridEnabled,
+    gridSize,
+    zoom,
+    rotation,
+    unit,
+    appIcon,
+    setEnclosureType,
+    setComponents,
+    setGridEnabled,
+    setGridSize,
+    setZoom,
+    setRotation,
+    setUnit,
+    setProjectName,
+    setProjectFilePath,
+    toast
+  });
 
-  const handleNew = () => {
-    if (isDirty) {
-      setShowNewConfirmDialog(true);
-    } else {
-      performNewProject();
-    }
-  };
+  const contextMenu = useContextMenu({
+    components,
+    selectedComponent,
+    setComponents,
+    setSelectedComponent: wrappedSetSelectedComponent,
+    markDirty: fileOperations.markDirty,
+    toast
+  });
 
-  const handleNewConfirmSave = async () => {
-    setShowNewConfirmDialog(false);
-    try {
-      await handleSave();
-      performNewProject();
-    } catch (error) {
-      console.error('Save failed, not starting new project:', error);
-    }
-  };
+  const componentManagement = useComponentManagement({
+    components,
+    setComponents,
+    selectedComponent,
+    setSelectedComponent: wrappedSetSelectedComponent,
+    gridEnabled,
+    gridSize,
+    setShowPalette,
+    markDirty: fileOperations.markDirty,
+    enclosureType,
+    rotation
+  });
 
-  const handleNewConfirmDiscard = () => {
-    setShowNewConfirmDialog(false);
-    performNewProject();
-  };
+  const pdfExport = usePDFExport({
+  enclosureTypeRef,
+  componentsRef,
+  unitRef,
+  rotationRef,
+  projectName: fileOperations.projectName, // Use the project name from fileOperations
+  enclosureType, // Pass the current enclosureType
+  toast
+});
 
-  const handleQuit = () => {
-    if (isDirty) {
-      setShowQuitConfirmDialog(true);
-    } else {
-      if (window.electronAPI?.isElectron) {
-        window.electronAPI.closeWindow();
-      }
-    }
-  };
+const print = usePrint({
+  enclosureTypeRef,
+  componentsRef,
+  unitRef,
+  rotationRef,
+  projectName: fileOperations.projectName, // Use the project name from fileOperations
+  enclosureType, // Pass the current enclosureType
+  toast
+});
 
-  const handleQuitConfirmSave = async () => {
-    setShowQuitConfirmDialog(false);
-    try {
-      await handleSave();
-      if (window.electronAPI?.isElectron) {
-        window.electronAPI.closeWindow();
-      }
-    } catch (error) {
-      console.error('Save failed, not quitting:', error);
-    }
-  };
+  const confirmDialogs = useConfirmDialogs({
+    onNewConfirmSave: fileOperations.handleNewConfirmSave,
+    onNewConfirmDiscard: fileOperations.handleNewConfirmDiscard,
+    onQuitConfirmSave: fileOperations.handleQuitConfirmSave,
+    onQuitConfirmDiscard: fileOperations.handleQuitConfirmDiscard,
+    onOpenConfirmSave: fileOperations.handleOpenConfirmSave,
+    onOpenConfirmDiscard: fileOperations.handleOpenConfirmDiscard,
+    onOpenConfirmCancel: fileOperations.handleOpenConfirmCancel
+  });
 
-  const handleQuitConfirmDiscard = () => {
-    setShowQuitConfirmDialog(false);
-    if (window.electronAPI?.isElectron) {
-      window.electronAPI.closeWindow();
-    }
-  };
+  useKeyboardShortcuts({
+    handleZoomIn: () => setZoom(prev => snapZoom(prev + 0.1)),
+    handleZoomOut: () => setZoom(prev => snapZoom(prev - 0.1)),
+    handleSave: fileOperations.handleSave,
+    handleSaveAs: fileOperations.handleSaveAs,
+    handleLoad: fileOperations.handleLoad,
+    handlePrint: print.handlePrint,
+    handleExportPDF: pdfExport.handleExportPDF,
+    handleQuit: fileOperations.handleQuit
+  });
 
-  const performLoad = async () => {
-    if (window.electronAPI?.isElectron) {
-      try {
-        const result = await window.electronAPI.openFile({
-          filters: [
-            { name: 'Enclosure Project Files', extensions: ['enc'] },
-            { name: 'All Files', extensions: ['*'] }
-          ]
-        });
-
-        if (result.canceled || !result.filePath) {
-          return;
-        }
-
-        const readResult = await window.electronAPI.readFile({
-          filePath: result.filePath
-        });
-
-        if (!readResult.success || !readResult.content) {
-          throw new Error(readResult.error || 'Failed to read file');
-        }
-
-        const filename = result.filePath.split(/[/\\]/).pop() || 'untitled.enc';
-        processLoadedFile(readResult.content, filename, result.filePath);
-        return;
-      } catch (error) {
-        console.error('Electron load failed:', error);
-      }
-    }
-
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.enc';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const json = event.target?.result as string;
-        processLoadedFile(json, file.name);
-      };
-      reader.readAsText(file);
-    };
-    input.click();
-  };
-
-  const handleLoad = async () => {
-    if (isDirty) {
-      setShowOpenConfirmDialog(true);
-    } else {
-      await performLoad();
-    }
-  };
-
-  const openFileFromPath = async (filePath: string) => {
-    try {
-      const result = await window.electronAPI.openExternalFile(filePath);
-      
-      if (result.success && result.content) {
-        const filename = filePath.split(/[/\\]/).pop() || 'untitled.enc';
-        processLoadedFile(result.content, filename, filePath);
-      } else {
-        throw new Error(result.error || 'Failed to read file');
-      }
-    } catch (error) {
-      console.error('Error opening file from path:', error);
-      toast({
-        title: "Open Failed",
-        description: `Failed to open ${filePath.split(/[/\\]/).pop()}`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleOpenConfirmSave = async () => {
-    setShowOpenConfirmDialog(false);
-    try {
-      await handleSave();
-      if (pendingFilePath) {
-        await openFileFromPath(pendingFilePath);
-        setPendingFilePath(null);
-      }
-    } catch (error) {
-      console.error('Save failed or canceled, not opening file:', error);
-      setPendingFilePath(null);
-      toast({
-        title: "Open Canceled",
-        description: "File open was canceled",
-      });
-    }
-  };
-
-  const handleOpenConfirmDiscard = async () => {
-    setShowOpenConfirmDialog(false);
-    if (pendingFilePath) {
-      await openFileFromPath(pendingFilePath);
-      setPendingFilePath(null);
-    }
-  };
-
-  const handleOpenConfirmCancel = () => {
-    setShowOpenConfirmDialog(false);
-    setPendingFilePath(null);
-    toast({
-      title: "Open Canceled",
-      description: "File open was canceled",
-    });
-  };
-
+  // UI Handlers
   const handleZoomIn = () => {
     setZoom(prev => snapZoom(prev + 0.1));
   };
@@ -354,789 +206,59 @@ export default function Designer() {
     setZoom(prev => snapZoom(prev - 0.1));
   };
 
-  const handleRotate = () => {
+  const handleRotateCanvas = () => {
     setRotation(prev => prev === 0 ? 90 : 0);
-    markDirty();
+    fileOperations.markDirty();
   };
 
   const rotationDirection: 'cw' | 'ccw' = rotation === 0 ? 'cw' : 'ccw';
 
-  const handleComponentMove = (id: string, x: number, y: number, side?: EnclosureSide) => {
-    const rotatesLabels = ENCLOSURE_TYPES[enclosureType].rotatesLabels || false;
-    
-    setComponents(prev =>
-      prev.map(c => {
-        if (c.id === id) {
-          let targetSide = side || c.side;
-          if (side && rotatesLabels && rotation !== 0) {
-            const reverseMap = getReverseSideMapping(rotation, rotatesLabels);
-            targetSide = reverseMap[side] || side;
-          }
-          
-          return { ...c, x, y, side: targetSide };
-        }
-        return c;
-      })
-    );
-    markDirty();
+  const enclosure = ENCLOSURE_TYPES[enclosureType];
+  
+  const getSideDimensions = (side: EnclosureSide) => {
+    const unwrapped = getUnwrappedDimensions(enclosureType);
+    return unwrapped[side.toLowerCase() as keyof ReturnType<typeof getUnwrappedDimensions>];
   };
 
-  const handleComponentDelete = (id: string) => {
-    setComponents(prev => prev.filter(c => c.id !== id));
-    markDirty();
-  };
-
-  const handleComponentSelect = (type: ComponentType) => {
-    let initialX = 0;
-    let initialY = 0;
+  // Helper function to get rotation icon and label
+  const getRotationInfo = (componentId: string | null) => {
+    if (!componentId) return { icon: RotateCw, label: "Rotate 90°" };
     
-    if (gridEnabled && gridSize > 0) {
-      const mmToPixels = 3.7795275591;
-      const gridPixels = gridSize * mmToPixels;
-      initialX = Math.round(initialX / gridPixels) * gridPixels;
-      initialY = Math.round(initialY / gridPixels) * gridPixels;
-    }
+    const component = components.find(c => c.id === componentId);
+    const currentRotation = component?.rotation || 0;
     
-    const newComponent: PlacedComponent = {
-      id: `comp-${Date.now()}-${Math.random()}`,
-      type,
-      x: initialX,
-      y: initialY,
-      side: "Front",
+    // If component is at 0° or 180°, show clockwise icon (will rotate to 90°/270°)
+    // If component is at 90° or 270°, show counter-clockwise icon (will rotate back to 0°/180°)
+    const isAlignedWithGrid = currentRotation === 0 || currentRotation === 180;
+    
+    return {
+      icon: isAlignedWithGrid ? RotateCw : RotateCcw,
+      label: isAlignedWithGrid ? "Rotate 90°" : "Rotate 90°"
     };
-    setComponents(prev => [...prev, newComponent]);
-    setSelectedComponent(newComponent.id);
-    setShowPalette(false);
-    markDirty();
   };
 
-  const renderForPrintExport = useCallback((
-  currentEnclosureType: EnclosureType, 
-  shouldRotate: boolean = false, 
-  currentRotation: number = 0
-): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    try {
-      const dimensions = getUnwrappedDimensions(currentEnclosureType);
-      const currentUnit = unitRef.current;
-      const rotatesLabels = ENCLOSURE_TYPES[currentEnclosureType].rotatesLabels || false;
-      const currentComponents = componentsRef.current;
-
-      const frontW = dimensions.front.width;
-      const frontH = dimensions.front.height;
-      const topW = dimensions.top.width;
-      const topH = dimensions.top.height;
-      const bottomW = dimensions.bottom.width;
-      const bottomH = dimensions.bottom.height;
-      const leftW = dimensions.left.width;
-      const leftH = dimensions.left.height;
-      const rightW = dimensions.right.width;
-      const rightH = dimensions.right.height;
-
-      let totalWidthMM = leftW + frontW + rightW;
-      let totalHeightMM = topH + frontH + bottomH;
-
-      if (shouldRotate) {
-        [totalWidthMM, totalHeightMM] = [totalHeightMM, totalWidthMM];
-      }
-
-      const pixelsPerMM = 3.7795275591;
-      
-      const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
-      const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
-      const ctx = canvas.getContext('2d');
-      
-      if (!ctx) {
-        reject(new Error('Could not get canvas context'));
-        return;
-      }
-
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-      if (shouldRotate) {
-        ctx.translate(canvasWidth / 2, canvasHeight / 2);
-        ctx.rotate(Math.PI / 2);
-        ctx.translate(-canvasHeight / 2, -canvasWidth / 2);
-        
-        [totalWidthMM, totalHeightMM] = [totalHeightMM, totalWidthMM];
-      }
-
-      const topOffsetX = (frontW - topW) / 2 * pixelsPerMM;
-      const bottomOffsetX = (frontW - bottomW) / 2 * pixelsPerMM;
-      const leftOffsetY = (frontH - leftH) / 2 * pixelsPerMM;
-      const rightOffsetY = (frontH - rightH) / 2 * pixelsPerMM;
-
-      const layout = {
-        front: { 
-          x: leftW * pixelsPerMM, 
-          y: topH * pixelsPerMM, 
-          width: frontW * pixelsPerMM, 
-          height: frontH * pixelsPerMM 
-        },
-        top: { 
-          x: leftW * pixelsPerMM + topOffsetX, 
-          y: 0, 
-          width: topW * pixelsPerMM, 
-          height: topH * pixelsPerMM 
-        },
-        bottom: { 
-          x: leftW * pixelsPerMM + bottomOffsetX, 
-          y: (topH + frontH) * pixelsPerMM, 
-          width: bottomW * pixelsPerMM, 
-          height: bottomH * pixelsPerMM 
-        },
-        left: { 
-          x: 0, 
-          y: topH * pixelsPerMM + leftOffsetY, 
-          width: leftW * pixelsPerMM, 
-          height: leftH * pixelsPerMM 
-        },
-        right: { 
-          x: (leftW + frontW) * pixelsPerMM, 
-          y: topH * pixelsPerMM + rightOffsetY, 
-          width: rightW * pixelsPerMM, 
-          height: rightH * pixelsPerMM 
-        },
-      };
-
-      const drawSide = (sideKey: keyof typeof layout, originalLabel: string) => {
-        const side = layout[sideKey];
-        const x = side.x;
-        const y = side.y;
-        const w = side.width;
-        const h = side.height;
-
-        const displayLabel = rotatesLabels 
-          ? getRotatedSideLabel(originalLabel as EnclosureSide, currentRotation, rotatesLabels)
-          : originalLabel;
-
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 2;
-        
-        if (sideKey === 'front') {
-          const cornerRadius = 5 * pixelsPerMM;
-          ctx.beginPath();
-          ctx.roundRect(x, y, w, h, cornerRadius);
-          ctx.stroke();
-        } else {
-          ctx.strokeRect(x, y, w, h);
-        }
-
-        // Draw side label
-        ctx.save();
-        ctx.fillStyle = 'black';
-        ctx.font = '16px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Use the same rotation logic for both print and PDF export
-        if (rotatesLabels && currentRotation !== 0) {
-          ctx.translate(x + w / 2, y + h / 2);
-          ctx.rotate(-Math.PI / 2); // 90° counter-clockwise
-          ctx.fillText(displayLabel, 0, 0);
-        } else {
-          ctx.fillText(displayLabel, x + w / 2, y + h / 2);
-        }
-        ctx.restore();
-
-        const sideComponents = currentComponents.filter(c => c.side === originalLabel);
-
-        sideComponents.forEach(component => {
-          const compData = COMPONENT_TYPES[component.type];
-          
-          // Skip utility guides (they're not printed)
-          if (compData.category === "Utility Guides (not printed)") {
-            return;
-          }
-
-          const centerX = x + (w / 2) + component.x;
-          const centerY = y + (h / 2) + component.y;
-
-          // Handle rectangles and squares
-          if (compData.shape === 'rectangle' || compData.shape === 'square') {
-            const rectWidth = (compData.width || 10) * pixelsPerMM;
-            const rectHeight = (compData.height || 10) * pixelsPerMM;
-            
-            // Draw white fill
-            ctx.fillStyle = 'white';
-            ctx.fillRect(
-              centerX - rectWidth / 2,
-              centerY - rectHeight / 2,
-              rectWidth,
-              rectHeight
-            );
-            
-            // Draw black outline
-            ctx.strokeStyle = 'black';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(
-              centerX - rectWidth / 2,
-              centerY - rectHeight / 2,
-              rectWidth,
-              rectHeight
-            );
-            
-            // Draw crosshair
-            const crosshairSizeH = Math.max(rectWidth / 2, 10);
-            const crosshairSizeV = Math.max(rectHeight / 2, 10);
-            ctx.beginPath();
-            ctx.moveTo(centerX - crosshairSizeH, centerY);
-            ctx.lineTo(centerX + crosshairSizeH, centerY);
-            ctx.moveTo(centerX, centerY - crosshairSizeV);
-            ctx.lineTo(centerX, centerY + crosshairSizeV);
-            ctx.stroke();
-
-            // Draw dimensions label
-            const dimText = currentUnit === "metric"
-            ? `${compData.width}mm×${compData.height}mm`  // Add units to both dimensions
-            : compData.imperialLabel;
-            
-            const labelOffset = Math.max(rectHeight / 2, rectWidth / 2) + 15;
-            
-            ctx.font = '12px Arial';
-            const textMetrics = ctx.measureText(dimText);
-            const textWidth = textMetrics.width;
-            
-            ctx.fillStyle = 'white';
-            ctx.fillRect(
-              centerX - textWidth / 2 - 3,
-              centerY + labelOffset - 8,
-              textWidth + 6,
-              16
-            );
-            
-            ctx.fillStyle = 'black';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(dimText, centerX, centerY + labelOffset);
-            
-          } else {
-            // Existing circle drawing code
-            const radius = (compData.drillSize / 2) * pixelsPerMM;
-
-            ctx.fillStyle = 'white';
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.fill();
-
-            ctx.strokeStyle = 'black';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.stroke();
-
-            const crosshairSize = Math.max(radius, 10);
-            ctx.beginPath();
-            ctx.moveTo(centerX - crosshairSize, centerY);
-            ctx.lineTo(centerX + crosshairSize, centerY);
-            ctx.moveTo(centerX, centerY - crosshairSize);
-            ctx.lineTo(centerX, centerY + crosshairSize);
-            ctx.stroke();
-
-            const drillText = currentUnit === "metric"
-              ? `${compData.drillSize.toFixed(1)}mm`
-              : compData.imperialLabel;
-            
-            const labelOffset = radius + 15;
-            
-            ctx.font = '12px Arial';
-            const textMetrics = ctx.measureText(drillText);
-            const textWidth = textMetrics.width;
-            
-            ctx.fillStyle = 'white';
-            ctx.fillRect(
-              centerX - textWidth / 2 - 3,
-              centerY + labelOffset - 8,
-              textWidth + 6,
-              16
-            );
-            
-            ctx.fillStyle = 'black';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(drillText, centerX, centerY + labelOffset);
-          }
-        });
-      };
-
-      drawSide('front', 'Front');
-      drawSide('top', 'Top');
-      drawSide('bottom', 'Bottom');
-      drawSide('left', 'Left');
-      drawSide('right', 'Right');
-
-      const dataUrl = canvas.toDataURL('image/png', 1.0);
-      resolve(dataUrl);
-    } catch (error) {
-      reject(error);
-    }
-  });
-}, []);
-
-  const generatePDF = async (
-    currentEnclosureType: EnclosureType, 
-    shouldRotate: boolean = false, 
-    currentRotation: number = 0
-  ): Promise<jsPDF> => {
-    try {
-      const dimensions = getUnwrappedDimensions(currentEnclosureType);
-      const enc = ENCLOSURE_TYPES[currentEnclosureType];
-
-      const frontW = dimensions.front.width;
-      const frontH = dimensions.front.height;
-      const topW = dimensions.top.width;
-      const topH = dimensions.top.height;
-      const bottomW = dimensions.bottom.width;
-      const bottomH = dimensions.bottom.height;
-      const leftW = dimensions.left.width;
-      const leftH = dimensions.left.height;
-      const rightW = dimensions.right.width;
-      const rightH = dimensions.right.height;
-
-      const totalWidth = leftW + frontW + rightW;
-      const totalHeight = topH + frontH + bottomH;
-
-      const displayWidth = shouldRotate ? totalHeight : totalWidth;
-      const displayHeight = shouldRotate ? totalWidth : totalHeight;
-
-      const imageData = await renderForPrintExport(currentEnclosureType, shouldRotate, currentRotation);
-      
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "letter",
-      });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      
-      const x = (pageWidth - displayWidth) / 2;
-      const y = (pageHeight - displayHeight) / 2 + 20;
-
-      pdf.setFontSize(12);
-      const title = projectName ? `${projectName} - ${currentEnclosureType}` : `${currentEnclosureType} Drill Template`;
-      pdf.text(title, pageWidth / 2, 10, { align: "center" });
-
-      pdf.setFontSize(9);
-      const currentUnit = unitRef.current;
-      const encInfo = currentUnit === "metric" 
-        ? `${enc.width}mm × ${enc.height}mm × ${enc.depth}mm | Scale: 100%`
-        : `${mmToFraction(enc.width)} × ${mmToFraction(enc.height)} × ${mmToFraction(enc.depth)} | Scale: 100%`;
-      pdf.text(encInfo, pageWidth / 2, 15, { align: "center" });
-
-      if (shouldRotate) {
-        pdf.setFontSize(8);
-        pdf.text("(Rotated for optimal fit)", pageWidth / 2, 18, { align: "center" });
-      }
-
-      pdf.addImage(imageData, 'PNG', x, y, displayWidth, displayHeight);
-
-      return pdf;
-    } catch (error) {
-      console.error('PDF generation failed:', error);
-      throw new Error('Failed to generate PDF');
-    }
-  };
-
-  // Optimized PDF generation functions
-  const getPDFForCurrentProject = async (): Promise<jsPDF> => {
-    const dimensions = getUnwrappedDimensions(enclosureTypeRef.current);
-    const totalWidth = dimensions.left.width + dimensions.front.width + dimensions.right.width;
-    const totalHeight = dimensions.top.height + dimensions.front.height + dimensions.bottom.height;
-    
-    const shouldRotate = totalWidth > totalHeight;
-    const currentRotation = rotationRef.current;
-    
-    return await generatePDF(enclosureTypeRef.current, shouldRotate, currentRotation);
-  };
-
-  const handleExportPDF = async () => {
-    try {
-      const pdf = await getPDFForCurrentProject();
-      const filename = projectName ? `${projectName}.pdf` : `${enclosureTypeRef.current}-drill-template.pdf`;
-      pdf.save(filename);
-      toast({
-        title: "PDF Exported",
-        description: "Template exported at 100% scale with high-quality rendering",
-      });
-    } catch (error) {
-      console.error('PDF export failed:', error);
-      toast({
-        title: "Export Failed",
-        description: "Failed to generate PDF",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handlePrint = async () => {
-    try {
-      const pdf = await getPDFForCurrentProject();
-      
-      if (window.electronAPI?.isElectron) {
-        const pdfBlob = pdf.output('blob');
-        const pdfBuffer = await pdfBlob.arrayBuffer();
-        
-        try {
-          await window.electronAPI.printPDF({
-            pdfData: Array.from(new Uint8Array(pdfBuffer)),
-            printOptions: {
-              printBackground: true,
-              scale: 1.0,
-              landscape: false,
-              margins: {
-                marginType: 'custom',
-                top: 0,
-                bottom: 0,
-                left: 0,
-                right: 0
-              }
-            }
-          });
-          
-          toast({
-            title: "Print Sent",
-            description: "Template sent to printer at 100% scale",
-          });
-          return;
-        } catch (error) {
-          // Fall through to browser print
-        }
-      }
-
-      // Browser print fallback
-      const pdfBlob = pdf.output('blob');
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      const printWindow = window.open(pdfUrl);
-      
-      if (printWindow) {
-        printWindow.onload = () => {
-          setTimeout(() => {
-            printWindow.print();
-          }, 500);
-        };
-      }
-
-      toast({
-        title: "Print Ready",
-        description: "PDF opened for printing",
-      });
-    } catch (error) {
-      console.error('Print failed:', error);
-      toast({
-        title: "Print Failed",
-        description: "Failed to generate print document",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSaveWithFilename = async (defaultFilename: string): Promise<void> => {
-    const currentRotation = rotationRef.current;
-    
-    const projectState: ProjectState = {
-      enclosureType,
-      components,
-      gridEnabled,
-      gridSize,
-      zoom,
-      rotation: currentRotation,
-      unit,
-      appIcon: appIcon || undefined,
-    };
-
-    const json = JSON.stringify(projectState, null, 2);
-    
-    const fullFilename = defaultFilename.endsWith('.enc') ? defaultFilename : `${defaultFilename}.enc`;
-
-    if (window.electronAPI?.isElectron) {
-      try {
-        const result = await window.electronAPI.saveFile({
-          defaultPath: fullFilename,
-          filters: [
-            { name: 'Enclosure Project Files', extensions: ['enc'] },
-            { name: 'All Files', extensions: ['*'] }
-          ]
-        });
-
-        if (result.canceled) {
-          throw new Error('User canceled save operation');
-        }
-
-        const writeResult = await window.electronAPI.writeFile({
-          filePath: result.filePath!,
-          content: json
-        });
-
-        if (!writeResult.success) {
-          throw new Error(writeResult.error || 'Failed to write file');
-        }
-
-        const savedFilename = result.filePath!.split(/[/\\]/).pop()?.replace('.enc', '') || defaultFilename;
-        
-        setProjectName(savedFilename);
-        setProjectFilePath(result.filePath!);
-        projectFilePathRef.current = result.filePath!;
-        resetDirty();
-
-        toast({
-          title: "Project Saved",
-          description: `Saved as ${result.filePath!.split('/').pop()}`,
-        });
-
-        return;
-      } catch (err: any) {
-        console.error('Electron save failed:', err);
-        throw err;
-      }
-    }
-
-    if ('showSaveFilePicker' in window) {
-      try {
-        const handle = await (window as any).showSaveFilePicker({
-          suggestedName: fullFilename,
-          types: [{
-            description: 'Enclosure Project Files',
-            accept: { 'application/json': ['.enc'] }
-          }]
-        });
-        
-        const writable = await handle.createWritable();
-        await writable.write(json);
-        await writable.close();
-        
-        setProjectName(defaultFilename.replace('.enc', ''));
-        setProjectFilePath(handle.name);
-        resetDirty();
-        
-        toast({
-          title: "Project Saved",
-          description: `Saved as ${fullFilename}`,
-        });
-        
-        return;
-      } catch (err: any) {
-        if (err.name === 'AbortError') {
-          throw new Error('User canceled save operation');
-        }
-        console.warn('File System Access API failed, falling back to download:', err);
-      }
-    }
-
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fullFilename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    setProjectName(defaultFilename.replace('.enc', ''));
-    setProjectFilePath(fullFilename);
-    resetDirty();
-
-    toast({
-      title: "Project Saved",
-      description: `Saved as ${fullFilename}`,
-    });
-  };
-
-  const handleSave = useCallback(async () => {
-    if (projectFilePathRef.current && window.electronAPI?.isElectron) {
-      const currentRotation = rotationRef.current;
-      
-      const projectState: ProjectState = {
-        enclosureType,
-        components,
-        gridEnabled,
-        gridSize,
-        zoom,
-        rotation: currentRotation,
-        unit,
-        appIcon: appIcon || undefined,
-      };
-
-      const json = JSON.stringify(projectState, null, 2);
-
-      try {
-        const writeResult = await window.electronAPI.writeFile({
-          filePath: projectFilePathRef.current,
-          content: json
-        });
-
-        if (!writeResult.success) {
-          throw new Error(writeResult.error || 'Failed to write file');
-        }
-
-        resetDirty();
-
-        toast({
-          title: "Project Saved",
-          description: `Saved ${projectFilePathRef.current.split(/[/\\]/).pop()}`,
-        });
-      } catch (err: any) {
-        console.error('Save failed:', err);
-        toast({
-          title: "Save Failed",
-          description: err.message || 'Failed to save file',
-          variant: "destructive",
-        });
-      }
-    } else {
-      await handleSaveAs();
-    }
-  }, [components, enclosureType, gridEnabled, gridSize, zoom, unit, appIcon]);
-
-  const handleSaveAs = async () => {
-    try {
-      await handleSaveWithFilename(projectName || enclosureType);
-    } catch (err: any) {
-      if (err.message !== 'User canceled save operation') {
-        console.error('Save As failed:', err);
-      }
-    }
-  };
-
-  const processLoadedFile = (json: string, filename: string, filePath?: string) => {
-    try {
-      if (filePath && projectFilePathRef.current === filePath) {
-        toast({
-          title: "File Already Open",
-          description: `${filename} is already open`,
-        });
-        return;
-      }
-      
-      const parsed = JSON.parse(json);
-
-      const legacyComponentSchema = z.object({
-        id: z.string().optional(),
-        type: z.string().optional(),
-        x: z.number().optional(),
-        y: z.number().optional(),
-        side: z.string().optional(),
-      });
-
-      const projectFileSchema = z.object({
-        enclosureType: z.string().optional(),
-        currentSide: z.string().optional(),
-        components: z.array(legacyComponentSchema).optional(),
-        gridEnabled: z.boolean().optional(),
-        gridSize: z.number().optional(),
-        zoom: z.any().optional(),
-        rotation: z.number().optional(),
-        unit: z.enum(["metric", "imperial"]).optional(),
-        appIcon: z.string().optional(),
-      });
-
-      const result = projectFileSchema.safeParse(parsed);
-      
-      if (!result.success) {
-        throw new Error("Invalid file structure");
-      }
-
-      const rawData = result.data;
-      
-      const SIDE_ORDER: EnclosureSide[] = ["Front", "Right", "Left", "Top", "Bottom"];
-
-      const normalizedEnclosureType = (rawData.enclosureType && rawData.enclosureType in ENCLOSURE_TYPES)
-        ? (rawData.enclosureType as EnclosureType)
-        : "1590B";
-
-      const validComponents: PlacedComponent[] = (rawData.components || [])
-        .filter(c => c.type && c.type in COMPONENT_TYPES)
-        .map((c, index) => {
-          let side = c.side;
-          if (side === "Back") side = "Front";
-          if (!side || !SIDE_ORDER.includes(side as EnclosureSide)) {
-            side = "Front";
-          }
-          
-          return {
-            id: c.id || `component-${Date.now()}-${index}`,
-            type: c.type as ComponentType,
-            x: typeof c.x === 'number' ? c.x : 0,
-            y: typeof c.y === 'number' ? c.y : 0,
-            side: side as EnclosureSide,
-          };
-        });
-
-      let normalizedZoom = 1;
-      if (typeof rawData.zoom === 'number') {
-        normalizedZoom = rawData.zoom;
-      } else if (rawData.zoom && typeof rawData.zoom === 'object') {
-        normalizedZoom = (rawData.zoom as any).Front || 1;
-      }
-
-      const loadedRotation = typeof rawData.rotation === 'number' ? rawData.rotation : 0;
-
-      setEnclosureType(normalizedEnclosureType);
-      setComponents(validComponents);
-      setGridEnabled(rawData.gridEnabled ?? true);
-      setGridSize(rawData.gridSize ?? 5);
-      setZoom(snapZoom(normalizedZoom));
-      setRotation(loadedRotation);
-      setUnit(rawData.unit ?? "metric");
-      
-      if (rawData.appIcon) {
-        setAppIcon(rawData.appIcon);
-      }
-      
-      setProjectName(filename.replace('.enc', ''));
-      setProjectFilePath(filePath || null);
-      projectFilePathRef.current = filePath || null;
-      resetDirty();
-
-      toast({
-        title: "Project Loaded",
-        description: `Loaded ${filename}`,
-      });
-    } catch (error) {
-      console.error('Load error:', error);
-      if (error instanceof z.ZodError) {
-        toast({
-          title: "Invalid Project File",
-          description: `Validation error: ${error.errors[0].message}`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to load project file",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
+  // Electron event listeners
   useEffect(() => {
     if (window.electronAPI?.isElectron && window.electronAPI.onCloseRequested) {
       const unsubscribe = window.electronAPI.onCloseRequested(() => {
-        if (isDirtyRef.current) {
-          setShowQuitConfirmDialog(true);
+        if (fileOperations.isDirty) {
+          confirmDialogs.setShowQuitConfirmDialog(true);
         } else {
           window.electronAPI.closeWindow();
         }
       });
       return unsubscribe;
     }
-  }, []);
+  }, [fileOperations.isDirty]);
 
   useEffect(() => {
     if (window.electronAPI?.isElectron && window.electronAPI.onFileOpenRequest) {
       const handleFileOpenRequest = (event: any, filePath: string) => {
-        if (isDirty) {
-          setPendingFilePath(filePath);
-          setShowOpenConfirmDialog(true);
+        if (fileOperations.isDirty) {
+          fileOperations.setPendingFilePath(filePath);
+          confirmDialogs.setShowOpenConfirmDialog(true);
         } else {
-          openFileFromPath(filePath);
+          fileOperations.openFileFromPath(filePath);
         }
       };
 
@@ -1146,27 +268,27 @@ export default function Designer() {
         removeListener();
       };
     }
-  }, [isDirty]);
+  }, [fileOperations.isDirty]);
 
   useEffect(() => {
     if (window.electronAPI) {
       const handleMenuNew = () => {
-        handleNew();
+        fileOperations.handleNew();
       };
       const handleMenuOpen = () => {
-        handleLoad();
+        fileOperations.handleLoad();
       };
       const handleMenuSave = () => {
-        handleSave();
+        fileOperations.handleSave();
       };
       const handleMenuSaveAs = () => {
-        handleSaveAs();
+        fileOperations.handleSaveAs();
       };
       const handleMenuPrint = () => {
-        handlePrint();
+        print.handlePrint();
       };
       const handleMenuExportPDF = () => {
-        handleExportPDF();
+        pdfExport.handleExportPDF();
       };
 
       window.electronAPI.onMenuNew(handleMenuNew);
@@ -1187,49 +309,7 @@ export default function Designer() {
         }
       };
     }
-  }, [handleNew, handleLoad, handleSave, handleSaveAs, handlePrint, handleExportPDF]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-      const modifier = isMac ? e.metaKey : e.ctrlKey;
-
-      if (e.key === '-' || e.key === '_') {
-        e.preventDefault();
-        handleZoomOut();
-      } else if (e.key === '=' || e.key === '+' || (e.code === 'Equal' && e.shiftKey)) {
-        e.preventDefault();
-        handleZoomIn();
-      }
-      else if (modifier && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        if (e.shiftKey) {
-          handleSaveAs();
-        } else {
-          handleSave();
-        }
-      } else if (modifier && e.key.toLowerCase() === 'o') {
-        e.preventDefault();
-        handleLoad();
-      } else if (modifier && e.key.toLowerCase() === 'p') {
-        e.preventDefault();
-        handlePrint();
-      } else if (modifier && e.key.toLowerCase() === 'e') {
-        e.preventDefault();
-        handleExportPDF();
-      } else if (modifier && e.key.toLowerCase() === 'q') {
-        e.preventDefault();
-        handleQuit();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [components]);
+  }, []);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden">
@@ -1241,36 +321,138 @@ export default function Designer() {
         gridEnabled={gridEnabled}
         gridSize={gridSize}
         unit={unit}
-        onComponentMove={handleComponentMove}
-        onComponentDelete={handleComponentDelete}
+        onComponentMove={componentManagement.handleComponentMove}
+        onComponentDelete={componentManagement.handleComponentDelete}
         selectedComponent={selectedComponent}
-        onSelectComponent={setSelectedComponent}
+        onSelectComponent={(id) => {
+          const shouldPrevent = contextMenu.shouldPreventCanvasClick();
+          const duplicatedId = contextMenu.justDuplicatedRef?.current;
+          const isSelectingDuplicate = id === duplicatedId;
+          
+          console.log("onSelectComponent - shouldPrevent:", shouldPrevent, "id:", id, "duplicatedId:", duplicatedId, "isSelectingDuplicate:", isSelectingDuplicate);
+          
+          // If we're preventing clicks, ONLY allow selecting the duplicated component
+          if (shouldPrevent && !isSelectingDuplicate) {
+            console.log("BLOCKED - preventing canvas click for non-duplicate, clearing flag now");
+            // Clear the flag after blocking the FIRST unwanted event
+            contextMenu.closeContextMenu(); // This sets preventCanvasClick to false
+            return;
+          }
+          
+          // If we're selecting the duplicate, clear the ref immediately
+          if (isSelectingDuplicate && contextMenu.justDuplicatedRef) {
+            contextMenu.justDuplicatedRef.current = null;
+            contextMenu.closeContextMenu();
+          }
+          
+          wrappedSetSelectedComponent(id);
+        }}
         onCanvasClick={() => {
-          setShowPalette(false);
-          setShowEnclosureSelector(false);
+          if (!contextMenu.shouldPreventCanvasClick()) {
+            setShowPalette(false);
+            setShowEnclosureSelector(false);
+            wrappedSetSelectedComponent(null);
+          }
+          contextMenu.closeContextMenu();
         }}
         onZoomChange={setZoom}
         rotatesLabels={ENCLOSURE_TYPES[enclosureType].rotatesLabels || false}
+        onRightClick={contextMenu.handleCanvasRightClick}
       />
+
+{contextMenu.contextMenu && (
+  <div 
+    className="fixed bg-white border border-gray-300 rounded-lg shadow-lg py-2 z-50 min-w-40"
+    style={{
+      left: contextMenu.contextMenu.x,
+      top: contextMenu.contextMenu.y,
+    }}
+    onMouseDown={(e) => e.stopPropagation()}
+    onMouseUp={(e) => e.stopPropagation()}
+    onClick={(e) => e.stopPropagation()}
+  >
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        contextMenu.handleDuplicate();
+      }}
+      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center gap-2"
+    >
+      <Copy className="w-4 h-4 mr-2 text-gray-600" />
+      <span>Duplicate</span>
+    </button>
+    
+    <div className="border-t border-gray-200 my-1"></div>
+    
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        contextMenu.handleRotate();
+      }}
+      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center gap-2"
+    >
+      {(() => {
+        // Get fresh component data each render
+        const currentComponent = components.find(c => c.id === contextMenu.contextMenu?.componentId);
+        const currentRotation = currentComponent?.rotation || 0;
+        const isAtDefault = currentRotation === 0;
+        const Icon = isAtDefault ? RotateCw : RotateCcw; // Show clockwise when at 0°, counter-clockwise when at 90°
+        const label = isAtDefault ? "Rotate  90°" : "Rotate  90°";
+        
+        return (
+          <>
+            <Icon className="w-4 h-4 mr-2 text-gray-600" />
+            <span>{label}</span>
+          </>
+        );
+      })()}
+    </button>
+    
+    <div className="border-t border-gray-200 my-1"></div>
+    
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        contextMenu.handleTogglePrint();
+      }}
+      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center justify-between"
+    >
+      <div className="flex items-center gap-2">
+        <Printer className="w-4 h-4 mr-2 text-gray-600" />
+        <span>Print</span>
+      </div>
+      <span className="ml-2">
+        {(() => {
+          const currentComponent = components.find(c => c.id === contextMenu.contextMenu?.componentId);
+          return currentComponent?.excludeFromPrint ? (
+            <Square className="w-4 h-4" />
+          ) : (
+            <Check className="w-4 h-4" />
+          );
+        })()}
+      </span>
+    </button>
+  </div>
+)}
 
       <TopControls
         currentSide={undefined}
         zoom={zoom}
-        fileName={projectName}
-        isDirty={isDirty}
+        fileName={fileOperations.projectName}
+        isDirty={fileOperations.isDirty}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
-        onRotate={handleRotate}
+        onRotate={handleRotateCanvas}
         rotationDirection={rotationDirection}
         onPrevSide={undefined}
         onNextSide={undefined}
-        onNew={handleNew}
-        onSave={handleSave}
-        onSaveAs={handleSaveAs}
-        onOpen={handleLoad}
-        onExportPDF={handleExportPDF}
-        onPrint={handlePrint}
-        onQuit={handleQuit}
+        onNew={fileOperations.handleNew}
+        onSave={fileOperations.handleSave}
+        onSaveAs={fileOperations.handleSaveAs}
+        onOpen={fileOperations.handleLoad}
+        onExportPDF={pdfExport.handleExportPDF}
+        onPrint={print.handlePrint}
+        onQuit={fileOperations.handleQuit}
       />
 
       <BottomInfo
@@ -1283,100 +465,22 @@ export default function Designer() {
         onComponentsClick={() => setShowPalette(true)}
         onUnitChange={(newUnit) => {
           setUnit(newUnit);
-          markDirty();
+          fileOperations.markDirty();
         }}
       />
 
       {showPalette && (
         <ComponentPalette
-          onComponentSelect={handleComponentSelect}
+          onComponentSelect={componentManagement.handleComponentSelect}
           onClose={() => setShowPalette(false)}
           unit={unit}
         />
       )}
 
-      <AlertDialog open={showNewConfirmDialog} onOpenChange={setShowNewConfirmDialog}>
-        <AlertDialogContent data-testid="dialog-new-confirm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes. Would you like to save before starting a new project?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-new-cancel">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleNewConfirmDiscard}
-              data-testid="button-new-discard"
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Don't Save
-            </AlertDialogAction>
-            <AlertDialogAction onClick={handleNewConfirmSave} data-testid="button-new-save">
-              Save
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showQuitConfirmDialog} onOpenChange={setShowQuitConfirmDialog}>
-        <AlertDialogContent data-testid="dialog-quit-confirm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes. Would you like to save before quitting?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-quit-cancel">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleQuitConfirmDiscard}
-              data-testid="button-quit-discard"
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Don't Save
-            </AlertDialogAction>
-            <AlertDialogAction onClick={handleQuitConfirmSave} data-testid="button-quit-save">
-              Save
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showOpenConfirmDialog} onOpenChange={(open) => {
-        if (!open) {
-          handleOpenConfirmCancel();
-        } else {
-          setShowOpenConfirmDialog(open);
-        }
-      }}>
-        <AlertDialogContent data-testid="dialog-open-confirm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes. What would you like to do before opening the new file?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel 
-              data-testid="button-open-cancel"
-              onClick={handleOpenConfirmCancel}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleOpenConfirmDiscard}
-              data-testid="button-open-discard"
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Don't Save
-            </AlertDialogAction>
-            <AlertDialogAction onClick={handleOpenConfirmSave} data-testid="button-open-save">
-              Save
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Confirmation Dialogs */}
+      <ConfirmDialog {...confirmDialogs.newConfirmDialog} />
+      <ConfirmDialog {...confirmDialogs.quitConfirmDialog} />
+      <ConfirmDialog {...confirmDialogs.openConfirmDialog} />
 
       <EnclosureSelector
         open={showEnclosureSelector}
@@ -1384,7 +488,7 @@ export default function Designer() {
         currentType={enclosureType}
         onSelect={(type) => {
           setEnclosureType(type);
-          markDirty();
+          fileOperations.markDirty();
         }}
         unit={unit}
       />
@@ -1395,12 +499,12 @@ export default function Designer() {
         gridEnabled={gridEnabled}
         onGridEnabledChange={(enabled) => {
           setGridEnabled(enabled);
-          markDirty();
+          fileOperations.markDirty();
         }}
         gridSize={gridSize}
         onGridSizeChange={(size) => {
           setGridSize(size);
-          markDirty();
+          fileOperations.markDirty();
         }}
         unit={unit}
       />
