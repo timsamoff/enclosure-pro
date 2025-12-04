@@ -193,30 +193,52 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   },
 "rotary-1": { 
     name: "1P4T Rotary", 
-    drillSize: 0, 
-    imperialLabel: '25/64" × 25/64"', 
+    drillSize: 10, 
+    imperialLabel: '25/64"', 
     category: "Footprint Guides", 
-    shape: "rectangle", 
-    width: 10, 
-    height: 10
+    shape: "circle",
   },
   "rotary-2": { 
     name: "2P6T Rotary", 
-    drillSize: 0, 
-    imperialLabel: '33/64" × 33/64"', 
+    drillSize: 13, 
+    imperialLabel: '33/64"', 
     category: "Footprint Guides", 
-    shape: "rectangle", 
-    width: 13, 
-    height: 13
+    shape: "circle",
   },
   "pushbutton-momentary": { 
     name: "Momentary Pushbutton", 
-    drillSize: 0, 
-    imperialLabel: '15/64" × 15/64"', 
+    drillSize: 6, 
+    imperialLabel: '15/64"', 
     category: "Footprint Guides", 
-    shape: "rectangle", 
-    width: 6, 
-    height: 6
+    shape: "circle",
+  },
+  "3pdt-washer": { 
+    name: "Generic 3PDT Washer", 
+    drillSize: 17.2, 
+    imperialLabel: '43/64"', 
+    category: "Footprint Guides", 
+    shape: "circle",
+  },
+    "3pdt-washer": { 
+    name: "Generic 3PDT Washer", 
+    drillSize: 17.2, 
+    imperialLabel: '43/64"', 
+    category: "Footprint Guides", 
+    shape: "circle",
+  },
+  "3pdt-nut": { 
+    name: "3PDT Aluminum Nut", 
+    drillSize: 18.9, 
+    imperialLabel: '3/4"', 
+    category: "Footprint Guides", 
+    shape: "circle",
+  },
+  "3pdt-dress": { 
+    name: "3PDT Dress Nut", 
+    drillSize: 19.6, 
+    imperialLabel: '49/64"', 
+    category: "Footprint Guides", 
+    shape: "circle",
   },
   
   // Circle Footprint guides

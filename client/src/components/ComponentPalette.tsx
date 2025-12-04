@@ -33,7 +33,6 @@ export default function ComponentPalette({
   };
 
   Object.entries(COMPONENT_TYPES).forEach(([key, value]) => {
-    if (key === 'toggle-spdt' || key === 'potentiometer') return;
     const category = value.category as keyof typeof categories;
     categories[category].push(key as ComponentType);
   });
@@ -50,6 +49,9 @@ export default function ComponentPalette({
       comp.name.toLowerCase().includes("toggle") ||
       comp.name.toLowerCase().includes("dip") ||
       comp.name.toLowerCase().includes("pushbutton") ||
+      comp.name.toLowerCase().includes("washer") ||
+      comp.name.toLowerCase().includes("nut") ||
+      comp.name.toLowerCase().includes("dress") ||
       compType.includes("spst") ||
       compType.includes("dpdt") ||
       compType.includes("3pdt") ||
@@ -109,7 +111,6 @@ export default function ComponentPalette({
 
   const handleComponentSelect = (compType: ComponentType) => {
     onComponentSelect(compType);
-    console.log(`Selected ${COMPONENT_TYPES[compType].name}`);
   };
 
   const getFilteredFootprintGuides = () => {
