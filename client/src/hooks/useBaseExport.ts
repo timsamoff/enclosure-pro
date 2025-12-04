@@ -155,20 +155,32 @@ export function useBaseExport({
           [totalWidthMM, totalHeightMM] = [totalHeightMM, totalWidthMM];
         }
 
-        // Use 96 DPI (same as original Designer.tsx) for correct 1:1 scale
-        const pixelsPerMM = 96 / 25.4; // This equals 3.7795275591
+        // Use EXACT 96 DPI calculation for 1:1 scale
+        const PIXELS_PER_INCH = 96;
+        const MM_PER_INCH = 25.4;
+        const pixelsPerMM = PIXELS_PER_INCH / MM_PER_INCH; // 3.779527559055118
+
+        // Round UP to nearest pixel to ensure full coverage
         const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
         const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
 
         const canvas = document.createElement('canvas');
         canvas.width = canvasWidth;
         canvas.height = canvasHeight;
+        // Set explicit physical dimensions
+        canvas.style.width = `${totalWidthMM}mm`;
+        canvas.style.height = `${totalHeightMM}mm`;
+        
         const ctx = canvas.getContext('2d');
         
         if (!ctx) {
           reject(new Error('Could not get canvas context'));
           return;
         }
+
+        // Set DPI metadata
+        canvas.setAttribute('data-dpi', '96');
+        canvas.setAttribute('data-scale', '100%');
 
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);

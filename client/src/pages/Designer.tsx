@@ -6,7 +6,8 @@ import ComponentPalette from "@/components/ComponentPalette";
 import EnclosureSelector from "@/components/EnclosureSelector";
 import GridSelector from "@/components/GridSelector";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
-import { Copy, RotateCw, RotateCcw, Printer, Check, Square } from "lucide-react"; // Added RotateCcw
+import { usePrintScaleTest } from "@/hooks/usePrintScaleTest";
+import { Copy, RotateCw, RotateCcw, Printer, Download, Check, Square } from "lucide-react"; // Added RotateCcw
 
 import {
   EnclosureSide,
@@ -161,8 +162,8 @@ export default function Designer() {
   componentsRef,
   unitRef,
   rotationRef,
-  projectName: fileOperations.projectName, // Use the project name from fileOperations
-  enclosureType, // Pass the current enclosureType
+  projectName: fileOperations.projectName,
+  enclosureType,
   toast
 });
 
@@ -171,8 +172,8 @@ const print = usePrint({
   componentsRef,
   unitRef,
   rotationRef,
-  projectName: fileOperations.projectName, // Use the project name from fileOperations
-  enclosureType, // Pass the current enclosureType
+  projectName: fileOperations.projectName,
+  enclosureType,
   toast
 });
 
@@ -236,6 +237,8 @@ const print = usePrint({
       label: isAlignedWithGrid ? "Rotate 90°" : "Rotate 90°"
     };
   };
+
+  const printScaleTest = usePrintScaleTest();
 
   // Electron event listeners
   useEffect(() => {
@@ -311,6 +314,20 @@ const print = usePrint({
     }
   }, []);
 
+  <button
+  onClick={() => {
+    printScaleTest.downloadScaleTest();
+    toast({
+      title: "Printer Test Downloaded",
+      description: "Print and measure to verify your printer scale is 100%",
+      duration: 5000,
+    });
+  }}
+  className="absolute right-4 top-20 px-4 py-2 bg-amber-500 text-white rounded-lg shadow hover:bg-amber-600 z-40"
+>
+  Printer Scale Test
+</button>
+
   return (
     <div className="relative w-screen h-screen overflow-hidden">
       <UnwrappedCanvas
@@ -362,7 +379,7 @@ const print = usePrint({
 
 {contextMenu.contextMenu && (
   <div 
-    className="fixed bg-white border border-gray-300 rounded-lg shadow-lg py-2 z-50 min-w-40"
+    className="fixed bg-white border border-gray-300 rounded-lg shadow-lg py-2 z-50 min-w-48"
     style={{
       left: contextMenu.contextMenu.x,
       top: contextMenu.contextMenu.y,
@@ -418,8 +435,8 @@ const print = usePrint({
       className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center justify-between cursor-pointer"
     >
       <div className="flex items-center gap-2">
-        <Printer className="w-4 h-4 mr-2 text-gray-600" />
-        <span>Print</span>
+        <Download className="w-4 h-4 mr-2 text-gray-600" />
+        <span>Print/Export</span>
       </div>
       <span className="ml-2">
         {(() => {

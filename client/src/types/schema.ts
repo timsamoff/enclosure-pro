@@ -219,13 +219,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     category: "Footprint Guides", 
     shape: "circle",
   },
-    "3pdt-washer": { 
-    name: "Generic 3PDT Washer", 
-    drillSize: 17.2, 
-    imperialLabel: '43/64"', 
-    category: "Footprint Guides", 
-    shape: "circle",
-  },
   "3pdt-nut": { 
     name: "3PDT Aluminum Nut", 
     drillSize: 18.9, 
