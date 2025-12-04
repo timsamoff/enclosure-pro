@@ -376,7 +376,7 @@ const print = usePrint({
         e.preventDefault();
         contextMenu.handleDuplicate();
       }}
-      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center gap-2"
+      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center gap-2 cursor-pointer"
     >
       <Copy className="w-4 h-4 mr-2 text-gray-600" />
       <span>Duplicate</span>
@@ -389,7 +389,7 @@ const print = usePrint({
         e.preventDefault();
         contextMenu.handleRotate();
       }}
-      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center gap-2"
+      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center gap-2 cursor-pointer"
     >
       {(() => {
         // Get fresh component data each render
@@ -415,7 +415,7 @@ const print = usePrint({
         e.preventDefault();
         contextMenu.handleTogglePrint();
       }}
-      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center justify-between"
+      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center justify-between cursor-pointer"
     >
       <div className="flex items-center gap-2">
         <Printer className="w-4 h-4 mr-2 text-gray-600" />
@@ -511,7 +511,7 @@ const print = usePrint({
 
       <button
         onClick={() => setShowPalette(true)}
-        className="hidden lg:block absolute left-4 top-20 px-4 py-3 bg-primary text-primary-foreground rounded-lg shadow-lg hover-elevate active-elevate-2 font-medium z-40"
+        className="hidden lg:block absolute left-4 top-20 px-4 py-3 bg-primary text-primary-foreground rounded-lg shadow-lg hover-elevate active-elevate-2 font-medium z-40 cursor-pointer"
         data-testid="button-show-palette"
       >
         Add Component

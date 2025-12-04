@@ -229,6 +229,10 @@ export default function UnwrappedCanvas({
   const [isPanning, setIsPanning] = useState(false);
   const [justFinishedDrag, setJustFinishedDrag] = useState(false);
   const [resizeTrigger, setResizeTrigger] = useState(0);
+  
+  // Cursor state management
+  const [cursorStyle, setCursorStyle] = useState<string>('default');
+  const [isHoveringComponent, setIsHoveringComponent] = useState<string | null>(null);
 
   const mmToPixels = 3.7795275591;
   const dimensions = getUnwrappedDimensions(enclosureType);
@@ -327,6 +331,95 @@ export default function UnwrappedCanvas({
   };
 
   const layout = getLayout();
+
+  /**
+   * Detect if mouse is hovering over any component
+   */
+  const detectHoveredComponent = (mouseX: number, mouseY: number): string | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    
+    // Convert mouse position to canvas coordinates
+    const centerX = rect.width / 2 + panOffset.x;
+    const centerY = rect.height / 2 + panOffset.y;
+    
+    const rotRad = (-rotation * Math.PI) / 180;
+    const dx = mouseX - centerX;
+    const dy = mouseY - centerY;
+    const rotatedX = dx * Math.cos(rotRad) - dy * Math.sin(rotRad);
+    const rotatedY = dx * Math.sin(rotRad) + dy * Math.cos(rotRad);
+    
+    const layoutX = rotatedX / zoom + layout.totalWidth / 2;
+    const layoutY = rotatedY / zoom + layout.totalHeight / 2;
+
+    // Sort components by z-order (newest on top)
+    const sortedComponents = [...components].sort((a, b) => {
+      const aZ = getComponentZOrder(a);
+      const bZ = getComponentZOrder(b);
+      
+      if (aZ.isUtility && !bZ.isUtility) return 1;
+      if (!aZ.isUtility && bZ.isUtility) return -1;
+      
+      return bZ.timestamp - aZ.timestamp;
+    });
+
+    // Check each side and component
+    for (const [side, sideLayout] of Object.entries(layout)) {
+      if (side === 'totalWidth' || side === 'totalHeight') continue;
+      if (typeof sideLayout === 'number') continue;
+
+      const sideName = (side.charAt(0).toUpperCase() + side.slice(1)) as EnclosureSide;
+      const sideComponents = sortedComponents.filter(c => c.side === sideName);
+      
+      const sideX = layoutX - sideLayout.x - sideLayout.width / 2;
+      const sideY = layoutY - sideLayout.y - sideLayout.height / 2;
+
+      for (const component of sideComponents) {
+        const compData = COMPONENT_TYPES[component.type];
+        if (!compData) continue;
+
+        let isHovering = false;
+
+        if (compData.shape === 'rectangle' || compData.shape === 'square') {
+          const rectWidth = (compData.width || 10) * mmToPixels;
+          const rectHeight = (compData.height || 10) * mmToPixels;
+          const rotationRad = (component.rotation * Math.PI) / 180;
+          
+          const dx = sideX - component.x;
+          const dy = sideY - component.y;
+          
+          const cos = Math.cos(-rotationRad);
+          const sin = Math.sin(-rotationRad);
+          const rotatedDx = dx * cos - dy * sin;
+          const rotatedDy = dx * sin + dy * cos;
+          
+          if (
+            Math.abs(rotatedDx) <= rectWidth / 2 && 
+            Math.abs(rotatedDy) <= rectHeight / 2
+          ) {
+            isHovering = true;
+          }
+        } else {
+          const radius = (compData.drillSize / 2) * mmToPixels;
+          const dx = sideX - component.x;
+          const dy = sideY - component.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance <= radius + 10) {
+            isHovering = true;
+          }
+        }
+
+        if (isHovering) {
+          return component.id;
+        }
+      }
+    }
+    
+    return null;
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -850,6 +943,7 @@ export default function UnwrappedCanvas({
     if (e.button === 1) {
       e.preventDefault();
       setIsPanning(true);
+      setCursorStyle('grabbing');
       setDragStart({ x: mouseX - panOffset.x, y: mouseY - panOffset.y });
       return;
     }
@@ -1047,9 +1141,11 @@ export default function UnwrappedCanvas({
       setDraggedComponent(clickedComponent.id);
       setDragStart({ x: clickedSideX, y: clickedSideY });
       setIsDragging(true);
+      setCursorStyle('grabbing'); // Change to grab when starting to drag
     } else {
       onSelectComponent(null);
       onCanvasClick?.();
+      setCursorStyle('default');
     }
   };
 
@@ -1062,6 +1158,7 @@ export default function UnwrappedCanvas({
     const mouseY = e.clientY - rect.top;
 
     if (isPanning) {
+      setCursorStyle('grabbing');
       setPanOffset({
         x: mouseX - dragStart.x,
         y: mouseY - dragStart.y,
@@ -1069,6 +1166,23 @@ export default function UnwrappedCanvas({
       return;
     }
 
+    // Check for component hover
+    const hoveredComponentId = detectHoveredComponent(mouseX, mouseY);
+
+    // Update cursor based on state
+    if (hoveredComponentId) {
+      if (isDragging) {
+        setCursorStyle('grabbing');
+      } else {
+        setCursorStyle('move');
+      }
+      setIsHoveringComponent(hoveredComponentId);
+    } else {
+      setCursorStyle('default');
+      setIsHoveringComponent(null);
+    }
+
+    // Existing drag logic
     if (isDragging && draggedComponent) {
       const component = components.find(c => c.id === draggedComponent);
       if (!component) return;
@@ -1153,15 +1267,29 @@ export default function UnwrappedCanvas({
 
   const handleMouseUp = () => {
     const wasDragging = isDragging;
+    const wasPanning = isPanning;
     
     setIsDragging(false);
     setDraggedComponent(null);
     setIsPanning(false);
     
+    // Reset cursor based on hover state
+    if (isHoveringComponent) {
+      setCursorStyle('move');
+    } else {
+      setCursorStyle('default');
+    }
+    
     if (wasDragging) {
       setJustFinishedDrag(true);
       setTimeout(() => setJustFinishedDrag(false), 300);
     }
+  };
+
+  const handleMouseLeave = () => {
+    handleMouseUp();
+    setCursorStyle('default');
+    setIsHoveringComponent(null);
   };
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1173,15 +1301,36 @@ export default function UnwrappedCanvas({
     }
   };
 
+  // Update cursor when hovering state changes
+  useEffect(() => {
+    if (!isDragging && !isPanning) {
+      if (isHoveringComponent) {
+        setCursorStyle('move');
+      } else {
+        setCursorStyle('default');
+      }
+    }
+  }, [isHoveringComponent, isDragging, isPanning]);
+
+  // Get cursor class based on cursorStyle state
+  const getCursorClass = () => {
+    switch (cursorStyle) {
+      case 'default': return 'cursor-default';
+      case 'move': return 'cursor-move';
+      case 'grabbing': return 'cursor-grabbing';
+      default: return 'cursor-default';
+    }
+  };
+
   return (
     <div ref={containerRef} className="relative w-full h-full">
       <canvas
         ref={canvasRef}
-        className="w-full h-full cursor-move"
+        className={`w-full h-full ${getCursorClass()}`}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
         onClick={handleClick}
         onContextMenu={(e) => e.preventDefault()}
         data-testid="unwrapped-canvas"
@@ -1196,7 +1345,7 @@ export default function UnwrappedCanvas({
               onSelectComponent(null);
             }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="w-9 h-9 rounded-md bg-[#ff8c42] text-white flex items-center justify-center hover-elevate active-elevate-2"
+            className="w-9 h-9 rounded-md bg-[#ff8c42] text-white flex items-center justify-center hover-elevate active-elevate-2 cursor-pointer"
             data-testid="button-delete-selected"
           >
             <Trash2 className="w-5 h-5" />
