@@ -41,7 +41,7 @@ export default function BottomInfo({
         <button
           onClick={onEnclosureClick}
           className="flex items-center gap-2 px-3 min-h-9 rounded-md hover-elevate active-elevate-2 border border-border w-32"
-          data-testid="button-enclosure-select-bottom"
+          data-testid="button-enclosure-select-bottom cursor-pointer"
         >
           <Box className="w-4 h-4" />
           <span>{enclosureType}</span>
@@ -79,7 +79,7 @@ export default function BottomInfo({
         <button
           onClick={onGridClick}
           className="flex items-center justify-center gap-2 px-3 min-h-9 rounded-md hover-elevate active-elevate-2 border border-border w-24"
-          data-testid="button-grid-toggle"
+          data-testid="button-grid-toggle cursor-pointer"
         >
           <Grid3x3 className="w-4 h-4 flex-shrink-0" />
           <span className="text-xs truncate">{gridEnabled ? formatDimension(gridSize) : "Off"}</span>
@@ -91,7 +91,7 @@ export default function BottomInfo({
         <button
           onClick={onComponentsClick}
           className="flex items-center gap-2 px-3 min-h-9 rounded-md hover-elevate active-elevate-2 border border-border w-32"
-          data-testid="button-components-bottom"
+          data-testid="button-components-bottom cursor-pointer"
         >
           <Package className="w-4 h-4" />
           <span>Components</span>

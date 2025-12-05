@@ -42,7 +42,7 @@ export default function FileMenu({
                 onLoad();
                 onOpenChange(false);
               }}
-              className="w-full"
+              className="w-full cursor-pointer"
               variant="outline"
               data-testid="button-load-enc"
             >
@@ -55,7 +55,7 @@ export default function FileMenu({
                 onSave();
                 onOpenChange(false);
               }}
-              className="w-full"
+              className="w-full cursor-pointer"
               variant="outline"
               data-testid="button-save-enc"
             >
@@ -72,7 +72,7 @@ export default function FileMenu({
                 onExportPDF();
                 onOpenChange(false);
               }}
-              className="w-full"
+              className="w-full cursor-pointer"
               data-testid="button-export-pdf"
             >
               <Download className="w-4 h-4 mr-2" />
@@ -83,7 +83,7 @@ export default function FileMenu({
                 onPrint();
                 onOpenChange(false);
               }}
-              className="w-full"
+              className="w-full cursor-pointer"
               variant="outline"
               data-testid="button-print"
             >

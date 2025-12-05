@@ -58,6 +58,7 @@ export default function TopControls({
               variant="ghost"
               onClick={onPrevSide}
               data-testid="button-prev-side"
+              className="cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
@@ -69,6 +70,7 @@ export default function TopControls({
               variant="ghost"
               onClick={onNextSide}
               data-testid="button-next-side"
+              className="cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -82,6 +84,7 @@ export default function TopControls({
             variant="ghost"
             onClick={onZoomOut}
             data-testid="button-zoom-out"
+            className="cursor-pointer"
           >
             <Minus className="w-4 h-4" />
           </Button>
@@ -93,6 +96,7 @@ export default function TopControls({
             variant="ghost"
             onClick={onZoomIn}
             data-testid="button-zoom-in"
+            className="cursor-pointer"
           >
             <Plus className="w-4 h-4" />
           </Button>
@@ -108,6 +112,7 @@ export default function TopControls({
               onRotate();
             }}
             data-testid="button-rotate"
+            className="cursor-pointer"
             aria-label={rotationDirection === 'cw' ? 'Rotate 90° clockwise' : 'Rotate 90° counterclockwise'}
           >
             {rotationDirection === 'cw' ? (
