@@ -61,9 +61,16 @@ export function usePrint(props: UsePrintProps) {
             silent: true // Silent printing might bypass dialog that enables scaling
           });
           
+          // Add parenthetical about larger printing formats
+          const formatNote = paperSize === 'A3' 
+            ? " For larger enclosures, consider export to PDF to print on A3 or tabloid (11x17\") paper."
+            : paperSize === 'A4'
+            ? " For larger enclosures, consider export to PDF to print on A3 or tabloid (11x17\") paper."
+            : "";
+          
           props.toast({
             title: "Print Sent (100% Scale)",
-            description: `Template printed at exact 100% scale. Verify 25.4mm (1") calibration mark measures correctly with a ruler.`,
+            description: `Template printed at exact 100% scale. Verify 25.4mm (1") calibration mark measures correctly with a ruler.${formatNote}`,
             duration: 5000,
           });
           return;
@@ -85,7 +92,7 @@ export function usePrint(props: UsePrintProps) {
             
             props.toast({
               title: "Check Printer Settings!",
-              description: "In print dialog, SET 'Scale: 100%' and DISABLE 'Fit to Page'. Check 25.4mm (1\") mark.",
+              description: "In print dialog, SET 'Scale: 100%' and DISABLE 'Fit to Page'. Check 25.4mm (1\") mark. For larger enclosures, use A3 or tabloid (11x17\") format.",
               duration: 6000,
               variant: "default"
             });
@@ -165,6 +172,7 @@ export function usePrint(props: UsePrintProps) {
                   <li>Set "Scale" to 100%</li>
                   <li>Print, then measure the red 1" (25.4mm) mark with a ruler</li>
                 </ol>
+                <em style="margin-top: 15px; display: block;">For larger enclosures, consider export to PDF to print on A3 or tabloid (11x17\") paper.</em>
               </div>
               <div class="pdf-container">
                 <iframe 
@@ -179,7 +187,7 @@ export function usePrint(props: UsePrintProps) {
         
         props.toast({
           title: "Print Preview (100% Scale)",
-          description: "Preview opened. Press Ctrl+P/Cmd+P to print.",
+          description: "Print preview opened.",
           duration: 6000,
         });
       } else {
@@ -193,7 +201,7 @@ export function usePrint(props: UsePrintProps) {
         
         props.toast({
           title: "PDF Downloaded",
-          description: "PDF downloaded. Open and print with 'Scale: 100%' setting.",
+          description: "PDF downloaded. Open and print with 'Scale: 100%' setting. For larger enclosures, use A3 or tabloid (11x17\") format.",
           duration: 5000,
         });
       }
@@ -222,7 +230,7 @@ export function usePrint(props: UsePrintProps) {
       if (previewWindow) {
         props.toast({
           title: "Print Preview (100% Scale)",
-          description: "Preview opened. Check 25.4mm (1\") calibration mark.",
+          description: "Preview opened. Check 25.4mm (1\") calibration mark. For larger enclosures, use A3 or tabloid (11x17\") format.",
         });
       }
     } catch (error) {
