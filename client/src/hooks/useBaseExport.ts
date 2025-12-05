@@ -12,15 +12,15 @@ interface UseBaseExportProps {
 const PRINT_CONFIG = {
   // Line widths
   lineWidths: {
-    enclosureBorder: 1,           // Border around enclosure sides
-    componentBorder: 0.5,         // Border around components (lineWidth - 1)
-    componentCrosshair: 0.5,      // Crosshair lines for components
+    enclosureBorder: 0.5,           // Border around enclosure sides
+    componentBorder: 0.25,         // Border around components (lineWidth - 1)
+    componentCrosshair: 0.25,      // Crosshair lines for components
   },
   
   // Font settings
   fonts: {
     sideLabel: {
-      size: 14,                   // Size for side labels (Front, Top, etc.)
+      size: 12,                   // Size for side labels (Front, Top, etc.)
       family: 'Arial',
       style: 'normal',            // 'normal', 'bold', 'italic'
       color: '#000000'
@@ -86,6 +86,78 @@ const getRotatedSideLabel = (side: string, rotation: number, rotatesLabels: bool
   return rotationMap[side] || side;
 };
 
+/**
+ * Calculate label position for print/PDF export.
+ * Mirrors the logic from UnwrappedCanvas.tsx's calculateLabelPosition.
+ * 
+ * @param centerX - Component center X in pixels
+ * @param centerY - Component center Y in pixels
+ * @param componentRotation - Component's own rotation (0° or 90°)
+ * @param canvasRotation - User's canvas rotation (0° or 90°)
+ * @param isRectangular - Whether component is rectangular
+ * @param rectWidthPx - Rectangle width in pixels (for rectangular components)
+ * @param rectHeightPx - Rectangle height in pixels (for rectangular components)
+ * @param radiusPx - Circle radius in pixels (for circular components)
+ * @param labelOffset - Offset distance from component edge
+ */
+const calculateLabelPosition = (
+  centerX: number,
+  centerY: number,
+  componentRotation: number,
+  canvasRotation: number,
+  isRectangular: boolean,
+  rectWidthPx?: number,
+  rectHeightPx?: number,
+  radiusPx?: number,
+  labelOffset: number = 15
+): { x: number; y: number; textAngle: number } => {
+  
+  if (isRectangular && rectWidthPx !== undefined && rectHeightPx !== undefined) {
+    // Determine visual orientation based on component rotation
+    const visualWidthPx = componentRotation === 0 ? rectWidthPx : rectHeightPx;
+    const visualHeightPx = componentRotation === 0 ? rectHeightPx : rectWidthPx;
+    
+    let labelX = centerX;
+    let labelY = centerY;
+    
+    if (canvasRotation === 0) {
+      // Canvas not rotated: label below rectangle
+      labelX = centerX;
+      labelY = centerY + visualHeightPx / 2 + labelOffset;
+    } else { // canvasRotation === 90
+      // Canvas rotated 90°: label to the right of rectangle (which is visual bottom)
+      labelX = centerX + visualWidthPx / 2 + labelOffset;
+      labelY = centerY;
+    }
+    
+    // Keep text horizontal (counter-rotate by canvas rotation only)
+    // Negative angle to counter-rotate back to horizontal
+    const textAngle = canvasRotation === 0 ? 0 : -Math.PI / 2;
+    
+    return { x: labelX, y: labelY, textAngle };
+    
+  } else {
+    // Circles: label position depends only on canvas rotation
+    const circleRadius = radiusPx || 0;
+    
+    if (canvasRotation === 0) {
+      // Canvas not rotated: label below circle
+      return {
+        x: centerX,
+        y: centerY + circleRadius + labelOffset,
+        textAngle: 0
+      };
+    } else { // canvasRotation === 90
+      // Canvas rotated 90°: label to the right of circle
+      return {
+        x: centerX + circleRadius + labelOffset,
+        y: centerY,
+        textAngle: -Math.PI / 2
+      };
+    }
+  }
+};
+
 export function useBaseExport({
   enclosureTypeRef,
   componentsRef,
@@ -112,9 +184,20 @@ export function useBaseExport({
 
   const getPrintableComponents = useCallback((components: any[]): any[] => {
     return components.filter(component => {
+      // If component is explicitly marked to exclude from print, exclude it
+      if (component.excludeFromPrint) {
+        return false;
+      }
+      
+      // If component is explicitly marked to include (excludeFromPrint === false), include it
+      if (component.excludeFromPrint === false) {
+        return true;
+      }
+      
+      // Default behavior: exclude Footprint Guides, include everything else
       const compData = COMPONENT_TYPES[component.type];
       const isUtilityGuide = compData.category === "Footprint Guides";
-      return !isUtilityGuide && !component.excludeFromPrint;
+      return !isUtilityGuide;
     });
   }, []);
 
@@ -252,7 +335,38 @@ export function useBaseExport({
             ctx.roundRect(x, y, w, h, cornerRadius);
             ctx.stroke();
           } else {
-            ctx.strokeRect(x, y, w, h);
+            // Draw borders selectively to avoid overlapping lines
+            ctx.beginPath();
+            
+            if (sideKey === 'top') {
+              // Top: draw top, left, right (bottom overlaps with front)
+              ctx.moveTo(x, y);
+              ctx.lineTo(x + w, y); // top edge
+              ctx.lineTo(x + w, y + h); // right edge
+              ctx.moveTo(x, y);
+              ctx.lineTo(x, y + h); // left edge
+            } else if (sideKey === 'bottom') {
+              // Bottom: draw left, right, bottom (top overlaps with front)
+              ctx.moveTo(x, y);
+              ctx.lineTo(x, y + h); // left edge
+              ctx.lineTo(x + w, y + h); // bottom edge
+              ctx.lineTo(x + w, y); // right edge
+            } else if (sideKey === 'left') {
+              // Left: draw top, left, bottom (right overlaps with front)
+              ctx.moveTo(x, y);
+              ctx.lineTo(x + w, y); // top edge
+              ctx.moveTo(x, y);
+              ctx.lineTo(x, y + h); // left edge
+              ctx.lineTo(x + w, y + h); // bottom edge
+            } else if (sideKey === 'right') {
+              // Right: draw top, right, bottom (left overlaps with front)
+              ctx.moveTo(x, y);
+              ctx.lineTo(x + w, y); // top edge
+              ctx.lineTo(x + w, y + h); // right edge
+              ctx.lineTo(x, y + h); // bottom edge
+            }
+            
+            ctx.stroke();
           }
 
           // Draw side label using central config
@@ -278,6 +392,9 @@ export function useBaseExport({
             const centerX = x + (w / 2) + component.x;
             const centerY = y + (h / 2) + component.y;
 
+            // Check if this is a utility guide (Footprint Guide)
+            const isUtilityGuide = compData.category === "Footprint Guides";
+
             if (compData.shape === 'rectangle' || compData.shape === 'square') {
               ctx.save();
               if (component.rotation) {
@@ -291,78 +408,89 @@ export function useBaseExport({
               const drawX = component.rotation ? -baseWidth / 2 : centerX - baseWidth / 2;
               const drawY = component.rotation ? -baseHeight / 2 : centerY - baseHeight / 2;
               
-              ctx.fillStyle = 'white';
+              // Fill: transparent for utility guides, white for regular components
+              if (isUtilityGuide) {
+                ctx.fillStyle = 'transparent';
+              } else {
+                ctx.fillStyle = 'white';
+              }
               ctx.fillRect(drawX, drawY, baseWidth, baseHeight);
               
               ctx.strokeStyle = config.fonts.sideLabel.color;
               ctx.lineWidth = config.lineWidths.componentBorder;
+              
+              // Use dashed line for utility guides
+              if (isUtilityGuide) {
+                ctx.setLineDash([5, 5]);
+              }
+              
               ctx.strokeRect(drawX, drawY, baseWidth, baseHeight);
               
-              const crosshairSizeH = Math.max(baseWidth / 2, config.components.crosshairSize);
-              const crosshairSizeV = Math.max(baseHeight / 2, config.components.crosshairSize);
-              
-              ctx.lineWidth = config.lineWidths.componentCrosshair;
-              ctx.beginPath();
-              if (component.rotation) {
-                ctx.moveTo(-crosshairSizeH, 0);
-                ctx.lineTo(crosshairSizeH, 0);
-                ctx.moveTo(0, -crosshairSizeV);
-                ctx.lineTo(0, crosshairSizeV);
-              } else {
-                ctx.moveTo(centerX - crosshairSizeH, centerY);
-                ctx.lineTo(centerX + crosshairSizeH, centerY);
-                ctx.moveTo(centerX, centerY - crosshairSizeV);
-                ctx.lineTo(centerX, centerY + crosshairSizeV);
+              if (isUtilityGuide) {
+                ctx.setLineDash([]);
               }
-              ctx.stroke();
+              
+              // Draw crosshair only for non-utility guides
+              if (!isUtilityGuide) {
+                const crosshairSizeH = Math.max(baseWidth / 2, config.components.crosshairSize);
+                const crosshairSizeV = Math.max(baseHeight / 2, config.components.crosshairSize);
+                
+                ctx.lineWidth = config.lineWidths.componentCrosshair;
+                ctx.beginPath();
+                if (component.rotation) {
+                  ctx.moveTo(-crosshairSizeH, 0);
+                  ctx.lineTo(crosshairSizeH, 0);
+                  ctx.moveTo(0, -crosshairSizeV);
+                  ctx.lineTo(0, crosshairSizeV);
+                } else {
+                  ctx.moveTo(centerX - crosshairSizeH, centerY);
+                  ctx.lineTo(centerX + crosshairSizeH, centerY);
+                  ctx.moveTo(centerX, centerY - crosshairSizeV);
+                  ctx.lineTo(centerX, centerY + crosshairSizeV);
+                }
+                ctx.stroke();
+              }
 
               ctx.restore();
 
-              // Calculate visual dimensions after component rotation
-              const visualWidthPx = component.rotation === 90 ? baseHeight : baseWidth;
-              const visualHeightPx = component.rotation === 90 ? baseWidth : baseHeight;
+              // Only draw labels for non-utility guides
+              if (!isUtilityGuide) {
+                // FIXED: Use calculateLabelPosition to match on-screen behavior
+                const labelPos = calculateLabelPosition(
+                  centerX,
+                  centerY,
+                  component.rotation || 0,  // Component's own rotation
+                  currentRotation,           // User's canvas rotation setting
+                  true,                      // Is rectangular
+                  baseWidth,
+                  baseHeight,
+                  undefined,
+                  config.components.labelOffset
+                );
 
-              // Determine label position based on canvas rotation
-              let labelX = centerX;
-              let labelY = centerY;
+                // Generate label text (swap dimensions for 90° component rotation)
+                const labelText = component.rotation === 90 
+                  ? currentUnit === "metric"
+                    ? `${compData.height}mm×${compData.width}mm`
+                    : compData.imperialLabel
+                  : currentUnit === "metric"
+                    ? `${compData.width}mm×${compData.height}mm`
+                    : compData.imperialLabel;
 
-              if (shouldRotate) {
-                // Canvas is rotated 90°: label goes to the right (visual bottom)
-                labelX = centerX + visualWidthPx / 2 + config.components.labelOffset;
-                labelY = centerY;
-              } else {
-                // Canvas not rotated: label goes below
-                labelX = centerX;
-                labelY = centerY + visualHeightPx / 2 + config.components.labelOffset;
-              }
-
-              // Generate label text (swap dimensions for 90° component rotation)
-              const labelText = component.rotation === 90 
-                ? currentUnit === "metric"
-                  ? `${compData.height}mm×${compData.width}mm`
-                  : compData.imperialLabel
-                : currentUnit === "metric"
-                  ? `${compData.width}mm×${compData.height}mm`
-                  : compData.imperialLabel;
-
-              ctx.font = `${config.fonts.componentLabel.style} ${config.fonts.componentLabel.size}px ${config.fonts.componentLabel.family}`;
-              const textMetrics = ctx.measureText(labelText);
-              const textWidth = textMetrics.width;
-              const padding = config.components.labelBackgroundPadding;
-
-              // Draw label background
-              ctx.fillStyle = 'white';
-              
-              if (shouldRotate) {
-                // Rotate label text when canvas is rotated 90°
                 ctx.save();
-                ctx.translate(labelX, labelY);
-                ctx.rotate(Math.PI / 2);
-                ctx.translate(-labelX, -labelY);
-                
+                ctx.translate(labelPos.x, labelPos.y);
+                ctx.rotate(labelPos.textAngle);
+
+                ctx.font = `${config.fonts.componentLabel.style} ${config.fonts.componentLabel.size}px ${config.fonts.componentLabel.family}`;
+                const textMetrics = ctx.measureText(labelText);
+                const textWidth = textMetrics.width;
+                const padding = config.components.labelBackgroundPadding;
+
+                // Draw label background
+                ctx.fillStyle = 'white';
                 ctx.fillRect(
-                  labelX - textWidth / 2 - padding,
-                  labelY - config.fonts.componentLabel.size / 2 - padding,
+                  -textWidth / 2 - padding,
+                  -config.fonts.componentLabel.size / 2 - padding,
                   textWidth + padding * 2,
                   config.fonts.componentLabel.size + padding * 2
                 );
@@ -370,83 +498,133 @@ export function useBaseExport({
                 ctx.fillStyle = config.fonts.componentLabel.color;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(labelText, labelX, labelY);
+                ctx.fillText(labelText, 0, 0);
                 
                 ctx.restore();
-              } else {
-                ctx.fillRect(
-                  labelX - textWidth / 2 - padding,
-                  labelY - config.fonts.componentLabel.size / 2 - padding,
-                  textWidth + padding * 2,
-                  config.fonts.componentLabel.size + padding * 2
-                );
-                
-                ctx.fillStyle = config.fonts.componentLabel.color;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(labelText, labelX, labelY);
               }
+              
+              // Footprint Guide labels (commented out - uncomment to show labels for utility guides)
+              // else {
+              //   const labelPos = calculateLabelPosition(
+              //     centerX,
+              //     centerY,
+              //     component.rotation || 0,
+              //     currentRotation,
+              //     true,
+              //     baseWidth,
+              //     baseHeight,
+              //     undefined,
+              //     config.components.labelOffset
+              //   );
+              //
+              //   const labelText = component.rotation === 90 
+              //     ? currentUnit === "metric"
+              //       ? `${compData.height}mm×${compData.width}mm`
+              //       : compData.imperialLabel
+              //     : currentUnit === "metric"
+              //       ? `${compData.width}mm×${compData.height}mm`
+              //       : compData.imperialLabel;
+              //
+              //   ctx.save();
+              //   ctx.translate(labelPos.x, labelPos.y);
+              //   ctx.rotate(labelPos.textAngle);
+              //
+              //   ctx.font = `${config.fonts.componentLabel.style} ${config.fonts.componentLabel.size}px ${config.fonts.componentLabel.family}`;
+              //   const textMetrics = ctx.measureText(labelText);
+              //   const textWidth = textMetrics.width;
+              //   const padding = config.components.labelBackgroundPadding;
+              //
+              //   ctx.fillStyle = 'white';
+              //   ctx.fillRect(
+              //     -textWidth / 2 - padding,
+              //     -config.fonts.componentLabel.size / 2 - padding,
+              //     textWidth + padding * 2,
+              //     config.fonts.componentLabel.size + padding * 2
+              //   );
+              //   
+              //   ctx.fillStyle = config.fonts.componentLabel.color;
+              //   ctx.textAlign = 'center';
+              //   ctx.textBaseline = 'middle';
+              //   ctx.fillText(labelText, 0, 0);
+              //   
+              //   ctx.restore();
+              // }
               
             } else {
               // CIRCLE COMPONENTS
               const radius = (compData.drillSize / 2) * pixelsPerMM;
 
-              ctx.fillStyle = 'white';
+              // Fill: transparent for utility guides, white for regular components
+              if (isUtilityGuide) {
+                ctx.fillStyle = 'transparent';
+              } else {
+                ctx.fillStyle = 'white';
+              }
               ctx.beginPath();
               ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
               ctx.fill();
 
               ctx.strokeStyle = config.fonts.sideLabel.color;
               ctx.lineWidth = config.lineWidths.componentBorder;
+              
+              // Use dashed line for utility guides
+              if (isUtilityGuide) {
+                ctx.setLineDash([5, 5]);
+              }
+              
               ctx.beginPath();
               ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
               ctx.stroke();
-
-              const crosshairSize = Math.max(radius, config.components.crosshairSize);
-              ctx.lineWidth = config.lineWidths.componentCrosshair;
-              ctx.beginPath();
-              ctx.moveTo(centerX - crosshairSize, centerY);
-              ctx.lineTo(centerX + crosshairSize, centerY);
-              ctx.moveTo(centerX, centerY - crosshairSize);
-              ctx.lineTo(centerX, centerY + crosshairSize);
-              ctx.stroke();
-
-              // Determine label position based on canvas rotation
-              let labelX = centerX;
-              let labelY = centerY;
-
-              if (shouldRotate) {
-                // Canvas rotated 90°: label to the right
-                labelX = centerX + radius + config.components.labelOffset;
-                labelY = centerY;
-              } else {
-                // Canvas not rotated: label below
-                labelX = centerX;
-                labelY = centerY + radius + config.components.labelOffset;
+              
+              if (isUtilityGuide) {
+                ctx.setLineDash([]);
               }
 
-              const drillText = currentUnit === "metric"
-                ? `${compData.drillSize.toFixed(1)}mm`
-                : compData.imperialLabel;
+              // Draw crosshair only for non-utility guides
+              if (!isUtilityGuide) {
+                const crosshairSize = Math.max(radius, config.components.crosshairSize);
+                ctx.lineWidth = config.lineWidths.componentCrosshair;
+                ctx.beginPath();
+                ctx.moveTo(centerX - crosshairSize, centerY);
+                ctx.lineTo(centerX + crosshairSize, centerY);
+                ctx.moveTo(centerX, centerY - crosshairSize);
+                ctx.lineTo(centerX, centerY + crosshairSize);
+                ctx.stroke();
+              }
 
-              ctx.font = `${config.fonts.componentLabel.style} ${config.fonts.componentLabel.size}px ${config.fonts.componentLabel.family}`;
-              const textMetrics = ctx.measureText(drillText);
-              const textWidth = textMetrics.width;
-              const padding = config.components.labelBackgroundPadding;
+              // Only draw labels for non-utility guides
+              if (!isUtilityGuide) {
+                // FIXED: Use calculateLabelPosition to match on-screen behavior
+                const labelPos = calculateLabelPosition(
+                  centerX,
+                  centerY,
+                  component.rotation || 0,  // Component's own rotation (not used for circles)
+                  currentRotation,           // User's canvas rotation setting
+                  false,                     // Is circular
+                  undefined,
+                  undefined,
+                  radius,
+                  config.components.labelOffset
+                );
 
-              // Draw label background
-              ctx.fillStyle = 'white';
-              
-              if (shouldRotate) {
-                // Rotate label text when canvas is rotated 90°
+                const drillText = currentUnit === "metric"
+                  ? `${compData.drillSize.toFixed(1)}mm`
+                  : compData.imperialLabel;
+
                 ctx.save();
-                ctx.translate(labelX, labelY);
-                ctx.rotate(Math.PI / 2);
-                ctx.translate(-labelX, -labelY);
-                
+                ctx.translate(labelPos.x, labelPos.y);
+                ctx.rotate(labelPos.textAngle);
+
+                ctx.font = `${config.fonts.componentLabel.style} ${config.fonts.componentLabel.size}px ${config.fonts.componentLabel.family}`;
+                const textMetrics = ctx.measureText(drillText);
+                const textWidth = textMetrics.width;
+                const padding = config.components.labelBackgroundPadding;
+
+                // Draw label background
+                ctx.fillStyle = 'white';
                 ctx.fillRect(
-                  labelX - textWidth / 2 - padding,
-                  labelY - config.fonts.componentLabel.size / 2 - padding,
+                  -textWidth / 2 - padding,
+                  -config.fonts.componentLabel.size / 2 - padding,
                   textWidth + padding * 2,
                   config.fonts.componentLabel.size + padding * 2
                 );
@@ -454,22 +632,53 @@ export function useBaseExport({
                 ctx.fillStyle = config.fonts.componentLabel.color;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(drillText, labelX, labelY);
+                ctx.fillText(drillText, 0, 0);
                 
                 ctx.restore();
-              } else {
-                ctx.fillRect(
-                  labelX - textWidth / 2 - padding,
-                  labelY - config.fonts.componentLabel.size / 2 - padding,
-                  textWidth + padding * 2,
-                  config.fonts.componentLabel.size + padding * 2
-                );
-                
-                ctx.fillStyle = config.fonts.componentLabel.color;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(drillText, labelX, labelY);
               }
+              
+              // Footprint Guide labels (commented out - uncomment to show labels for utility guides)
+              // else {
+              //   const labelPos = calculateLabelPosition(
+              //     centerX,
+              //     centerY,
+              //     component.rotation || 0,
+              //     currentRotation,
+              //     false,
+              //     undefined,
+              //     undefined,
+              //     radius,
+              //     config.components.labelOffset
+              //   );
+              //
+              //   const drillText = currentUnit === "metric"
+              //     ? `${compData.drillSize.toFixed(1)}mm`
+              //     : compData.imperialLabel;
+              //
+              //   ctx.save();
+              //   ctx.translate(labelPos.x, labelPos.y);
+              //   ctx.rotate(labelPos.textAngle);
+              //
+              //   ctx.font = `${config.fonts.componentLabel.style} ${config.fonts.componentLabel.size}px ${config.fonts.componentLabel.family}`;
+              //   const textMetrics = ctx.measureText(drillText);
+              //   const textWidth = textMetrics.width;
+              //   const padding = config.components.labelBackgroundPadding;
+              //
+              //   ctx.fillStyle = 'white';
+              //   ctx.fillRect(
+              //     -textWidth / 2 - padding,
+              //     -config.fonts.componentLabel.size / 2 - padding,
+              //     textWidth + padding * 2,
+              //     config.fonts.componentLabel.size + padding * 2
+              //   );
+              //   
+              //   ctx.fillStyle = config.fonts.componentLabel.color;
+              //   ctx.textAlign = 'center';
+              //   ctx.textBaseline = 'middle';
+              //   ctx.fillText(drillText, 0, 0);
+              //   
+              //   ctx.restore();
+              // }
             }
           });
         };
