@@ -1,6 +1,6 @@
 {
   "name": "enclosure-pro",
-  "version": "1.1.0-beta",
+  "version": "1.1.0-beta.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/timsamoff/enclosure-pro"
@@ -33,10 +33,10 @@
     "appId": "com.enclosurepro.app",
     "productName": "Enclosure Pro",
     "publish": {
-    "provider": "github",
-    "owner": "timsamoff",
-    "repo": "enclosure-pro"
-  },
+      "provider": "github",
+      "owner": "timsamoff",
+      "repo": "enclosure-pro"
+    },
     "artifactName": "Enclosure-Pro-${version}.${ext}",
     "files": [
       "dist/**/*",
@@ -78,7 +78,9 @@
       "extendInfo": {
         "CFBundleDocumentTypes": [
           {
-            "CFBundleTypeExtensions": ["enc"],
+            "CFBundleTypeExtensions": [
+              "enc"
+            ],
             "CFBundleTypeName": "Enclosure Pro Project",
             "CFBundleTypeRole": "Editor",
             "CFBundleTypeIconFile": "EnclosureProFileIcon.icns"
@@ -91,11 +93,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -110,7 +116,9 @@
       "maintainer": "Tim Samoff <samoff@gmail.com>",
       "synopsis": "Professional effects pedal enclosure designer",
       "description": "Design drill hole layouts for effects pedal enclosures",
-      "mimeTypes": ["application/x-enclosurepro"],
+      "mimeTypes": [
+        "application/x-enclosurepro"
+      ],
       "fileAssociations": [
         {
           "ext": "enc",
@@ -208,7 +216,6 @@
     "electron": "^39.2.0",
     "electron-builder": "^26.0.12",
     "postcss": "^8.4.47",
-    "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.17",
     "typescript": "5.6.3",
     "vite": "^7.2.4"
