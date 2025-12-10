@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-// console.log('🔌 Preload script loading...');
+console.log('🔌 Preload script loading...');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   isElectron: true,
@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // File operations
   saveFile: (options) => ipcRenderer.invoke('dialog:saveFile', options),
   openFile: (options) => ipcRenderer.invoke('dialog:openFile', options),
+  openProjectFile: () => ipcRenderer.invoke('file:open'),
   writeFile: (options) => ipcRenderer.invoke('file:write', options),
   readFile: (options) => ipcRenderer.invoke('file:read', options),
   openExternalFile: (filePath) => ipcRenderer.invoke('file:open-external', filePath),
@@ -23,52 +24,107 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Event listeners
   onCloseRequested: (callback) => {
-    ipcRenderer.on('window-close-requested', callback);
-    return () => ipcRenderer.removeListener('window-close-requested', callback);
+    const handler = (event) => callback();
+    ipcRenderer.on('window-close-requested', handler);
+    return () => ipcRenderer.removeListener('window-close-requested', handler);
   },
   
   onFileOpenRequest: (callback) => {
-    ipcRenderer.on('file-open-request', callback);
-    return () => ipcRenderer.removeListener('file-open-request', callback);
+    const handler = (event, filePath) => callback(event, filePath);
+    ipcRenderer.on('file-open-request', handler);
+    return () => ipcRenderer.removeListener('file-open-request', handler);
   },
 
   // Update event listeners
   onUpdateAvailable: (callback) => {
-    ipcRenderer.on('update-available', callback);
-    return () => ipcRenderer.removeListener('update-available', callback);
+    const handler = (event, info) => callback(event, info);
+    ipcRenderer.on('update-available', handler);
+    return () => ipcRenderer.removeListener('update-available', handler);
   },
   
   onUpdateDownloaded: (callback) => {
-    ipcRenderer.on('update-downloaded', callback);
-    return () => ipcRenderer.removeListener('update-downloaded', callback);
+    const handler = (event, info) => callback(event, info);
+    ipcRenderer.on('update-downloaded', handler);
+    return () => ipcRenderer.removeListener('update-downloaded', handler);
   },
   
   onUpdateError: (callback) => {
-    ipcRenderer.on('update-error', callback);
-    return () => ipcRenderer.removeListener('update-error', callback);
+    const handler = (event, error) => callback(event, error);
+    ipcRenderer.on('update-error', handler);
+    return () => ipcRenderer.removeListener('update-error', handler);
   },
   
   onDownloadProgress: (callback) => {
-    ipcRenderer.on('download-progress', callback);
-    return () => ipcRenderer.removeListener('download-progress', callback);
+    const handler = (event, progress) => callback(event, progress);
+    ipcRenderer.on('download-progress', handler);
+    return () => ipcRenderer.removeListener('download-progress', handler);
   },
 
-  // NEW: Download started event
   onDownloadStarted: (callback) => {
-    ipcRenderer.on('download-started', callback);
-    return () => ipcRenderer.removeListener('download-started', callback);
+    const handler = (event) => callback(event);
+    ipcRenderer.on('download-started', handler);
+    return () => ipcRenderer.removeListener('download-started', handler);
   },
 
-  // Menu event listeners for the native menu shortcuts
-  onMenuNew: (callback) => ipcRenderer.on('menu-new-file', callback),
-  onMenuOpen: (callback) => ipcRenderer.on('menu-open-file', callback),
-  onMenuSave: (callback) => ipcRenderer.on('menu-save-file', callback),
-  onMenuSaveAs: (callback) => ipcRenderer.on('menu-save-as-file', callback),
-  onMenuPrint: (callback) => ipcRenderer.on('menu-print', callback),
-  onMenuExportPDF: (callback) => ipcRenderer.on('menu-export-pdf', callback),
+  // Menu action listeners - FIXED to handle menu-action events
+  onMenuNew: (callback) => {
+    const handler = (event, action) => {
+      if (action === 'new') callback();
+    };
+    ipcRenderer.on('menu-action', handler);
+    return () => ipcRenderer.removeListener('menu-action', handler);
+  },
+  
+  onMenuOpen: (callback) => {
+    const handler = (event, action) => {
+      if (action === 'open') callback();
+    };
+    ipcRenderer.on('menu-action', handler);
+    return () => ipcRenderer.removeListener('menu-action', handler);
+  },
+  
+  onMenuSave: (callback) => {
+    const handler = (event, action) => {
+      if (action === 'save') callback();
+    };
+    ipcRenderer.on('menu-action', handler);
+    return () => ipcRenderer.removeListener('menu-action', handler);
+  },
+  
+  onMenuSaveAs: (callback) => {
+    const handler = (event, action) => {
+      if (action === 'save-as') callback();
+    };
+    ipcRenderer.on('menu-action', handler);
+    return () => ipcRenderer.removeListener('menu-action', handler);
+  },
+  
+  onMenuPrint: (callback) => {
+    const handler = (event, action) => {
+      if (action === 'print') callback();
+    };
+    ipcRenderer.on('menu-action', handler);
+    return () => ipcRenderer.removeListener('menu-action', handler);
+  },
+  
+  onMenuExportPDF: (callback) => {
+    const handler = (event, action) => {
+      if (action === 'export-pdf') callback();
+    };
+    ipcRenderer.on('menu-action', handler);
+    return () => ipcRenderer.removeListener('menu-action', handler);
+  },
+  
+  onMenuQuit: (callback) => {
+    const handler = (event, action) => {
+      if (action === 'quit') callback();
+    };
+    ipcRenderer.on('menu-action', handler);
+    return () => ipcRenderer.removeListener('menu-action', handler);
+  },
   
   // Remove listeners
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
 });
 
-// console.log('🔌 Preload script loaded, electronAPI exposed');
+console.log('🔌 Preload script loaded, electronAPI exposed');

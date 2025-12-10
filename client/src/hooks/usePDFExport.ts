@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { EnclosureType } from "@/types/schema";
+import { EnclosureType, getUnwrappedDimensions } from "@/types/schema";
 import jsPDF from "jspdf";
 import { useBaseExport } from "./useBaseExport";
 
@@ -13,18 +13,6 @@ interface UsePDFExportProps {
   toast: any;
 }
 
-// Standard paper sizes in mm (ISO 216)
-const PAPER_SIZES = {
-  A0: { width: 841, height: 1189 },
-  A1: { width: 594, height: 841 },
-  A2: { width: 420, height: 594 },
-  A3: { width: 297, height: 420 },
-  A4: { width: 210, height: 297 },
-  A5: { width: 148, height: 210 },
-} as const;
-
-type PaperSize = keyof typeof PAPER_SIZES;
-
 export function usePDFExport({
   enclosureTypeRef,
   componentsRef,
@@ -34,327 +22,324 @@ export function usePDFExport({
   enclosureType,
   toast
 }: UsePDFExportProps) {
-  const { prepareExportData } = useBaseExport({
+  const { renderCanvas } = useBaseExport({
     enclosureTypeRef,
     componentsRef,
     unitRef,
     rotationRef
   });
 
-  // Function to find the smallest paper that can fit template at 100% scale
-  const getBestPaperSize = useCallback((templateWidth: number, templateHeight: number): {
-    size: PaperSize;
-    width: number;
-    height: number;
-    needsRotation: boolean;
-    scale: number;
-  } => {
-    // Determine which paper sizes to check based on template size
-    let sizes: PaperSize[];
-    
-    if (templateWidth > 200 || templateHeight > 200) {
-      // Large template (like 1590XX): start with A3
-      sizes = ['A3', 'A2', 'A1', 'A0'];
-    } else if (templateWidth > 180 || templateHeight > 180) {
-      // Medium template: check A4 first, but A3 is likely
-      sizes = ['A4', 'A3', 'A2', 'A1', 'A0'];
-    } else {
-      // Small template: A4 should work
-      sizes = ['A4', 'A3', 'A2', 'A1', 'A0'];
-    }
-    
-    for (const size of sizes) {
-      const paper = PAPER_SIZES[size];
-      
-      // Try portrait
-      const fitsPortrait = templateWidth <= paper.width && templateHeight <= paper.height;
-      
-      // Try landscape  
-      const fitsLandscape = templateWidth <= paper.height && templateHeight <= paper.width;
-      
-      if (fitsPortrait) {
-        return {
-          size,
-          width: paper.width,
-          height: paper.height,
-          needsRotation: false,
-          scale: 1,
-        };
-      }
-      
-      if (fitsLandscape) {
-        return {
-          size,
-          width: paper.height,
-          height: paper.width,
-          needsRotation: true,
-          scale: 1,
-        };
-      }
-    }
-    
-    return {
-      size: 'A0',
-      width: PAPER_SIZES.A0.width,
-      height: PAPER_SIZES.A0.height,
-      needsRotation: templateWidth > templateHeight,
-      scale: 1,
-    };
-  }, []);
-
   const generatePDF = useCallback(async (options: {
     forPrint?: boolean;
   } = {}): Promise<jsPDF> => {
     try {
-      const exportData = await prepareExportData({ 
-        forPDF: !options.forPrint, 
-        forPrint: options.forPrint 
-      });
-
-      const templateWidth = exportData.pageDimensions.width;
-      const templateHeight = exportData.pageDimensions.height;
-      
-      // Get current unit from ref
+      const currentEnclosureType = enclosureTypeRef.current;
+      const currentRotation = rotationRef.current;
       const currentUnit = unitRef.current;
       
-      // Find best paper size (MUST be 100% scale when possible)
-      const paperInfo = getBestPaperSize(templateWidth, templateHeight);
+      // Get the ACTUAL unrotated dimensions - this is the TRUE size in mm
+      const dimensions = getUnwrappedDimensions(currentEnclosureType);
+      const trueWidth = dimensions.left.width + dimensions.front.width + dimensions.right.width;
+      const trueHeight = dimensions.top.height + dimensions.front.height + dimensions.bottom.height;
       
-      // KEY CHANGE: For printing, ALWAYS use A4 PDF size to prevent automatic scaling
-      // For export, use the actual paper size
-      const pdfPageSize = options.forPrint ? 'a4' : paperInfo.size.toLowerCase() as any;
-      const pdfPageWidth = options.forPrint ? PAPER_SIZES.A4.width : paperInfo.width;
-      const pdfPageHeight = options.forPrint ? PAPER_SIZES.A4.height : paperInfo.height;
+      console.log('TRUE template dimensions (mm):', trueWidth, 'x', trueHeight);
       
-      // Create PDF
+      // Determine if we need to rotate for portrait
+      const needsRotation = trueWidth > trueHeight;
+      console.log('Needs rotation to portrait:', needsRotation);
+      
+      // Check if ORIGINAL (unrotated) template fits on A4
+      // This determines page size choice - not affected by rotation
+      const originalFitsOnA4 = trueWidth <= 210 && trueHeight <= 297;
+      console.log('Original template fits on A4:', originalFitsOnA4);
+      
+      // Generate canvas WITHOUT any rotation - we'll rotate in PDF if needed
+      const imageData = await renderCanvas(
+        currentEnclosureType,
+        false, // NEVER rotate at canvas level
+        currentRotation,
+        options
+      );
+      
+      // If we need to rotate, rotate the image data itself
+      let finalImageData = imageData;
+      let finalWidth = trueWidth;
+      let finalHeight = trueHeight;
+      
+      if (needsRotation) {
+        console.log('Rotating image 90° clockwise before adding to PDF');
+        
+        // Create a canvas to rotate the image
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = imageData;
+        });
+        
+        // Create canvas with swapped dimensions for 90° rotation
+        const rotateCanvas = document.createElement('canvas');
+        rotateCanvas.width = img.height;  // Swap width/height
+        rotateCanvas.height = img.width;
+        
+        // Set explicit physical dimensions to preserve DPI
+        const PIXELS_PER_INCH = 72;
+        const MM_PER_INCH = 25.4;
+        rotateCanvas.style.width = `${(img.height / PIXELS_PER_INCH) * MM_PER_INCH}mm`;
+        rotateCanvas.style.height = `${(img.width / PIXELS_PER_INCH) * MM_PER_INCH}mm`;
+        
+        const rotateCtx = rotateCanvas.getContext('2d');
+        
+        if (!rotateCtx) {
+          throw new Error('Could not get rotation canvas context');
+        }
+        
+        // Rotate 90° clockwise: translate, rotate, draw
+        rotateCtx.translate(rotateCanvas.width / 2, rotateCanvas.height / 2);
+        rotateCtx.rotate(Math.PI / 2);  // 90° clockwise
+        rotateCtx.drawImage(img, -img.width / 2, -img.height / 2);
+        
+        // Get rotated image data at maximum quality
+        finalImageData = rotateCanvas.toDataURL('image/png', 1.0);
+        finalWidth = trueHeight;   // After rotation
+        finalHeight = trueWidth;   // After rotation
+        
+        console.log('Image rotated. New dimensions:', finalWidth, 'x', finalHeight);
+      }
+      
+      // Page setup - HYBRID APPROACH
+      let pdfPageWidth: number;
+      let pdfPageHeight: number;
+      let skipHeadersFooters = false;
+      const A4_WIDTH = 210;
+      const A4_HEIGHT = 297;
+      
+      if (options.forPrint) {
+        // HYBRID: Use A4 if ORIGINAL template fits, otherwise use exact template size
+        // Use originalFitsOnA4 instead of checking finalWidth/finalHeight
+        
+        if (originalFitsOnA4) {
+          // Original template fits on A4 - use A4 page size
+          pdfPageWidth = A4_WIDTH;
+          pdfPageHeight = A4_HEIGHT;
+          console.log('Print mode: Original template fits on A4, using A4 page');
+        } else {
+          // Original template too large for A4 - use exact final size (after rotation)
+          pdfPageWidth = finalWidth;
+          pdfPageHeight = finalHeight;
+          console.log('Print mode: Original template larger than A4, using exact template size');
+          console.log('User will need A3/tabloid or print will be cropped');
+        }
+        
+        skipHeadersFooters = true; // Skip extended headers for print mode
+      } else {
+        // For export: Custom size with margins for headers/footers
+        const EXTRA_MARGIN = 50;
+        pdfPageWidth = finalWidth + EXTRA_MARGIN;
+        pdfPageHeight = finalHeight + EXTRA_MARGIN + 100;
+      }
+      
       const pdf = new jsPDF({
-        orientation: paperInfo.needsRotation ? "landscape" : "portrait",
+        orientation: "portrait",
         unit: "mm",
-        format: pdfPageSize
+        format: [pdfPageWidth, pdfPageHeight] as any
       });
 
-      // Fixed measurements in mm
       const INCH_TO_MM = 25.4;
+      const TOP_MARGIN = 0.5 * INCH_TO_MM;
       
-      // Calculate centered position at 100% scale
-      const scaledWidth = templateWidth * paperInfo.scale;
-      const scaledHeight = templateHeight * paperInfo.scale;
-      
-      // Position header 0.5" from top of page
-      const TOP_MARGIN = 0.5 * INCH_TO_MM; // 0.5" = 12.7mm
-      
-      // Header positions (starting from TOP_MARGIN)
-      const titleY = TOP_MARGIN + 10; // 10mm down from top margin
+      // Header positions
+      const titleY = TOP_MARGIN + 10;
       const enclosureInfoY = TOP_MARGIN + 16;
       const dimensionsInfoY = TOP_MARGIN + 22;
-      const paperInfoY = TOP_MARGIN + 28;
       
-      // Calculate positioning - different for print vs export
-      let x, y;
+      // Centering logic - different for small vs large enclosures
+      let imageX: number;
+      let imageY: number;
       
-      if (options.forPrint) {
-  // For printing on A4: Center content on A4 page
-  x = (pdfPageWidth - scaledWidth) / 2; // Center horizontally on A4
-  y = TOP_MARGIN + 47; // Start enclosure lower to make room for additional instructions
-} else {
-  // For export: Use normal positioning
-  const HEADER_BOTTOM = TOP_MARGIN + 45; // Bottom of header area
-  x = (pdfPageWidth - scaledWidth) / 2; // Center horizontally
-  y = HEADER_BOTTOM + (0.75 * INCH_TO_MM); // 0.75" below header
-}
-
-      // Check if we need to rotate wider templates -90° (270°) for portrait orientation
-      const isWiderThanTall = templateWidth > templateHeight;
-      const isPortraitPage = !paperInfo.needsRotation;
-      const needsMinus90degRotation = isWiderThanTall && isPortraitPage;
-
-      // ORIGINAL HEADER STYLE - keep as is
-      pdf.setFontSize(14);
-      pdf.setFont("helvetica", "bold");
-      const title = projectName ? `${projectName} - Drill Template` : "Enclosure Pro - Drill Template";
-      pdf.text(title, pdfPageWidth / 2, titleY, { align: "center" });
-      
-      pdf.setFontSize(10);
-      pdf.setFont("helvetica", "normal");
-      
-      // Format dimensions based on unit
-      const dimensionsInfo = currentUnit === "metric" 
-        ? `Template: ${templateWidth.toFixed(1)}mm × ${templateHeight.toFixed(1)}mm`
-        : `Template: ${(templateWidth / INCH_TO_MM).toFixed(2)}" × ${(templateHeight / INCH_TO_MM).toFixed(2)}"`;
-      
-      // Update enclosure info to include unit
-      const enclosureInfo = `${exportData.enclosureType} Enclosure - 100% scale`;
-      pdf.text(enclosureInfo, pdfPageWidth / 2, enclosureInfoY, { align: "center" });
-      
-      pdf.text(dimensionsInfo, pdfPageWidth / 2, dimensionsInfoY, { align: "center" });
-      
-      // Paper size info - ALWAYS in mm (paper sizes are standard)
-      const paperInfoText = options.forPrint 
-  ? `Designed for ${paperInfo.size} paper (${paperInfo.width.toFixed(0)}mm × ${paperInfo.height.toFixed(0)}mm)`
-  : `${paperInfo.size} paper (${paperInfo.width.toFixed(0)}mm × ${paperInfo.height.toFixed(0)}mm)`;
-pdf.text(paperInfoText, pdfPageWidth / 2, paperInfoY, { align: "center" });
-      
-      // CRITICAL PRINT INSTRUCTIONS
-      pdf.setTextColor(255, 0, 0);
-      pdf.setFontSize(9);
-      pdf.setFont("helvetica", "bold");
-      
-      if (options.forPrint) {
-        if (paperInfo.size !== 'A4') {
-          // Template is designed for larger paper but being printed on A4
-          pdf.text(`PRINTING ON A4: Set 'Scale: 100%' and DISABLE 'Fit to Page'`, pdfPageWidth / 2, TOP_MARGIN + 34, { align: "center" });
-          pdf.text(`Template will print at 100% scale (may overflow A4 paper)`, pdfPageWidth / 2, TOP_MARGIN + 40, { align: "center" });
-        } else {
-          // Template is designed for A4
-          pdf.text(`PRINT SETTINGS: Set 'Scale: 100%' and DISABLE 'Fit to Page'`, pdfPageWidth / 2, TOP_MARGIN + 34, { align: "center" });
-        }
+      if (options.forPrint && originalFitsOnA4) {
+        // Small enclosures: Center on A4
+        const centerX = pdfPageWidth / 2;
+        const centerY = pdfPageHeight / 2;
+        imageX = centerX - (finalWidth / 2);
+        imageY = centerY - (finalHeight / 2);
+        console.log('Centering small enclosure on A4');
+      } else if (options.forPrint && !originalFitsOnA4) {
+        // Large enclosures: Position at top-left (0,0)
+        imageX = 0;
+        imageY = 0;
+        console.log('Positioning large enclosure at 0,0');
       } else {
-        // For PDF export, show warning if template overflows
-        const fitsHorizontally = templateWidth <= pdfPageWidth;
-        const fitsVertically = templateHeight <= pdfPageHeight;
-        
-        if (!fitsHorizontally || !fitsVertically) {
-          pdf.text(`WARNING: Template overflows ${paperInfo.size} paper`, pdfPageWidth / 2, TOP_MARGIN + 34, { align: "center" });
-        }
+        // Export mode: center with header space
+        const centerX = pdfPageWidth / 2;
+        const centerY = TOP_MARGIN + 40 + (finalHeight / 2);
+        imageX = centerX - (finalWidth / 2);
+        imageY = centerY - (finalHeight / 2);
       }
       
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFont("helvetica", "normal");
+      console.log('Center point:', imageX + (finalWidth / 2), imageY + (finalHeight / 2));
+      console.log('Final image dimensions:', finalWidth, 'x', finalHeight);
+      console.log('Image position:', imageX, imageY);
+      
+      console.log('=== ADDING IMAGE TO PDF ===');
+      console.log('PDF Page size:', pdfPageWidth, 'x', pdfPageHeight, 'mm');
+      console.log('Image dimensions being added:', finalWidth, 'x', finalHeight, 'mm');
+      console.log('Image position:', imageX, imageY);
+      
+      // Get the actual pixel dimensions of the image we're adding
+      const img = new Image();
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.src = finalImageData;
+      });
+      
+      console.log('Image pixel dimensions:', img.width, 'x', img.height);
+      console.log('Calculated DPI: X=' + (img.width / finalWidth * 25.4) + ', Y=' + (img.height / finalHeight * 25.4));
+      console.log('Should be 72 DPI for both');
+      
+      // CRITICAL FIX: jsPDF might be using the image's pixel dimensions to recalculate
+      // We need to ensure jsPDF uses OUR specified mm dimensions, not its own calculation
+      // The trick is to use the 'alias' parameter and explicitly set compression to NONE
+      const alias = `img_${Date.now()}`;
+      
+      // Add image - explicitly tell jsPDF not to recalculate dimensions
+      pdf.addImage(
+        finalImageData,
+        'PNG',
+        imageX,
+        imageY,
+        finalWidth,    // Explicit width in mm - jsPDF MUST honor this
+        finalHeight,   // Explicit height in mm - jsPDF MUST honor this  
+        alias,
+        'NONE',        // No compression - preserve exact pixels
+        0              // No rotation
+      );
+      
+      console.log('Image added');
+      console.log('For 1590XX front face: should be 153mm x 122.5mm');
+      console.log('Total template added:', finalWidth, 'x', finalHeight);
 
-      // Handle image drawing with -90° rotation for wider enclosures in portrait
-      if (needsMinus90degRotation) {
-        // For -90° rotation: we need to adjust position
-        // After -90° rotation, the image dimensions swap
-        const rotatedWidth = scaledHeight;
-        const rotatedHeight = scaledWidth;
-        
-        // Recalculate position for the rotated dimensions
-        x = (pdfPageWidth - rotatedWidth) / 2;
-        y = options.forPrint ? TOP_MARGIN + 47 : TOP_MARGIN + 45 + (0.75 * INCH_TO_MM);
-        
-        // Rotate wider template by -90° (270°) to put left edge at bottom
-        pdf.saveGraphicsState();
-        
-        // Translate to the center of where the image should be
-        const centerX = x + rotatedWidth / 2;
-        const centerY = y + rotatedHeight / 2;
-        
-        pdf.translate(centerX, centerY);
-        pdf.rotate(-90, "degrees"); // -90° rotation
-        pdf.translate(-centerX, -centerY);
-        
-        // Draw the image (rotated -90°)
-        pdf.addImage(
-          exportData.imageData, 
-          'PNG', 
-          x, y, 
-          scaledWidth,
-          scaledHeight,
-          undefined,
-          'FAST'
-        );
-        
-        pdf.restoreGraphicsState();
-      } else {
-        // Normal drawing for taller templates or landscape pages
-        pdf.addImage(
-          exportData.imageData, 
-          'PNG', 
-          x, y, 
-          scaledWidth,
-          scaledHeight,
-          undefined,
-          'FAST'
-        );
-      }
-
-      // Add calibration markings - need to handle -90° rotation for wider enclosures
-      const addCalibrationMarkings = () => {
-        const offset = 5; // 5mm from template edge
-        const markLength = INCH_TO_MM; // 25.4mm (1 inch)
-        
-        let startX, startY, labelX, labelY;
-        
-        if (needsMinus90degRotation) {
-          // For -90° rotated wider templates: 
-          // After -90° rotation, original top-left becomes bottom-right
-          // We want calibration mark at bottom-left (after rotation)
-          startX = x + offset;
-          startY = y + scaledWidth - offset; // Bottom of rotated template
-          labelX = startX + (markLength / 2);
-          labelY = startY + 3; // Below the line
-        } else {
-          // For normal taller templates: calibration mark at top-left
-          startX = x + offset;
-          startY = y + offset;
-          labelX = startX + (markLength / 2);
-          labelY = startY - 1; // Above the line
-        }
-        
-        // Only draw if mark would be visible on page
-        if (startX >= 0 && startX <= pdfPageWidth && startY >= 0 && startY <= pdfPageHeight) {
-          // Draw the calibration line
-          pdf.setDrawColor(255, 0, 0);
-          pdf.setLineWidth(0.5);
-          pdf.line(startX, startY, startX + markLength, startY);
-          
-          // Label
-          pdf.setFontSize(6);
-          pdf.setTextColor(255, 0, 0);
-          
-          // Draw calibration label based on current unit
-          if (currentUnit === "metric") {
-            pdf.text("25.4mm", labelX, labelY, { align: "center" });
-          } else {
-            pdf.text("1\"", labelX, labelY, { align: "center" });
-          }
-          
-          // Draw a small vertical mark at the end to show it's measured
-          pdf.line(startX + markLength, startY - 1, startX + markLength, startY + 1);
-          pdf.line(startX, startY - 1, startX, startY + 1);
-          
-          pdf.setTextColor(0, 0, 0);
-          pdf.setDrawColor(0, 0, 0);
-        }
-      };
-
-      // Draw calibration marks
-      addCalibrationMarkings();
-
-      // Add footer with critical information
+      // Add minimal header/footer overlay for ALL modes (including print)
+      const pdfTitle = projectName ? `${projectName} - Drill Template` : "Enclosure Pro - Drill Template";
+      
+      // Simple header at top
       pdf.setFontSize(8);
-      pdf.setFont("helvetica", "italic");
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(pdfTitle, pdfPageWidth / 2, 5, { align: "center" });
+      
+      // Simple footer at bottom
+      pdf.setFontSize(7);
+      pdf.setFont("helvetica", "normal");
       const dateStr = new Date().toLocaleDateString();
-      pdf.text(`Generated: ${dateStr}`, 10, pdfPageHeight - 10);
-      
-      // Add scale and unit info to footer
-      const scaleText = paperInfo.scale === 1 ? "100%" : `${(paperInfo.scale * 100).toFixed(1)}%`;
-      pdf.text(`Scale: ${scaleText} | Units: ${currentUnit}`, pdfPageWidth / 2, pdfPageHeight - 10, { align: "center" });
-      
-      // Add print instructions in footer for printing
-      if (options.forPrint && paperInfo.size !== 'A4') {
-        pdf.setTextColor(255, 0, 0);
-        pdf.setFontSize(7);
-        pdf.text(`Designed for ${paperInfo.size} - Printing on A4 at 100% scale`, pdfPageWidth / 2, pdfPageHeight - 15, { align: "center" });
-        pdf.setTextColor(0, 0, 0);
-      }
-      
-      pdf.text("Enclosure Pro", pdfPageWidth - 10, pdfPageHeight - 10, { align: "right" });
+      pdf.text(`${currentEnclosureType} | ${currentUnit}`, 5, pdfPageHeight - 3);
+      pdf.text(`100% Scale`, pdfPageWidth / 2, pdfPageHeight - 3, { align: "center" });
+      pdf.text(dateStr, pdfPageWidth - 5, pdfPageHeight - 3, { align: "right" });
 
-      // Set PDF metadata with STRONG anti-scaling instructions
+      // Only add full headers/footers/calibration for export mode
+      if (!skipHeadersFooters) {
+        // Header (drawn on top)
+        pdf.setFontSize(14);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(pdfTitle, pdfPageWidth / 2, titleY, { align: "center" });
+        
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "normal");
+        
+        const dimensionsInfo = currentUnit === "metric" 
+          ? `Template: ${trueWidth.toFixed(1)}mm × ${trueHeight.toFixed(1)}mm`
+          : `Template: ${(trueWidth / INCH_TO_MM).toFixed(2)}" × ${(trueHeight / INCH_TO_MM).toFixed(2)}"`;
+        
+        const enclosureInfo = `${currentEnclosureType} Enclosure - 100% scale`;
+        pdf.text(enclosureInfo, pdfPageWidth / 2, enclosureInfoY, { align: "center" });
+        pdf.text(dimensionsInfo, pdfPageWidth / 2, dimensionsInfoY, { align: "center" });
+        
+        pdf.setTextColor(255, 0, 0);
+        pdf.setFontSize(9);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(`PRINT AT 100% SCALE - VERIFY WITH CALIBRATION MARK`, pdfPageWidth / 2, TOP_MARGIN + 34, { align: "center" });
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont("helvetica", "normal");
+
+        // Calibration mark
+        const addCalibrationMarkings = () => {
+          const offset = 5;
+          const markLength = INCH_TO_MM;
+          
+          let startX, startY, labelX, labelY;
+          
+          // Position based on final dimensions (after rotation if applicable)
+          startX = (pdfPageWidth - finalWidth) / 2 + offset;
+          startY = TOP_MARGIN + 40 + offset;
+          
+          labelX = startX + (markLength / 2);
+          labelY = startY - 1;
+          
+          if (startX >= 0 && startX <= pdfPageWidth && startY >= 0 && startY <= pdfPageHeight) {
+            pdf.setDrawColor(255, 0, 0);
+            pdf.setLineWidth(0.5);
+            pdf.line(startX, startY, startX + markLength, startY);
+            
+            pdf.setFontSize(6);
+            pdf.setTextColor(255, 0, 0);
+            
+            if (currentUnit === "metric") {
+              pdf.text("25.4mm", labelX, labelY, { align: "center" });
+            } else {
+              pdf.text("1\"", labelX, labelY, { align: "center" });
+            }
+            
+            pdf.line(startX + markLength, startY - 1, startX + markLength, startY + 1);
+            pdf.line(startX, startY - 1, startX, startY + 1);
+            
+            pdf.setTextColor(0, 0, 0);
+            pdf.setDrawColor(0, 0, 0);
+          }
+        };
+
+        addCalibrationMarkings();
+
+        // Paper size warning
+        pdf.setFontSize(9);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(255, 0, 0);
+        
+        let paperSizeText = "";
+        if (Math.abs(pdfPageWidth - 210) < 5 && Math.abs(pdfPageHeight - 297) < 5) {
+          paperSizeText = "Designed for A4 size - Printing on A4 at 100% scale";
+        } else if (Math.abs(pdfPageWidth - 297) < 5 && Math.abs(pdfPageHeight - 420) < 5) {
+          paperSizeText = "Designed for A3 size - Printing on A3 at 100% scale";
+        } else if (Math.abs(pdfPageWidth - 279.4) < 10 && Math.abs(pdfPageHeight - 431.8) < 10) {
+          paperSizeText = "Designed for Tabloid (11x17\") size - Printing at 100% scale";
+        } else {
+          paperSizeText = `Designed for custom size (${pdfPageWidth.toFixed(0)}mm × ${pdfPageHeight.toFixed(0)}mm) - Printing at 100% scale`;
+        }
+        
+        pdf.text(paperSizeText, pdfPageWidth / 2, pdfPageHeight - 20, { align: "center" });
+        pdf.setTextColor(0, 0, 0);
+
+        // Footer
+        pdf.setFontSize(8);
+        pdf.setFont("helvetica", "italic");
+        const dateStr = new Date().toLocaleDateString();
+        pdf.text(`Generated: ${dateStr}`, 10, pdfPageHeight - 10);
+        pdf.text(`Scale: 100% | Units: ${currentUnit}`, pdfPageWidth / 2, pdfPageHeight - 10, { align: "center" });
+        pdf.text("Enclosure Pro", pdfPageWidth - 10, pdfPageHeight - 10, { align: "right" });
+      }
+
+      // Set PDF metadata
       pdf.setProperties({
-        title: `${title} - DO NOT SCALE - PRINT AT 100%`,
-        subject: `Enclosure Drill Template - PRINT AT 100% SCALE ONLY - NO FIT TO PAGE`,
+        title: `${pdfTitle} - DO NOT SCALE - PRINT AT 100%`,
+        subject: `Enclosure Drill Template - PRINT AT 100% SCALE ONLY`,
         creator: 'Enclosure Pro',
         producer: 'Enclosure Pro',
-        keywords: `DO NOT SCALE, NO FIT TO PAGE, PRINT AT 100%, exact size, ${templateWidth.toFixed(1)}mm x ${templateHeight.toFixed(1)}mm, ${currentUnit}`
+        keywords: `DO NOT SCALE, PRINT AT 100%, exact size, ${trueWidth.toFixed(1)}mm x ${trueHeight.toFixed(1)}mm, ${currentUnit}`
       });
 
-      // CRITICAL: Set ALL PDF boxes to exact size to prevent ANY scaling
+      // Force 100% scale in PDF
       try {
         const pdfInternal = (pdf as any).internal;
         if (pdfInternal && pdfInternal.pages && pdfInternal.pages[1]) {
-          // Set ALL boxes to exact page size - this prevents scaling
           pdfInternal.pages[1].mediaBox = [0, 0, pdfPageWidth, pdfPageHeight];
           pdfInternal.pages[1].cropBox = [0, 0, pdfPageWidth, pdfPageHeight];
           pdfInternal.pages[1].bleedBox = [0, 0, pdfPageWidth, pdfPageHeight];
@@ -367,16 +352,16 @@ pdf.text(paperInfoText, pdfPageWidth / 2, paperInfoY, { align: "center" });
 
       return pdf;
     } catch (error) {
-      console.error('PDF generation failed:', error);
-      throw new Error('Failed to generate PDF');
+      console.error('PDF generation failed with error:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      throw new Error(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }, [prepareExportData, getBestPaperSize, projectName]);
+  }, [renderCanvas, projectName]);
 
   const handleExportPDF = async () => {
     try {
       const pdf = await generatePDF();
       const currentUnit = unitRef.current;
-      // Removed -metric/-imperial from filename
       const filename = projectName 
         ? `${projectName}.pdf` 
         : `${enclosureTypeRef.current}-template.pdf`;

@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { snapZoom } from "@/lib/zoom";
+import { useEffect, useRef } from "react";
 
 interface UseKeyboardShortcutsProps {
   handleZoomIn: () => void;
@@ -22,6 +21,32 @@ export function useKeyboardShortcuts({
   handleExportPDF,
   handleQuit
 }: UseKeyboardShortcutsProps) {
+  // Store handlers in refs so they're always current
+  const handlersRef = useRef({
+    handleZoomIn,
+    handleZoomOut,
+    handleSave,
+    handleSaveAs,
+    handleLoad,
+    handlePrint,
+    handleExportPDF,
+    handleQuit,
+  });
+
+  // Update refs when handlers change
+  useEffect(() => {
+    handlersRef.current = {
+      handleZoomIn,
+      handleZoomOut,
+      handleSave,
+      handleSaveAs,
+      handleLoad,
+      handlePrint,
+      handleExportPDF,
+      handleQuit,
+    };
+  }, [handleZoomIn, handleZoomOut, handleSave, handleSaveAs, handleLoad, handlePrint, handleExportPDF, handleQuit]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -31,36 +56,52 @@ export function useKeyboardShortcuts({
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const modifier = isMac ? e.metaKey : e.ctrlKey;
 
+      // Zoom shortcuts (no modifier needed)
       if (e.key === '-' || e.key === '_') {
         e.preventDefault();
-        handleZoomOut();
+        handlersRef.current.handleZoomOut();
       } else if (e.key === '=' || e.key === '+' || (e.code === 'Equal' && e.shiftKey)) {
         e.preventDefault();
-        handleZoomIn();
+        handlersRef.current.handleZoomIn();
       }
+      // Ctrl/Cmd + S - Save / Save As
       else if (modifier && e.key.toLowerCase() === 's') {
         e.preventDefault();
         if (e.shiftKey) {
-          handleSaveAs();
+          handlersRef.current.handleSaveAs();
         } else {
-          handleSave();
+          handlersRef.current.handleSave();
         }
-      } else if (modifier && e.key.toLowerCase() === 'o') {
+      } 
+      // Ctrl/Cmd + O - Open
+      else if (modifier && e.key.toLowerCase() === 'o') {
         e.preventDefault();
-        handleLoad();
-      } else if (modifier && e.key.toLowerCase() === 'p') {
+        console.log('🎹 Keyboard shortcut: Ctrl+O triggered');
+        handlersRef.current.handleLoad();
+      } 
+      // Ctrl/Cmd + P - Print
+      else if (modifier && e.key.toLowerCase() === 'p') {
         e.preventDefault();
-        handlePrint();
-      } else if (modifier && e.key.toLowerCase() === 'e') {
+        handlersRef.current.handlePrint();
+      } 
+      // Ctrl/Cmd + E - Export PDF
+      else if (modifier && e.key.toLowerCase() === 'e') {
         e.preventDefault();
-        handleExportPDF();
-      } else if (modifier && e.key.toLowerCase() === 'q') {
+        handlersRef.current.handleExportPDF();
+      } 
+      // Ctrl/Cmd + Q - Quit (Mac only, Windows uses Alt+F4)
+      else if (modifier && e.key.toLowerCase() === 'q') {
         e.preventDefault();
-        handleQuit();
+        handlersRef.current.handleQuit();
+      }
+      // Alt+F4 - Quit (Windows/Linux)
+      else if (!isMac && e.altKey && e.key === 'F4') {
+        e.preventDefault();
+        handlersRef.current.handleQuit();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleZoomIn, handleZoomOut, handleSave, handleSaveAs, handleLoad, handlePrint, handleExportPDF, handleQuit]);
+  }, []); // Empty dependency array - handlers accessed via ref
 }

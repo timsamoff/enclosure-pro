@@ -11,14 +11,17 @@ import { Button } from "@/components/ui/button";
 import enclosureProIcon from "@/../../images/EnclosureProIcon.svg";
 import { useEffect, useState } from "react";
 import ProgressDialog from "@/components/ProgressDialog";
+import { useFocusManagement } from "@/hooks/useFocusManagement";
 
 export default function AppIconMenu() {
+  const { releaseFocus } = useFocusManagement();
   const [appVersion, setAppVersion] = useState('1.0.0');
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
   const [progressDetails, setProgressDetails] = useState({} as any);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     // Get version from Electron
@@ -65,10 +68,20 @@ export default function AppIconMenu() {
     }
   }, []);
 
+  // Release focus when menu closes
+  useEffect(() => {
+    if (!isOpen) {
+      releaseFocus();
+    }
+  }, [isOpen, releaseFocus]);
+
   const handleCheckForUpdates = async () => {
     if (!window.electronAPI) return;
     
     setIsChecking(true);
+    setIsOpen(false);
+    releaseFocus();
+    
     try {
       await window.electronAPI.checkForUpdates();
     } catch (error) {
@@ -81,6 +94,9 @@ export default function AppIconMenu() {
   const handleSimulateUpdate = async () => {
     if (!window.electronAPI) return;
     
+    setIsOpen(false);
+    releaseFocus();
+    
     try {
       await window.electronAPI.simulateUpdate();
     } catch (error) {
@@ -88,17 +104,23 @@ export default function AppIconMenu() {
     }
   };
 
+  const handleMenuItemClick = () => {
+    setIsOpen(false);
+    releaseFocus();
+  };
+
   // Simple development detection (always show test option when running locally)
   const isDevelopment = false; // Set this to false when building for production
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <Button
             size="icon"
             variant="ghost"
             data-testid="button-app-menu"
+            onMouseUp={releaseFocus}
           >
             <img src={enclosureProIcon} alt="Enclosure Pro" className="w-full h-full object-contain" />
           </Button>
@@ -123,6 +145,7 @@ export default function AppIconMenu() {
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-xs text-foreground hover:text-primary transition-colors"
               data-testid="link-instagram"
+              onClick={handleMenuItemClick}
             >
               <span>Circuitous FX</span>
               <SiInstagram className="w-4 h-4" />
@@ -139,6 +162,7 @@ export default function AppIconMenu() {
               rel="noopener noreferrer"
               className="flex items-center gap-2 cursor-pointer"
               data-testid="link-documentation"
+              onClick={handleMenuItemClick}
             >
               <Book className="w-4 h-4" />
               <span>Documentation</span>
@@ -147,14 +171,15 @@ export default function AppIconMenu() {
 
           <DropdownMenuSeparator />
 
-            {/* Feedback */}
+          {/* Feedback */}
           <DropdownMenuItem asChild>
             <a
               href="https://samoff.com/enclosure-pro/feedback.html"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 cursor-pointer"
-              data-testid="link-documentation"
+              data-testid="link-feedback"
+              onClick={handleMenuItemClick}
             >
               <MessageSquare className="w-4 h-4" />
               <span>Feedback</span>
@@ -199,6 +224,7 @@ export default function AppIconMenu() {
               rel="noopener noreferrer"
               className="flex items-center gap-2 cursor-pointer"
               data-testid="link-buy-me-coffee"
+              onClick={handleMenuItemClick}
             >
               <Coffee className="w-4 h-4" />
               <span>Buy Me a Cup of Coffee</span>

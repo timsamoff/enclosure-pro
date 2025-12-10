@@ -41,25 +41,24 @@ export function usePrint(props: UsePrintProps) {
           // CRITICAL: Use silent printing with explicit scale settings
           // Some Electron versions support disabling fit-to-page via these options
           await window.electronAPI.printPDF({
-            pdfData: Array.from(new Uint8Array(pdfBuffer)),
-            printOptions: {
-              printBackground: true,
-              scale: 1.0, // Explicitly set scale to 100%
-              landscape: false,
-              pageSize: paperSize,
-              margins: {
-                marginType: 'custom',
-                top: 0,
-                bottom: 0,
-                left: 0,
-                right: 0
-              },
-              disableFitToPage: true, // Some Electron versions support this
-              fitToPageEnabled: false, // Alternative flag
-              ...printOptions
-            },
-            silent: true // Silent printing might bypass dialog that enables scaling
-          });
+  pdfData: Array.from(new Uint8Array(pdfBuffer)),
+  printOptions: {
+    printBackground: true,
+    scale: 1.0,
+    landscape: false,
+    pageSize: 'Custom',
+    pageWidth: pdf.internal.pageSize.getWidth() * 72 / 25.4, // Convert mm to points
+    pageHeight: pdf.internal.pageSize.getHeight() * 72 / 25.4,
+    margins: {
+      marginType: 'none',
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0
+    },
+  },
+  silent: true
+});
           
           // Add parenthetical about larger printing formats
           const formatNote = paperSize === 'A3' 
@@ -69,10 +68,10 @@ export function usePrint(props: UsePrintProps) {
             : "";
           
           props.toast({
-            title: "Print Sent (100% Scale)",
-            description: `Template printed at exact 100% scale. Verify 25.4mm (1") calibration mark measures correctly with a ruler.${formatNote}`,
-            duration: 5000,
-          });
+  title: "Print Sent",
+  description: `Printing at 100% scale on ${paperSize} paper. Verify calibration mark.`,
+  duration: 5000,
+});
           return;
         } catch (error) {
           console.warn('Electron silent print failed, trying with dialog:', error);

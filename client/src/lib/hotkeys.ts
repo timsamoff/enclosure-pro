@@ -19,15 +19,14 @@ export const shiftKey = isMac ? '⇧' : 'Shift';
  * @returns Formatted shortcut string (e.g., '⌘S' or 'Ctrl+S')
  */
 export function formatShortcut(key: string, useShift: boolean = false): string {
-  const modifier = isMac ? '⌘' : 'Ctrl+';
-  const shift = useShift ? (isMac ? '⇧' : 'Shift+') : '';
-  
   if (isMac) {
     // Mac format: ⇧⌘S (no separators)
-    return `${shift}${modifier}${key}`;
+    const shift = useShift ? '⇧' : '';
+    return `${shift}⌘${key}`;
   } else {
     // Windows/Linux format: Ctrl+Shift+S
-    return `${modifier}${shift}${key}`;
+    const shift = useShift ? 'Shift+' : '';
+    return `Ctrl+${shift}${key}`;
   }
 }
 
@@ -41,7 +40,7 @@ export const shortcuts = {
   saveAs: formatShortcut('S', true),
   print: formatShortcut('P'),
   exportPDF: formatShortcut('E'),
-  quit: formatShortcut('Q'),
+  quit: formatShortcut('Q'), // Changed: Now shows Ctrl+Q for Windows (Alt+F4 still works but isn't shown)
   zoomIn: isMac ? '⌘+' : 'Ctrl++',
   zoomOut: isMac ? '⌘-' : 'Ctrl+-',
 };

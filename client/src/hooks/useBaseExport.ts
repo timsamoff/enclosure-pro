@@ -20,13 +20,13 @@ const PRINT_CONFIG = {
   // Font settings
   fonts: {
     sideLabel: {
-      size: 12,                   // Size for side labels (Front, Top, etc.)
+      size: 9,                    // Size for side labels (Front, Top, etc.) - adjusted for 72 DPI
       family: 'Arial',
       style: 'normal',            // 'normal', 'bold', 'italic'
       color: '#000000'
     },
     componentLabel: {
-      size: 10,                   // Size for component dimension labels
+      size: 7,                    // Size for component dimension labels - adjusted for 72 DPI
       family: 'Arial',
       style: 'normal',
       color: '#000000'
@@ -35,7 +35,7 @@ const PRINT_CONFIG = {
   
   // Component styling
   components: {
-    labelOffset: 15,              // Distance from component to its label
+    labelOffset: 10,              // Distance from component to its label
     labelBackgroundPadding: 4,    // Padding around label text background
     crosshairSize: 10,            // Minimum crosshair size in pixels
   },
@@ -238,14 +238,21 @@ export function useBaseExport({
           [totalWidthMM, totalHeightMM] = [totalHeightMM, totalWidthMM];
         }
 
-        // Use EXACT 96 DPI calculation for 1:1 scale
-        const PIXELS_PER_INCH = 96;
+        // Use EXACT 72 DPI calculation - jsPDF's default
+        // This ensures perfect 1:1 scale when jsPDF interprets the image
+        const PIXELS_PER_INCH = 72;  // Changed from 96 to match jsPDF default
         const MM_PER_INCH = 25.4;
-        const pixelsPerMM = PIXELS_PER_INCH / MM_PER_INCH; // 3.779527559055118
+        const pixelsPerMM = PIXELS_PER_INCH / MM_PER_INCH; // 2.834645669291339
 
         // Round UP to nearest pixel to ensure full coverage
         const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
         const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
+
+        console.log('=== CANVAS GENERATION ===');
+        console.log('Total dimensions in MM:', totalWidthMM, 'x', totalHeightMM);
+        console.log('Pixels per MM:', pixelsPerMM);
+        console.log('Canvas size in pixels:', canvasWidth, 'x', canvasHeight);
+        console.log('Expected: 1mm = ', pixelsPerMM, 'pixels');
 
         const canvas = document.createElement('canvas');
         canvas.width = canvasWidth;
@@ -313,6 +320,12 @@ export function useBaseExport({
             height: rightH * pixelsPerMM 
           },
         };
+
+        console.log('=== FRONT PANEL SIZE ===');
+        console.log('Front panel dimensions in MM:', frontW, 'x', frontH);
+        console.log('Front panel dimensions in pixels:', layout.front.width, 'x', layout.front.height);
+        console.log('Pixels per MM:', pixelsPerMM);
+        console.log('Expected at 72 DPI: frontW=' + frontW + 'mm should be', frontW * pixelsPerMM, 'pixels');
 
         const drawSide = (sideKey: keyof typeof layout, originalLabel: string) => {
           const side = layout[sideKey];
@@ -503,53 +516,6 @@ export function useBaseExport({
                 ctx.restore();
               }
               
-              // Footprint Guide labels (commented out - uncomment to show labels for utility guides)
-              // else {
-              //   const labelPos = calculateLabelPosition(
-              //     centerX,
-              //     centerY,
-              //     component.rotation || 0,
-              //     currentRotation,
-              //     true,
-              //     baseWidth,
-              //     baseHeight,
-              //     undefined,
-              //     config.components.labelOffset
-              //   );
-              //
-              //   const labelText = component.rotation === 90 
-              //     ? currentUnit === "metric"
-              //       ? `${compData.height}mm×${compData.width}mm`
-              //       : compData.imperialLabel
-              //     : currentUnit === "metric"
-              //       ? `${compData.width}mm×${compData.height}mm`
-              //       : compData.imperialLabel;
-              //
-              //   ctx.save();
-              //   ctx.translate(labelPos.x, labelPos.y);
-              //   ctx.rotate(labelPos.textAngle);
-              //
-              //   ctx.font = `${config.fonts.componentLabel.style} ${config.fonts.componentLabel.size}px ${config.fonts.componentLabel.family}`;
-              //   const textMetrics = ctx.measureText(labelText);
-              //   const textWidth = textMetrics.width;
-              //   const padding = config.components.labelBackgroundPadding;
-              //
-              //   ctx.fillStyle = 'white';
-              //   ctx.fillRect(
-              //     -textWidth / 2 - padding,
-              //     -config.fonts.componentLabel.size / 2 - padding,
-              //     textWidth + padding * 2,
-              //     config.fonts.componentLabel.size + padding * 2
-              //   );
-              //   
-              //   ctx.fillStyle = config.fonts.componentLabel.color;
-              //   ctx.textAlign = 'center';
-              //   ctx.textBaseline = 'middle';
-              //   ctx.fillText(labelText, 0, 0);
-              //   
-              //   ctx.restore();
-              // }
-              
             } else {
               // CIRCLE COMPONENTS
               const radius = (compData.drillSize / 2) * pixelsPerMM;
@@ -636,49 +602,6 @@ export function useBaseExport({
                 
                 ctx.restore();
               }
-              
-              // Footprint Guide labels (commented out - uncomment to show labels for utility guides)
-              // else {
-              //   const labelPos = calculateLabelPosition(
-              //     centerX,
-              //     centerY,
-              //     component.rotation || 0,
-              //     currentRotation,
-              //     false,
-              //     undefined,
-              //     undefined,
-              //     radius,
-              //     config.components.labelOffset
-              //   );
-              //
-              //   const drillText = currentUnit === "metric"
-              //     ? `${compData.drillSize.toFixed(1)}mm`
-              //     : compData.imperialLabel;
-              //
-              //   ctx.save();
-              //   ctx.translate(labelPos.x, labelPos.y);
-              //   ctx.rotate(labelPos.textAngle);
-              //
-              //   ctx.font = `${config.fonts.componentLabel.style} ${config.fonts.componentLabel.size}px ${config.fonts.componentLabel.family}`;
-              //   const textMetrics = ctx.measureText(drillText);
-              //   const textWidth = textMetrics.width;
-              //   const padding = config.components.labelBackgroundPadding;
-              //
-              //   ctx.fillStyle = 'white';
-              //   ctx.fillRect(
-              //     -textWidth / 2 - padding,
-              //     -config.fonts.componentLabel.size / 2 - padding,
-              //     textWidth + padding * 2,
-              //     config.fonts.componentLabel.size + padding * 2
-              //   );
-              //   
-              //   ctx.fillStyle = config.fonts.componentLabel.color;
-              //   ctx.textAlign = 'center';
-              //   ctx.textBaseline = 'middle';
-              //   ctx.fillText(drillText, 0, 0);
-              //   
-              //   ctx.restore();
-              // }
             }
           });
         };
@@ -700,11 +623,17 @@ export function useBaseExport({
   const prepareExportData = useCallback(async (options: {
     forPDF?: boolean;
     forPrint?: boolean;
+    disableRotation?: boolean;
   } = {}) => {
     const enclosureType = enclosureTypeRef.current;
     const currentRotation = rotationRef.current;
     
-    const shouldRotate = getOptimalRotation(enclosureType);
+    // CRITICAL: For print mode, NEVER rotate the canvas
+    // Use disableRotation flag if provided, otherwise use optimal rotation
+    const shouldRotate = options.disableRotation ? false : getOptimalRotation(enclosureType);
+    
+    console.log('prepareExportData - disableRotation:', options.disableRotation, 'shouldRotate:', shouldRotate);
+    
     const pageDimensions = getPageDimensions(enclosureType, shouldRotate);
 
     const imageData = await renderCanvas(

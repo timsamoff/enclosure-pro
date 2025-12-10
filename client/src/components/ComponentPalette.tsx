@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, ChevronRight } from "lucide-react";
 import { mmToFraction } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useFocusManagement } from "@/hooks/useFocusManagement";
 
 interface ComponentPaletteProps {
   onComponentSelect: (type: ComponentType) => void;
@@ -19,6 +20,7 @@ export default function ComponentPalette({
   onClose,
   unit,
 }: ComponentPaletteProps) {
+  const { releaseFocus } = useFocusManagement();
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedFootprintSubcategory, setSelectedFootprintSubcategory] = useState<FootprintSubcategory | null>(null);
 
@@ -94,24 +96,41 @@ export default function ComponentPalette({
   const handleBackToCategories = () => {
     setSelectedCategory(null);
     setSelectedFootprintSubcategory(null);
+    releaseFocus();
   };
 
   const handleBackToFootprintSubmenu = () => {
     setSelectedFootprintSubcategory(null);
+    releaseFocus();
   };
 
   const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
     setSelectedFootprintSubcategory(null);
+    releaseFocus();
   };
 
   const handleFootprintSubcategorySelect = (subcategory: FootprintSubcategory) => {
     setSelectedFootprintSubcategory(subcategory);
+    releaseFocus();
   };
 
   const handleComponentSelect = (compType: ComponentType) => {
     onComponentSelect(compType);
+    releaseFocus();
   };
+
+  const handleClose = () => {
+    onClose();
+    releaseFocus();
+  };
+
+  // Release focus when palette unmounts
+  useEffect(() => {
+    return () => {
+      releaseFocus();
+    };
+  }, [releaseFocus]);
 
   const getFilteredFootprintGuides = () => {
     const allFootprints = categories["Footprint Guides"];
@@ -148,6 +167,7 @@ export default function ComponentPalette({
               size="icon"
               variant="ghost"
               onClick={selectedFootprintSubcategory ? handleBackToFootprintSubmenu : handleBackToCategories}
+              onMouseUp={releaseFocus}
               className="w-6 h-6"
             >
               <ChevronRight className="w-4 h-4 rotate-180" />
@@ -171,7 +191,8 @@ export default function ComponentPalette({
         <Button
           size="icon"
           variant="ghost"
-          onClick={onClose}
+          onClick={handleClose}
+          onMouseUp={releaseFocus}
           data-testid="button-close-palette"
         >
           <X className="w-4 h-4" />
@@ -185,7 +206,8 @@ export default function ComponentPalette({
               <button
                 key={category}
                 onClick={() => handleCategorySelect(category as Category)}
-                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left"
+                onMouseUp={releaseFocus}
+                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
                 data-testid={`button-category-${category}`}
               >
                 <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
@@ -203,7 +225,8 @@ export default function ComponentPalette({
             <div className="space-y-3">
               <button
                 onClick={() => handleFootprintSubcategorySelect("potentiometers")}
-                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left"
+                onMouseUp={releaseFocus}
+                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
               >
                 <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
                   Potentiometers
@@ -215,7 +238,8 @@ export default function ComponentPalette({
               
               <button
                 onClick={() => handleFootprintSubcategorySelect("jacks")}
-                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left"
+                onMouseUp={releaseFocus}
+                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
               >
                 <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
                   Jacks
@@ -227,7 +251,8 @@ export default function ComponentPalette({
               
               <button
                 onClick={() => handleFootprintSubcategorySelect("switches")}
-                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left"
+                onMouseUp={releaseFocus}
+                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
               >
                 <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
                   Switches
@@ -239,7 +264,8 @@ export default function ComponentPalette({
               
               <button
                 onClick={() => handleFootprintSubcategorySelect("knobs")}
-                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left"
+                onMouseUp={releaseFocus}
+                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
               >
                 <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
                   Knobs
@@ -260,7 +286,8 @@ export default function ComponentPalette({
                   <button
                     key={compType}
                     onClick={() => handleComponentSelect(compType)}
-                    className="w-full flex items-center justify-between gap-2 p-2 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left"
+                    onMouseUp={releaseFocus}
+                    className="w-full flex items-center justify-between gap-2 p-2 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
                     data-testid={`button-component-${compType}`}
                   >
                     <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">

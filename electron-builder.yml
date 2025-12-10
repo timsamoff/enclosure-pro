@@ -1,0 +1,32 @@
+appId: com.enclosurepro.app
+productName: Enclosure Pro
+artifactName: Enclosure-Pro-Setup-${version}.${ext}
+
+directories:
+  buildResources: build
+  output: release
+
+files:
+  - dist/**/*
+  - electron/**/*
+  - images/**/*
+  - build/**/*
+  - scripts/**/*
+
+# Force clean build each time
+npmRebuild: false
+nodeGypRebuild: false
+electronDownload:
+  cache: ./cache
+
+# Disable caching of asar files
+asar: true
+asarUnpack:
+  - "**/*.node"
+  - "**/node_modules/sqlite3/**"
+  - "**/node_modules/electron-updater/**"
+
+# Enable debug logging
+publish:
+  provider: generic
+  url: https://github.com/${user}/${project}/releases/download/${version}

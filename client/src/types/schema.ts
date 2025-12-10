@@ -16,14 +16,15 @@ export interface EnclosureDimensions {
 }
 
 export const ENCLOSURE_TYPES = {
-  "1590A": { width: 38.5, height: 92.5, depth: 29, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590B": { width: 61, height: 112, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590LB": { width: 50.5, height: 50.5, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const },
+  "1590A": { width: 39, height: 93, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const },
+  "1590B": { width: 60, height: 113, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const },
+  "1590LB": { width: 51, height: 51, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const },
   "125B": { width: 66.98, height: 121, depth: 35.94, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590BB": { width: 119, height: 94, depth: 34, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590BB2": { width: 120, height: 94, depth: 38, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590DD": { width: 188, height: 120, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590XX": { width: 145, height: 121, depth: 39, rotatesLabels: true, cornerStyle: "rounded" as const },
+  "1590BB": { width: 119, height: 94, depth: 33, rotatesLabels: true, cornerStyle: "rounded" as const },
+  "1590BB2": { width: 119, height: 94, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const },
+  "1590BBS": { width: 120, height: 94, depth: 38.3, rotatesLabels: true, cornerStyle: "rounded" as const },
+  "1590DD": { width: 188, height: 120, depth: 36, rotatesLabels: true, cornerStyle: "rounded" as const },
+  "1590XX": { width: 153, height: 122.5, depth: 38, rotatesLabels: true, cornerStyle: "rounded" as const },
 } as const;
 
 export type EnclosureType = keyof typeof ENCLOSURE_TYPES;

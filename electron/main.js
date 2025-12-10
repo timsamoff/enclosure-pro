@@ -7,6 +7,137 @@ let mainWindow;
 let fileToOpen = null;
 let isWindowReady = false;
 
+// Create application menu with accelerators
+function createApplicationMenu() {
+  const isMac = process.platform === 'darwin';
+  
+  const template = [
+    // File menu
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'New Project',
+          accelerator: isMac ? 'Cmd+N' : 'Ctrl+N',
+          click: () => {
+            console.log('🆕 New via accelerator');
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu-action', 'new');
+            }
+          }
+        },
+        {
+          label: 'Open Project...',
+          accelerator: isMac ? 'Cmd+O' : 'Ctrl+O',
+          click: () => {
+            console.log('📂 Open via accelerator');
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu-action', 'open');
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Save',
+          accelerator: isMac ? 'Cmd+S' : 'Ctrl+S',
+          click: () => {
+            console.log('💾 Save via accelerator');
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu-action', 'save');
+            }
+          }
+        },
+        {
+          label: 'Save As...',
+          accelerator: isMac ? 'Cmd+Shift+S' : 'Ctrl+Shift+S',
+          click: () => {
+            console.log('💾 Save As via accelerator');
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu-action', 'save-as');
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Print...',
+          accelerator: isMac ? 'Cmd+P' : 'Ctrl+P',
+          click: () => {
+            console.log('🖨️ Print via accelerator');
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu-action', 'print');
+            }
+          }
+        },
+        {
+          label: 'Export as PDF...',
+          accelerator: isMac ? 'Cmd+E' : 'Ctrl+E',
+          click: () => {
+            console.log('📄 Export PDF via accelerator');
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu-action', 'export-pdf');
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Quit',
+          accelerator: isMac ? 'Cmd+Q' : 'Alt+F4',
+          click: () => {
+            console.log('🚪 Quit via accelerator');
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu-action', 'quit');
+            }
+          }
+        }
+      ]
+    },
+    // Edit menu (for standard shortcuts)
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' }
+      ]
+    },
+    // View menu
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    }
+  ];
+
+  // Add Window menu on macOS
+  if (isMac) {
+    template.push({
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        { type: 'separator' },
+        { role: 'front' }
+      ]
+    });
+  }
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
 // Auto-updater setup
 function setupAutoUpdater() {
   // Configure auto-updater for proper restart behavior
@@ -16,7 +147,7 @@ function setupAutoUpdater() {
 
   // Set logger for debug output
   autoUpdater.logger = {
-    info: (message) => console.log('🔍 AutoUpdater Info:', message),
+    info: (message) => console.log('📝 AutoUpdater Info:', message),
     warn: (message) => console.log('⚠️ AutoUpdater Warn:', message),
     error: (message) => console.log('❌ AutoUpdater Error:', message),
     debug: (message) => console.log('🐛 AutoUpdater Debug:', message)
@@ -38,6 +169,9 @@ function setupAutoUpdater() {
     console.log('✅ Update available:', info);
     mainWindow?.webContents.send('update-available', info);
     
+    // Ensure mainWindow exists before showing dialog
+    if (!mainWindow) return;
+    
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Update Available',
@@ -54,6 +188,8 @@ function setupAutoUpdater() {
       } else {
         console.log('⏰ User chose to download later');
       }
+    }).catch((error) => {
+      console.error('❌ Error showing update dialog:', error);
     });
   });
 
@@ -70,6 +206,9 @@ function setupAutoUpdater() {
   autoUpdater.on('update-downloaded', (info) => {
     console.log('🎉 Update downloaded and ready to install:', info);
     mainWindow?.webContents.send('update-downloaded', info);
+    
+    // Ensure mainWindow exists before showing dialog
+    if (!mainWindow) return;
     
     // Force sync and show restart dialog
     setTimeout(() => {
@@ -91,6 +230,8 @@ function setupAutoUpdater() {
         } else {
           console.log('⏰ User chose to restart later');
         }
+      }).catch((error) => {
+        console.error('❌ Error showing restart dialog:', error);
       });
     }, 100);
   });
@@ -99,12 +240,16 @@ function setupAutoUpdater() {
     console.error('❌ Auto-updater error:', error);
     mainWindow?.webContents.send('update-error', error.message);
     
-    dialog.showMessageBox(mainWindow, {
-      type: 'error',
-      title: 'Update Error',
-      message: `Failed to update: ${error.message}`,
-      buttons: ['OK']
-    });
+    if (mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'Update Error',
+        message: `Failed to update: ${error.message}`,
+        buttons: ['OK']
+      }).catch((err) => {
+        console.error('Error showing error dialog:', err);
+      });
+    }
   });
 }
 
@@ -118,33 +263,56 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      devTools: true, // Enabled for production debugging
+      devTools: true,
+      sandbox: true,
     },
     title: 'Enclosure Pro',
     icon: path.join(__dirname, '../images/EnclosureProIcon.png'),
     autoHideMenuBar: true,
+    show: false,
   });
 
+  // Prevent Alt from opening menu bar
+  mainWindow.setAutoHideMenuBar(true);
+  mainWindow.setMenuBarVisibility(false);
+
+  // Create application menu with accelerators
+  createApplicationMenu();
+  
   // Set up auto-updater
   setupAutoUpdater();
 
-  // Only open DevTools in development
-  if (isDevelopment) {
-    mainWindow.webContents.openDevTools();
-  }
-
-  // Add F12 shortcut to open DevTools (works in production too)
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.key === 'F12') {
-      mainWindow.webContents.toggleDevTools();
-      event.preventDefault();
+  // Show window when ready
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    
+    if (isDevelopment) {
+      mainWindow.webContents.openDevTools();
     }
   });
 
-  // Prevent window from closing, let renderer handle it
+  // F12 shortcut for DevTools and prevent Alt key from opening menu
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    // F12 for DevTools
+    if (input.key === 'F12') {
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+      return;
+    }
+    
+    // Prevent Alt key from opening menu (but allow Alt+F4)
+    if (input.key === 'Alt' && input.type === 'keyDown') {
+      event.preventDefault();
+      return;
+    }
+  });
+
+  // Prevent window from closing
   mainWindow.on('close', (e) => {
     e.preventDefault();
-    mainWindow.webContents.send('window-close-requested');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window-close-requested');
+    }
   });
 
   // Handle window being destroyed
@@ -152,14 +320,26 @@ function createWindow() {
     mainWindow = null;
   });
 
-  mainWindow.loadFile(path.join(__dirname, '../dist/public/index.html'));
+  // Handle window loading errors
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Failed to load window:', errorCode, errorDescription);
+  });
+
+  mainWindow.loadFile(path.join(__dirname, '../dist/public/index.html')).catch((error) => {
+    console.error('Failed to load index.html:', error);
+    dialog.showErrorBox('Load Error', `Failed to load application: ${error.message}`);
+  });
   
   mainWindow.webContents.once('did-finish-load', () => {
     isWindowReady = true;
+    console.log('✅ Window is ready');
     
     if (fileToOpen) {
       setTimeout(() => {
-        mainWindow.webContents.send('file-open-request', fileToOpen);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          console.log('📂 Opening queued file:', fileToOpen);
+          mainWindow.webContents.send('file-open-request', fileToOpen);
+        }
         fileToOpen = null;
       }, 1500);
     }
@@ -169,10 +349,13 @@ function createWindow() {
 // Handle file open events (macOS)
 app.on('open-file', (event, filePath) => {
   event.preventDefault();
+  console.log('📂 macOS open-file event:', filePath);
   
-  if (mainWindow && isWindowReady) {
+  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
+    console.log('📂 Sending file-open-request to renderer:', filePath);
     mainWindow.webContents.send('file-open-request', filePath);
   } else {
+    console.log('📂 Window not ready yet, storing file path:', filePath);
     fileToOpen = filePath;
   }
 });
@@ -184,15 +367,20 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', (event, commandLine, workingDirectory) => {
+    console.log('📂 Second instance detected');
+    
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
       
       const filePath = getFilePathFromArgs(commandLine);
       if (filePath) {
-        if (isWindowReady) {
+        console.log('📂 File from command line:', filePath);
+        if (isWindowReady && !mainWindow.isDestroyed()) {
+          console.log('📂 Sending file-open-request to renderer:', filePath);
           mainWindow.webContents.send('file-open-request', filePath);
         } else {
+          console.log('📂 Window not ready yet, storing file path');
           fileToOpen = filePath;
         }
       }
@@ -201,8 +389,11 @@ if (!gotTheLock) {
 }
 
 app.whenReady().then(() => {
+  console.log('🚀 App is ready');
+  
   const filePath = getFilePathFromArgs(process.argv);
   if (filePath) {
+    console.log('📂 Initial file from command line:', filePath);
     fileToOpen = filePath;
   }
   
@@ -210,7 +401,7 @@ app.whenReady().then(() => {
 
   // Check for updates 5 seconds after app starts
   setTimeout(() => {
-    console.log('🚀 App started, checking for updates...');
+    console.log('🔄 Checking for updates...');
     autoUpdater.checkForUpdates().then(result => {
       console.log('✅ Initial update check result:', result);
     }).catch(error => {
@@ -219,45 +410,57 @@ app.whenReady().then(() => {
   }, 5000);
 
   app.on('activate', () => {
+    console.log('🔵 App activated');
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
+}).catch((error) => {
+  console.error('Failed to create window:', error);
+  dialog.showErrorBox('Startup Error', `Failed to start application: ${error.message}`);
 });
 
 app.on('window-all-closed', () => {
-  app.quit();
+  console.log('👋 All windows closed');
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
 });
 
 // Helper function to extract file path from command line arguments
 function getFilePathFromArgs(args) {
+  if (!args || !Array.isArray(args)) return null;
+  
+  console.log('📂 Processing args:', args);
+  
   if (process.platform === 'win32') {
     const potentialFiles = args.slice(1).filter(arg => 
-      arg.endsWith('.enc') && !arg.startsWith('--')
+      arg && typeof arg === 'string' && arg.endsWith('.enc') && !arg.startsWith('--')
     );
+    console.log('📂 Windows potential files:', potentialFiles);
     return potentialFiles[0] || null;
   } else if (process.platform === 'darwin') {
-    return null;
+    const potentialFiles = args.slice(1).filter(arg => 
+      arg && typeof arg === 'string' && arg.endsWith('.enc')
+    );
+    console.log('📂 macOS potential files:', potentialFiles);
+    return potentialFiles[0] || null;
   } else {
-    const fileArg = args.find(arg => arg.endsWith('.enc') && !arg.startsWith('-'));
-    return fileArg;
+    const fileArg = args.find(arg => 
+      arg && typeof arg === 'string' && arg.endsWith('.enc') && !arg.startsWith('-')
+    );
+    console.log('📂 Linux potential file:', fileArg);
+    return fileArg || null;
   }
 }
 
-// Helper function to calculate next version for simulation
-function getNextVersion(currentVersion) {
-  const parts = currentVersion.split('.');
-  const lastPart = parseInt(parts[parts.length - 1]);
-  parts[parts.length - 1] = (lastPart + 1).toString();
-  return parts.join('.');
-}
-
-// IPC handler to actually close the window (called after save check)
+// IPC handler to actually close the window
 ipcMain.handle('window:close', () => {
-  if (mainWindow) {
+  console.log('🚪 Closing window via IPC');
+  if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.destroy();
-    app.quit();
   }
+  app.quit();
 });
 
 // IPC handlers for auto-updater
@@ -305,16 +508,207 @@ ipcMain.handle('app:manual-check-updates', async () => {
   }
 });
 
+// FIXED: Direct file open handler with consistent return format
+ipcMain.handle('file:open', async () => {
+  console.log('📂 file:open called from renderer');
+  
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    console.error('❌ Main window not available');
+    return { success: false, error: 'Main window not available' };
+  }
+  
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'Enclosure Project Files', extensions: ['enc'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+    });
+
+    if (result.canceled) {
+      return { 
+        success: false, 
+        canceled: true 
+      };
+    }
+
+    const filePath = result.filePaths[0];
+    console.log('📂 Selected file (file:open):', filePath);
+    
+    // Send the file-open-request event for backward compatibility
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('file-open-request', filePath);
+    }
+    
+    return { 
+      success: true, 
+      filePath 
+    };
+  } catch (error) {
+    console.error('❌ Error in file:open:', error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+});
+
+// Direct menu action triggers
+ipcMain.handle('menu:new-project', () => {
+  console.log('🆕 Menu: New Project requested via IPC');
+  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('menu-action', 'new');
+  }
+});
+
+ipcMain.handle('menu:open-project', () => {
+  console.log('📂 Menu: Open Project requested via IPC');
+  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('menu-action', 'open');
+  }
+});
+
+ipcMain.handle('menu:save-project', () => {
+  console.log('💾 Menu: Save Project requested via IPC');
+  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('menu-action', 'save');
+  }
+});
+
+ipcMain.handle('menu:save-as-project', () => {
+  console.log('💾 Menu: Save As Project requested via IPC');
+  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('menu-action', 'save-as');
+  }
+});
+
+ipcMain.handle('menu:print-project', () => {
+  console.log('🖨️ Menu: Print Project requested via IPC');
+  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('menu-action', 'print');
+  }
+});
+
+ipcMain.handle('menu:export-pdf-project', () => {
+  console.log('📄 Menu: Export PDF requested via IPC');
+  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('menu-action', 'export-pdf');
+  }
+});
+
+ipcMain.handle('menu:quit-project', () => {
+  console.log('🚪 Menu: Quit requested via IPC');
+  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('menu-action', 'quit');
+  }
+});
+
+// IPC Handlers for file operations
+ipcMain.handle('dialog:saveFile', async (event, { defaultPath, filters }) => {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return { canceled: true, error: 'Main window not available' };
+  }
+  
+  const result = await dialog.showSaveDialog(mainWindow, {
+    defaultPath,
+    filters: filters || [
+      { name: 'Enclosure Project Files', extensions: ['enc'] },
+      { name: 'All Files', extensions: ['*'] }
+    ],
+  });
+
+  if (result.canceled) {
+    return { canceled: true };
+  }
+
+  return { canceled: false, filePath: result.filePath };
+});
+
+ipcMain.handle('dialog:openFile', async (event, { filters }) => {
+  console.log('📂 dialog:openFile called from renderer');
+  
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    console.error('❌ Main window not available');
+    return { canceled: true, error: 'Main window not available' };
+  }
+  
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: filters || [
+        { name: 'Enclosure Project Files', extensions: ['enc'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+    });
+
+    console.log('📂 Open dialog result:', result);
+
+    if (result.canceled) {
+      console.log('📂 Open dialog was cancelled');
+      return { canceled: true };
+    }
+
+    const filePath = result.filePaths[0];
+    console.log('📂 Selected file:', filePath);
+    
+    return { 
+      canceled: false, 
+      filePath
+    };
+  } catch (error) {
+    console.error('❌ Error in dialog:openFile:', error);
+    return { 
+      canceled: true, 
+      error: error.message 
+    };
+  }
+});
+
+ipcMain.handle('file:write', async (event, { filePath, content }) => {
+  try {
+    await fs.writeFile(filePath, content, 'utf8');
+    return { success: true };
+  } catch (error) {
+    console.error('Error writing file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('file:read', async (event, { filePath }) => {
+  try {
+    const content = await fs.readFile(filePath, 'utf8');
+    return { success: true, content };
+  } catch (error) {
+    console.error('Error reading file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('file:open-external', async (event, filePath) => {
+  try {
+    const content = await fs.readFile(filePath, 'utf8');
+    return { success: true, content, filePath };
+  } catch (error) {
+    console.error('Error reading external file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // TEST: Simulate update handler
 ipcMain.handle('test:simulate-update', () => {
   console.log('🎭 test:simulate-update IPC handler called');
+  
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return { success: false, error: 'Main window not available' };
+  }
   
   const currentVersion = app.getVersion();
   const nextVersion = getNextVersion(currentVersion);
   
   console.log(`🔧 Simulating update from ${currentVersion} to ${nextVersion}...`);
   
-  mainWindow?.webContents.send('update-available', {
+  mainWindow.webContents.send('update-available', {
     version: nextVersion,
     releaseDate: new Date().toISOString()
   });
@@ -335,106 +729,72 @@ ipcMain.handle('test:simulate-update', () => {
         progress += 10;
         console.log(`🔧 Download progress: ${progress}%`);
         
-        mainWindow?.webContents.send('download-progress', {
-          percent: progress,
-          bytesPerSecond: 1000000,
-          total: 50000000,
-          transferred: progress * 500000
-        });
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('download-progress', {
+            percent: progress,
+            bytesPerSecond: 1000000,
+            total: 50000000,
+            transferred: progress * 500000
+          });
+        }
         
         if (progress >= 100) {
           clearInterval(interval);
           console.log('🔧 Download complete, simulating update downloaded');
           
           setTimeout(() => {
-            mainWindow?.webContents.send('update-downloaded', {
-              version: nextVersion
-            });
-            
-            dialog.showMessageBox(mainWindow, {
-              type: 'info',
-              title: 'TEST - Update Ready',
-              message: `Simulated: Version ${nextVersion} has been downloaded. Would you like to restart to apply the update?`,
-              buttons: ['Restart', 'Later'],
-              defaultId: 0,
-              cancelId: 1
-            }).then((restartResult) => {
-              if (restartResult.response === 0) {
-                console.log('🔧 User chose to restart (simulation only - no actual restart)');
-                dialog.showMessageBox(mainWindow, {
-                  type: 'info',
-                  title: 'TEST - Simulation Complete',
-                  message: `In a real update, the app would now restart with version ${nextVersion}.`,
-                  buttons: ['OK']
-                });
-              }
-            });
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('update-downloaded', {
+                version: nextVersion
+              });
+              
+              dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'TEST - Update Ready',
+                message: `Simulated: Version ${nextVersion} has been downloaded. Would you like to restart to apply the update?`,
+                buttons: ['Restart', 'Later'],
+                defaultId: 0,
+                cancelId: 1
+              }).then((restartResult) => {
+                if (restartResult.response === 0) {
+                  console.log('🔧 User chose to restart (simulation only - no actual restart)');
+                  dialog.showMessageBox(mainWindow, {
+                    type: 'info',
+                    title: 'TEST - Simulation Complete',
+                    message: `In a real update, the app would now restart with version ${nextVersion}.`,
+                    buttons: ['OK']
+                  });
+                }
+              });
+            }
           }, 1000);
         }
       }, 300);
     }
+  }).catch((error) => {
+    console.error('Error in simulate update dialog:', error);
   });
   
   return { success: true, message: 'Update simulation started' };
 });
 
-// IPC Handlers for file operations
-ipcMain.handle('dialog:saveFile', async (event, { defaultPath, filters }) => {
-  const result = await dialog.showSaveDialog(mainWindow, {
-    defaultPath,
-    filters: filters || [
-      { name: 'Enclosure Project Files', extensions: ['enc'] },
-      { name: 'All Files', extensions: ['*'] }
-    ],
-  });
+// Helper function to calculate next version for simulation
+function getNextVersion(currentVersion) {
+  if (!currentVersion) return '1.0.0';
+  
+  const parts = currentVersion.split('.');
+  if (parts.length < 3) return currentVersion + '.1';
+  
+  const lastPart = parseInt(parts[parts.length - 1]) || 0;
+  parts[parts.length - 1] = (lastPart + 1).toString();
+  return parts.join('.');
+}
 
-  if (result.canceled) {
-    return { canceled: true };
-  }
-
-  return { canceled: false, filePath: result.filePath };
+// Error handling for uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
 });
 
-ipcMain.handle('dialog:openFile', async (event, { filters }) => {
-  const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openFile'],
-    filters: filters || [
-      { name: 'Enclosure Project Files', extensions: ['enc'] },
-      { name: 'All Files', extensions: ['*'] }
-    ],
-  });
-
-  if (result.canceled) {
-    return { canceled: true };
-  }
-
-  return { canceled: false, filePath: result.filePaths[0] };
-});
-
-ipcMain.handle('file:write', async (event, { filePath, content }) => {
-  try {
-    await fs.writeFile(filePath, content, 'utf8');
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('file:read', async (event, { filePath }) => {
-  try {
-    const content = await fs.readFile(filePath, 'utf8');
-    return { success: true, content };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('file:open-external', async (event, filePath) => {
-  try {
-    const content = await fs.readFile(filePath, 'utf8');
-    return { success: true, content, filePath };
-  } catch (error) {
-    console.error('Error reading external file:', error);
-    return { success: false, error: error.message };
-  }
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
