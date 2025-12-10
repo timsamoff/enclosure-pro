@@ -44,6 +44,7 @@ jobs:
         run: npm ci --legacy-peer-deps
       
       - name: Clean previous builds
+      shell: bash
         run: |
           # Clean release and build directories
           rm -rf release
@@ -51,6 +52,7 @@ jobs:
           mkdir -p build
       
       - name: Copy icon files for CI build
+      shell: bash
         run: |
           echo "Copying icon files to build directory..."
           
@@ -104,15 +106,16 @@ jobs:
           NODE_ENV: production  # Ensure production build
       
       - name: Verify build artifacts
+      shell: bash
         run: |
           echo "=== Release directory contents ==="
           ls -la release/ || echo "Release directory not found"
           echo ""
           echo "=== Looking for installers ==="
-          find release/ -type f -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.zip" 2>/dev/null || echo "No installers found"
+          find release/ -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.zip" \) 2>/dev/null || echo "No installers found"
           echo ""
           echo "=== Looking for update files ==="
-          find release/ -type f -name "latest*.yml" -o -name "latest*.json" 2>/dev/null || echo "No update files found"
+          find release/ -type f \( -name "latest*.yml" -o -name "latest*.json" \) 2>/dev/null || echo "No update files found"
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

@@ -132,7 +132,8 @@ export function useContextMenu({
     markDirty();
     
     const currentComponent = components.find(c => c.id === contextMenu.componentId);
-    const newRotation = currentComponent?.rotation === 0 ? 90 : 90;
+    const newRotation = currentComponent && (currentComponent.rotation || 0) === 0 ? 90 : 0;
+    // const newRotation = currentComponent?.rotation === 0 ? 90 : 90;
     
     // Toast notification commented out
     // toast({

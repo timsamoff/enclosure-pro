@@ -1,13 +1,13 @@
-import { useCallback } from "react";
+import { useCallback, type MutableRefObject } from "react";
 import { EnclosureType, getUnwrappedDimensions } from "@/types/schema";
 import jsPDF from "jspdf";
 import { useBaseExport } from "./useBaseExport";
 
 interface UsePDFExportProps {
-  enclosureTypeRef: React.MutableRefObject<EnclosureType>;
-  componentsRef: React.MutableRefObject<any[]>;
-  unitRef: React.MutableRefObject<any>;
-  rotationRef: React.MutableRefObject<number>;
+  enclosureTypeRef: MutableRefObject<EnclosureType>;
+  componentsRef: MutableRefObject<any[]>;
+  unitRef: MutableRefObject<any>;
+  rotationRef: MutableRefObject<number>;
   projectName: string;
   enclosureType: EnclosureType;
   toast: any;

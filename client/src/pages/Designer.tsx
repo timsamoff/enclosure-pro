@@ -650,7 +650,7 @@ export default function Designer() {
               const currentRotation = currentComponent?.rotation || 0;
               const isAtDefault = currentRotation === 0;
               const Icon = isAtDefault ? RotateCw : RotateCcw;
-              const label = isAtDefault ? "Rotate  90°" : "Rotate  90°";
+              const label = isAtDefault ? "Rotate 90°" : "Rotate 90°";
               
               return (
                 <>

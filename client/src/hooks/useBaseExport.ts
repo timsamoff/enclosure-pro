@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, type MutableRefObject } from "react";
 import { EnclosureType, ENCLOSURE_TYPES, COMPONENT_TYPES, getUnwrappedDimensions } from "@/types/schema";
 
 interface UseBaseExportProps {
@@ -240,7 +240,7 @@ export function useBaseExport({
 
         // Use EXACT 72 DPI calculation - jsPDF's default
         // This ensures perfect 1:1 scale when jsPDF interprets the image
-        const PIXELS_PER_INCH = 72;  // Changed from 96 to match jsPDF default
+        const PIXELS_PER_INCH = 72;
         const MM_PER_INCH = 25.4;
         const pixelsPerMM = PIXELS_PER_INCH / MM_PER_INCH; // 2.834645669291339
 
@@ -269,7 +269,7 @@ export function useBaseExport({
         }
 
         // Set DPI metadata
-        canvas.setAttribute('data-dpi', '96');
+        canvas.setAttribute('data-dpi', '72');
         canvas.setAttribute('data-scale', '100%');
 
         ctx.fillStyle = 'white';
@@ -401,8 +401,12 @@ export function useBaseExport({
           const sideComponents = printableComponents.filter((c: any) => c.side === originalLabel);
 
           sideComponents.forEach((component: any) => {
-            const compData = COMPONENT_TYPES[component.type];
-            const centerX = x + (w / 2) + component.x;
+          const compData = COMPONENT_TYPES[component.type];
+          if (!compData) {
+            console.warn(`Unknown component type: ${component.type}`);
+            return;
+          }
+          const centerX = x + (w / 2) + component.x;
             const centerY = y + (h / 2) + component.y;
 
             // Check if this is a utility guide (Footprint Guide)

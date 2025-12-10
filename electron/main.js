@@ -550,9 +550,9 @@ ipcMain.handle('file:open', async () => {
     // console.log('📂 Selected file (file:open):', filePath);
     
     // Send the file-open-request event for backward compatibility
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('file-open-request', filePath);
-    }
+    // if (mainWindow && !mainWindow.isDestroyed()) {
+    //   mainWindow.webContents.send('file-open-request', filePath);
+    // }
     
     return { 
       success: true, 
@@ -710,6 +710,12 @@ ipcMain.handle('file:open-external', async (event, filePath) => {
 
 // TEST: Simulate update handler
 ipcMain.handle('test:simulate-update', () => {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  if (!isDevelopment) {
+    return { success: false, error: 'Simulation only available in development' };
+  }
+
   // console.log('🎭 test:simulate-update IPC handler called');
   
   if (!mainWindow || mainWindow.isDestroyed()) {

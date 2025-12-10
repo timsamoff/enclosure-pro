@@ -28,5 +28,5 @@ asarUnpack:
 
 # Enable debug logging
 publish:
-  provider: generic
+  provider: github
   url: https://github.com/${user}/${project}/releases/download/${version}

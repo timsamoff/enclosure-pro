@@ -138,7 +138,7 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     width: 17, 
     height: 16.7 
   },
-  "3pdt-3=toggle": { 
+  "3pdt-toggle": { 
     name: "3PDT Toggle", 
     drillSize: 0, 
     imperialLabel: '25/64" × 33/64"', 
@@ -353,7 +353,7 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     height: 14.75 
   },
   "knob-10": { 
-    name: '12.5mm Knob', 
+    name: '10mm Knob', 
     drillSize: 10, 
     imperialLabel: '25/64"',
     category: "Footprint Guides", 
