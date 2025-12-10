@@ -44,7 +44,7 @@ jobs:
         run: npm ci --legacy-peer-deps
       
       - name: Clean previous builds
-      shell: bash
+        shell: bash
         run: |
           # Clean release and build directories
           rm -rf release
@@ -52,7 +52,7 @@ jobs:
           mkdir -p build
       
       - name: Copy icon files for CI build
-      shell: bash
+        shell: bash
         run: |
           echo "Copying icon files to build directory..."
           
@@ -106,7 +106,7 @@ jobs:
           NODE_ENV: production  # Ensure production build
       
       - name: Verify build artifacts
-      shell: bash
+        shell: bash
         run: |
           echo "=== Release directory contents ==="
           ls -la release/ || echo "Release directory not found"
