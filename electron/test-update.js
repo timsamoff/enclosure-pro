@@ -5,7 +5,7 @@ const { dialog } = require('electron');
 function setupTestUpdater(mainWindow) {
   // Simulate update available
   const simulateUpdate = () => {
-    console.log('🔧 Simulating update available...');
+    // console.log('🔧 Simulating update available...');
     
     // Simulate update-available event
     mainWindow.webContents.send('update-available', {
@@ -64,7 +64,7 @@ function setupTestUpdater(mainWindow) {
     Menu.setApplicationMenu(Menu.getApplicationMenu());
   }
 
-  console.log('🔧 Test updater ready - Check Help menu for "TEST: Simulate Update"');
+  // console.log('🔧 Test updater ready - Check Help menu for "TEST: Simulate Update"');
 }
 
 module.exports = { setupTestUpdater };

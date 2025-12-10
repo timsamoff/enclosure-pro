@@ -10,5 +10,5 @@ if (!rootElement) {
 
 createRoot(rootElement).render(<App />);
 
-console.log("main.tsx is executing!");
-console.log("root element:", document.getElementById("root"));
+// console.log("main.tsx is executing!");
+// console.log("root element:", document.getElementById("root"));

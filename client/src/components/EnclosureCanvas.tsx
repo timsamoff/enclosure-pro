@@ -223,20 +223,20 @@ export default function EnclosureCanvas({
       // Always use metric drillSize for radius (hit detection)
       const radius = (compData.drillSize / 2) * mmToPixels;
       const dist = Math.sqrt((pos.x - comp.x) ** 2 + (pos.y - comp.y) ** 2);
-      console.log('Checking component:', comp.type, 'at', comp.x, comp.y, 'radius:', radius, 'dist:', dist, 'clicked:', dist <= radius);
+      // console.log('Checking component:', comp.type, 'at', comp.x, comp.y, 'radius:', radius, 'dist:', dist, 'clicked:', dist <= radius);
       return dist <= radius;
     });
 
-    console.log('handleMouseDown - pos:', pos, 'clickedComponent:', clickedComponent?.type || 'none', 'sideComponents:', sideComponents.length);
+    // console.log('handleMouseDown - pos:', pos, 'clickedComponent:', clickedComponent?.type || 'none', 'sideComponents:', sideComponents.length);
 
     if (clickedComponent) {
-      console.log('Selecting component:', clickedComponent.id);
+      // console.log('Selecting component:', clickedComponent.id);
       setDraggedComponent(clickedComponent.id);
       setDragStart({ x: pos.x - clickedComponent.x, y: pos.y - clickedComponent.y });
       setIsDragging(true);
       onSelectComponent(clickedComponent.id);
     } else {
-      console.log('Deselecting - calling onSelectComponent(null)');
+      // console.log('Deselecting - calling onSelectComponent(null)');
       onSelectComponent(null);
       onCanvasClick?.();
       if (e.shiftKey || e.ctrlKey) {

@@ -1,6 +1,10 @@
 {
   "name": "enclosure-pro",
-  "version": "1.0.1",
+  "version": "1.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/timsamoff/enclosure-pro"
+  },
   "description": "Professional effects pedal enclosure drill hole designer",
   "main": "electron/main.js",
   "license": "GPL-3.0",
@@ -13,17 +17,33 @@
     "dev": "vite",
     "build": "vite build",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && electron-builder --publish=never",
+    "clean": "rimraf dist release build",
+    "clean:release": "rimraf release",
+    "precopy-icons": "node -e \"const fs = require('fs'); if (!fs.existsSync('build')) fs.mkdirSync('build', { recursive: true }); console.log('Build directory ready')\"",
+    "copy-icons": "node scripts/copy-icons.js",
+    "electron:build": "npm run build && npm run copy-icons && npm run electron:build:only",
+    "electron:build:only": "electron-builder --publish=never",
+    "electron:build:clean": "npm run clean:release && npm run electron:build",
+    "electron:build:full": "npm run clean && npm run electron:build",
+    "electron:build:installer": "npm run build && npm run copy-icons && electron-builder --win nsis --publish=never",
+    "electron:build:portable": "npm run build && npm run copy-icons && electron-builder --win portable --publish=never",
     "check": "tsc"
   },
   "build": {
     "appId": "com.enclosurepro.app",
     "productName": "Enclosure Pro",
-    "artifactName": "Enclosure-Pro-Setup-${version}.${ext}",
+    "publish": {
+    "provider": "github",
+    "owner": "timsamoff",
+    "repo": "enclosure-pro"
+  },
+    "artifactName": "Enclosure-Pro-${version}.${ext}",
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "images/**/*"
+      "images/**/*",
+      "build/**/*",
+      "scripts/**/*"
     ],
     "directories": {
       "buildResources": "build",
@@ -34,7 +54,8 @@
         "ext": "enc",
         "name": "Enclosure Project File",
         "description": "Enclosure Pro Project File",
-        "role": "Editor"
+        "role": "Editor",
+        "icon": "EnclosureProFileIcon.ico"
       }
     ],
     "mac": {
@@ -52,15 +73,31 @@
           ]
         }
       ],
-      "artifactName": "Enclosure-Pro-${version}.${ext}"
+      "artifactName": "Enclosure-Pro-${version}.${ext}",
+      "icon": "EnclosureProIcon.icns",
+      "extendInfo": {
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeExtensions": ["enc"],
+            "CFBundleTypeName": "Enclosure Pro Project",
+            "CFBundleTypeRole": "Editor",
+            "CFBundleTypeIconFile": "EnclosureProFileIcon.icns"
+          }
+        ]
+      }
     },
     "win": {
       "icon": "build/icon.ico",
       "target": [
-        "nsis",
-        "portable"
-      ],
-      "artifactName": "Enclosure-Pro-Setup-${version}.${ext}"
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
     },
     "linux": {
       "icon": "build/icon.png",
@@ -72,17 +109,34 @@
       "category": "Graphics",
       "maintainer": "Tim Samoff <samoff@gmail.com>",
       "synopsis": "Professional effects pedal enclosure designer",
-      "description": "Design drill hole layouts for effects pedal enclosures"
+      "description": "Design drill hole layouts for effects pedal enclosures",
+      "mimeTypes": ["application/x-enclosurepro"],
+      "fileAssociations": [
+        {
+          "ext": "enc",
+          "name": "Enclosure Pro Project",
+          "mimeType": "application/x-enclosurepro",
+          "icon": "EnclosureProFileIcon.png"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Enclosure Pro",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
+      "license": "LICENSE",
+      "deleteAppDataOnUninstall": false,
       "perMachine": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "artifactName": "Enclosure-Pro-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Enclosure-Pro-Portable-${version}.${ext}"
     }
   },
   "dependencies": {
@@ -154,6 +208,7 @@
     "electron": "^39.2.0",
     "electron-builder": "^26.0.12",
     "postcss": "^8.4.47",
+    "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.17",
     "typescript": "5.6.3",
     "vite": "^7.2.4"

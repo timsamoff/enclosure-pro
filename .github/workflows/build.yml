@@ -11,6 +11,9 @@ on:
 permissions:
   contents: write
 
+env:
+  NODE_ENV: production  # Set production environment for all build steps
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -40,12 +43,79 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
       
+      - name: Clean previous builds
+      shell: bash
+        run: |
+          # Clean release and build directories
+          rm -rf release
+          rm -rf build
+          mkdir -p build
+      
+      - name: Copy icon files for CI build
+      shell: bash
+        run: |
+          echo "Copying icon files to build directory..."
+          
+          # Copy all icon files from images to build directory
+          # Windows
+          if [ -f "images/EnclosureProIcon.ico" ]; then
+            cp "images/EnclosureProIcon.ico" "build/icon.ico"
+            echo "Copied EnclosureProIcon.ico -> build/icon.ico"
+          fi
+          
+          if [ -f "images/EnclosureProFileIcon.ico" ]; then
+            cp "images/EnclosureProFileIcon.ico" "build/EnclosureProFileIcon.ico"
+            echo "Copied EnclosureProFileIcon.ico"
+          fi
+          
+          # macOS
+          if [ -f "images/EnclosureProIcon.icns" ]; then
+            cp "images/EnclosureProIcon.icns" "build/EnclosureProIcon.icns"
+            echo "Copied EnclosureProIcon.icns"
+          fi
+          
+          if [ -f "images/EnclosureProFileIcon.icns" ]; then
+            cp "images/EnclosureProFileIcon.icns" "build/EnclosureProFileIcon.icns"
+            echo "Copied EnclosureProFileIcon.icns"
+          fi
+          
+          # PNG files (Linux and general)
+          if [ -f "images/EnclosureProIcon.png" ]; then
+            cp "images/EnclosureProIcon.png" "build/icon.png"
+            echo "Copied EnclosureProIcon.png -> build/icon.png"
+          fi
+          
+          if [ -f "images/EnclosureProFileIcon.png" ]; then
+            cp "images/EnclosureProFileIcon.png" "build/EnclosureProFileIcon.png"
+            echo "Copied EnclosureProFileIcon.png"
+          fi
+          
+          echo "Build directory contents:"
+          ls -la build/
+      
+      - name: Set production environment for build
+        run: |
+          echo "Setting NODE_ENV=production for build"
+          echo "NODE_ENV=${{ env.NODE_ENV }}"
+      
       - name: Build Electron app
-        run: npm run electron:build
+        run: npm run electron:build:only
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Prevent electron-builder from publishing (GitHub Action will handle it)
           PUBLISH: never
+          NODE_ENV: production  # Ensure production build
+      
+      - name: Verify build artifacts
+      shell: bash
+        run: |
+          echo "=== Release directory contents ==="
+          ls -la release/ || echo "Release directory not found"
+          echo ""
+          echo "=== Looking for installers ==="
+          find release/ -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.zip" \) 2>/dev/null || echo "No installers found"
+          echo ""
+          echo "=== Looking for update files ==="
+          find release/ -type f \( -name "latest*.yml" -o -name "latest*.json" \) 2>/dev/null || echo "No update files found"
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -59,7 +129,7 @@ jobs:
             release/**/*.zip
             release/latest*.yml
             release/latest*.json
-          if-no-files-found: warn
+          if-no-files-found: error  # Changed from warn to error to catch issues
           retention-days: 1
 
   create-release:
