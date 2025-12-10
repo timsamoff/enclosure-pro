@@ -1,14 +1,11 @@
 name: Build and Release
 
 on:
-  # Auto-trigger on tag pushes
   push:
     tags:
       - 'v*'
     branches:
       - 'maintenance/v1.0.0'
-  
-  # Manual trigger from GitHub UI
   workflow_dispatch:
     inputs:
       tag_name:
@@ -40,12 +37,14 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
+            artifact_pattern: '**/*.exe'
           - os: macos-latest  
             platform: macos
+            artifact_pattern: '**/*.dmg'
           - os: ubuntu-latest
             platform: linux
+            artifact_pattern: '**/*.AppImage,**/*.deb'
     
-    # Determine tag name based on trigger source
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
       CLEAN_PREVIOUS: ${{ github.event_name == 'workflow_dispatch' && inputs.clean_previous || 'true' }}
@@ -53,17 +52,15 @@ jobs:
     steps:
       - name: Debug trigger info
         run: |
-          echo "Triggered by: ${{ github.event_name }}"
-          echo "Release tag: ${{ env.RELEASE_TAG }}"
-          echo "Clean previous: ${{ env.CLEAN_PREVIOUS }}"
-          echo "Git ref: ${{ github.ref }}"
-          echo "Git ref name: ${{ github.ref_name }}"
+          echo "🏷️ Building for tag: ${{ env.RELEASE_TAG }}"
+          echo "🔧 Trigger: ${{ github.event_name }}"
+          echo "🗑️ Clean previous: ${{ env.CLEAN_PREVIOUS }}"
+          echo "💻 Platform: ${{ matrix.platform }}"
       
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # For manual dispatch, checkout the specified tag
           ref: ${{ github.event_name == 'workflow_dispatch' && env.RELEASE_TAG || '' }}
       
       - name: Setup Node.js
@@ -75,14 +72,14 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
       
-      - name: Verify build tools
+      - name: Verify installation
         run: |
           echo "Node: $(node --version)"
           echo "NPM: $(npm --version)"
           npx electron-builder --version
           echo "Package version: $(node -p "require('./package.json').version")"
       
-      - name: Clean previous builds
+      - name: Clean build directories
         shell: bash
         run: |
           rm -rf release
@@ -92,49 +89,42 @@ jobs:
       - name: Copy icon files for CI build
         shell: bash
         run: |
-          echo "Building for tag: ${{ env.RELEASE_TAG }}"
-          echo "Copying icon files to build directory..."
+          echo "📁 Copying icon files..."
           
           # Windows icons
           if [ -f "images/EnclosureProIcon.ico" ]; then
             cp "images/EnclosureProIcon.ico" "build/icon.ico"
-            echo "✓ Copied EnclosureProIcon.ico"
-          else
-            echo "⚠ Windows icon not found"
+            echo "✓ Windows icon: build/icon.ico"
           fi
           
           if [ -f "images/EnclosureProFileIcon.ico" ]; then
             cp "images/EnclosureProFileIcon.ico" "build/EnclosureProFileIcon.ico"
-            echo "✓ Copied EnclosureProFileIcon.ico"
+            echo "✓ Windows file icon"
           fi
           
           # macOS icons
           if [ -f "images/EnclosureProIcon.icns" ]; then
             cp "images/EnclosureProIcon.icns" "build/EnclosureProIcon.icns"
-            echo "✓ Copied EnclosureProIcon.icns"
-          else
-            echo "⚠ macOS icon not found"
+            echo "✓ macOS icon"
           fi
           
           if [ -f "images/EnclosureProFileIcon.icns" ]; then
             cp "images/EnclosureProFileIcon.icns" "build/EnclosureProFileIcon.icns"
-            echo "✓ Copied EnclosureProFileIcon.icns"
+            echo "✓ macOS file icon"
           fi
           
           # PNG icons (Linux and general)
           if [ -f "images/EnclosureProIcon.png" ]; then
             cp "images/EnclosureProIcon.png" "build/icon.png"
-            echo "✓ Copied EnclosureProIcon.png"
-          else
-            echo "⚠ PNG icon not found"
+            echo "✓ PNG icon: build/icon.png"
           fi
           
           if [ -f "images/EnclosureProFileIcon.png" ]; then
             cp "images/EnclosureProFileIcon.png" "build/EnclosureProFileIcon.png"
-            echo "✓ Copied EnclosureProFileIcon.png"
+            echo "✓ PNG file icon"
           fi
           
-          echo "Build directory contents:"
+          echo "📊 Build directory contents:"
           ls -la build/
       
       - name: Build Electron app
@@ -143,42 +133,37 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
       
-      - name: Verify build artifacts
+      - name: List build artifacts
         shell: bash
         run: |
-          echo "=== Build Summary ==="
-          echo "Tag: ${{ env.RELEASE_TAG }}"
-          echo "Platform: ${{ matrix.platform }}"
-          echo ""
-          echo "=== Release directory contents ==="
-          ls -la release/ 2>/dev/null || echo "Release directory not found"
-          echo ""
-          echo "=== Installers found ==="
-          find release/ -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.zip" \) 2>/dev/null | head -10 || echo "No installers found"
-          echo ""
-          echo "=== Update files found ==="
-          find release/ -type f \( -name "latest*.yml" -o -name "latest*.json" \) 2>/dev/null | head -5 || echo "No update files found"
+          echo "📦 Artifacts created:"
+          find release/ -type f -name "*" 2>/dev/null | while read file; do
+            size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "unknown")
+            echo "  - $(basename "$file") (${size} bytes)"
+          done || echo "No artifacts found"
       
-      - name: Upload build artifacts
+      - name: Upload platform artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.platform }}-build-${{ github.run_id }}
+          name: ${{ matrix.platform }}-build-${{ github.run_number }}
+          path: ${{ matrix.artifact_pattern }}
+          if-no-files-found: error
+          retention-days: 7
+      
+      - name: Upload update files
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-files-${{ github.run_number }}
           path: |
-            release/**/*.exe
-            release/**/*.dmg
-            release/**/*.AppImage
-            release/**/*.deb
-            release/**/*.zip
             release/latest*.yml
             release/latest*.json
-          if-no-files-found: error
+            release/*.blockmap
+          if-no-files-found: ignore
           retention-days: 7
 
   create-release:
     needs: build
     runs-on: ubuntu-latest
-    
-    # Run for tag pushes OR manual dispatch
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     
     env:
@@ -188,64 +173,104 @@ jobs:
     steps:
       - name: Debug release info
         run: |
-          echo "Creating release for tag: ${{ env.RELEASE_TAG }}"
-          echo "Clean previous release: ${{ env.CLEAN_PREVIOUS }}"
-          echo "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "🎯 Creating release: ${{ env.RELEASE_TAG }}"
+          echo "🧹 Clean previous: ${{ env.CLEAN_PREVIOUS }}"
+          echo "🔗 Run: #${{ github.run_number }}"
       
-      - name: Checkout code
+      - name: Checkout tag for release notes
         uses: actions/checkout@v4
         with:
           ref: ${{ env.RELEASE_TAG }}
       
-      - name: Download all build artifacts
+      - name: Download platform artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
-          pattern: '*-build-${{ github.run_id }}'
-          merge-multiple: true
+          path: artifacts/platforms
+          pattern: '*-build-${{ github.run_number }}'
+          merge-multiple: false
       
-      - name: List downloaded artifacts
+      - name: Download update files
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/updates
+          pattern: 'update-files-${{ github.run_number }}'
+          merge-multiple: false
+      
+      - name: List all downloaded files
         run: |
-          echo "=== Artifacts structure ==="
-          find artifacts/ -type f -name "*" 2>/dev/null | head -30 || echo "No artifacts found"
+          echo "📂 Downloaded artifacts:"
+          find artifacts/ -type f -name "*" 2>/dev/null | sort
           echo ""
-          echo "=== Total files ==="
-          find artifacts/ -type f 2>/dev/null | wc -l || echo "0"
+          echo "📊 Total files: $(find artifacts/ -type f 2>/dev/null | wc -l)"
       
       - name: Delete existing release (if enabled)
         if: env.CLEAN_PREVIOUS == 'true'
         run: |
-          echo "Deleting previous release: ${{ env.RELEASE_TAG }}"
-          gh release delete "${{ env.RELEASE_TAG }}" --yes 2>/dev/null || echo "No existing release to delete"
+          echo "🗑️ Deleting previous release: ${{ env.RELEASE_TAG }}"
+          gh release delete "${{ env.RELEASE_TAG }}" --yes 2>/dev/null || echo "No existing release found"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Extract version from tag
+          VERSION="${RELEASE_TAG#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Try to get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ] && [ "$LAST_TAG" != "$RELEASE_TAG" ]; then
+            echo "📝 Changes since $LAST_TAG:"
+            git log --oneline --no-merges "$LAST_TAG..HEAD" | head -20
+          else
+            echo "📝 Initial release or no previous tag found"
+          fi
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: artifacts/**
+          files: |
+            artifacts/**/*.exe
+            artifacts/**/*.dmg
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb
+            artifacts/**/*.zip
+            artifacts/**/latest*.yml
+            artifacts/**/latest*.json
+            artifacts/**/*.blockmap
           draft: true
           prerelease: ${{ contains(env.RELEASE_TAG, 'beta') || contains(env.RELEASE_TAG, 'alpha') || contains(env.RELEASE_TAG, 'rc') || contains(env.RELEASE_TAG, 'test') }}
           generate_release_notes: true
           tag_name: ${{ env.RELEASE_TAG }}
           name: Release ${{ env.RELEASE_TAG }}
           body: |
-            Automated build triggered via ${{ github.event_name }}
+            ## 🚀 Automated Build
             
-            **Build Details:**
-            - Workflow Run: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            - Trigger: ${{ github.event_name }}
-            - Commit: ${{ github.sha }}
+            **Build Information:**
+            - **Version:** ${{ steps.changelog.outputs.version }}
+            - **Trigger:** ${{ github.event_name }}
+            - **Workflow Run:** [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
             
-            **Platforms included:**
-            - Windows (x64)
-            - macOS (x64/arm64)
-            - Linux (AppImage, deb)
+            **📦 Included Platforms:**
+            - ✅ Windows (x64) - `.exe` installer
+            - ✅ macOS (Intel & Apple Silicon) - `.dmg`
+            - ✅ Linux - `.AppImage` & `.deb`
+            
+            **🔧 Build Environment:**
+            - Node.js 20
+            - GitHub Actions
+            - Production mode
+            
+            ---
+            
+            *This release was automatically generated by GitHub Actions.*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Output release URL
+      - name: Success notification
         run: |
-          echo "🎉 Release created successfully!"
-          echo "📦 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ env.RELEASE_TAG }}"
-          echo "⚡ Actions URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "✅ Release created successfully!"
+          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ env.RELEASE_TAG }}"
+          echo "👀 Preview: https://github.com/${{ github.repository }}/releases"
