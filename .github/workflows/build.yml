@@ -1,12 +1,29 @@
 name: Build and Release
 
 on:
+  # Auto-trigger on tag pushes
   push:
     tags:
       - 'v*'
     branches:
       - 'maintenance/v1.0.0'
+  
+  # Manual trigger from GitHub UI
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to build and release'
+        required: true
+        default: 'latest'
+        type: string
+      clean_previous:
+        description: 'Delete previous release with same tag?'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 permissions:
   contents: write
@@ -28,11 +45,26 @@ jobs:
           - os: ubuntu-latest
             platform: linux
     
+    # Determine tag name based on trigger source
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
+      CLEAN_PREVIOUS: ${{ github.event_name == 'workflow_dispatch' && inputs.clean_previous || 'true' }}
+    
     steps:
+      - name: Debug trigger info
+        run: |
+          echo "Triggered by: ${{ github.event_name }}"
+          echo "Release tag: ${{ env.RELEASE_TAG }}"
+          echo "Clean previous: ${{ env.CLEAN_PREVIOUS }}"
+          echo "Git ref: ${{ github.ref }}"
+          echo "Git ref name: ${{ github.ref_name }}"
+      
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # For manual dispatch, checkout the specified tag
+          ref: ${{ github.event_name == 'workflow_dispatch' && env.RELEASE_TAG || '' }}
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -42,6 +74,13 @@ jobs:
       
       - name: Install dependencies
         run: npm install --legacy-peer-deps
+      
+      - name: Verify build tools
+        run: |
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          npx electron-builder --version
+          echo "Package version: $(node -p "require('./package.json').version")"
       
       - name: Clean previous builds
         shell: bash
@@ -53,64 +92,77 @@ jobs:
       - name: Copy icon files for CI build
         shell: bash
         run: |
+          echo "Building for tag: ${{ env.RELEASE_TAG }}"
           echo "Copying icon files to build directory..."
           
+          # Windows icons
           if [ -f "images/EnclosureProIcon.ico" ]; then
             cp "images/EnclosureProIcon.ico" "build/icon.ico"
-            echo "Copied EnclosureProIcon.ico -> build/icon.ico"
+            echo "✓ Copied EnclosureProIcon.ico"
+          else
+            echo "⚠ Windows icon not found"
           fi
           
           if [ -f "images/EnclosureProFileIcon.ico" ]; then
             cp "images/EnclosureProFileIcon.ico" "build/EnclosureProFileIcon.ico"
-            echo "Copied EnclosureProFileIcon.ico"
+            echo "✓ Copied EnclosureProFileIcon.ico"
           fi
           
+          # macOS icons
           if [ -f "images/EnclosureProIcon.icns" ]; then
             cp "images/EnclosureProIcon.icns" "build/EnclosureProIcon.icns"
-            echo "Copied EnclosureProIcon.icns"
+            echo "✓ Copied EnclosureProIcon.icns"
+          else
+            echo "⚠ macOS icon not found"
           fi
           
           if [ -f "images/EnclosureProFileIcon.icns" ]; then
             cp "images/EnclosureProFileIcon.icns" "build/EnclosureProFileIcon.icns"
-            echo "Copied EnclosureProFileIcon.icns"
+            echo "✓ Copied EnclosureProFileIcon.icns"
           fi
           
+          # PNG icons (Linux and general)
           if [ -f "images/EnclosureProIcon.png" ]; then
             cp "images/EnclosureProIcon.png" "build/icon.png"
-            echo "Copied EnclosureProIcon.png -> build/icon.png"
+            echo "✓ Copied EnclosureProIcon.png"
+          else
+            echo "⚠ PNG icon not found"
           fi
           
           if [ -f "images/EnclosureProFileIcon.png" ]; then
             cp "images/EnclosureProFileIcon.png" "build/EnclosureProFileIcon.png"
-            echo "Copied EnclosureProFileIcon.png"
+            echo "✓ Copied EnclosureProFileIcon.png"
           fi
           
           echo "Build directory contents:"
           ls -la build/
       
       - name: Build Electron app
-        run: npm run electron:build:only
+        run: npx electron-builder --publish=never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PUBLISH: never
           NODE_ENV: production
       
       - name: Verify build artifacts
         shell: bash
         run: |
+          echo "=== Build Summary ==="
+          echo "Tag: ${{ env.RELEASE_TAG }}"
+          echo "Platform: ${{ matrix.platform }}"
+          echo ""
           echo "=== Release directory contents ==="
-          ls -la release/ || echo "Release directory not found"
+          ls -la release/ 2>/dev/null || echo "Release directory not found"
           echo ""
-          echo "=== Looking for installers ==="
-          find release/ -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.zip" \) 2>/dev/null || echo "No installers found"
+          echo "=== Installers found ==="
+          find release/ -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.zip" \) 2>/dev/null | head -10 || echo "No installers found"
           echo ""
-          echo "=== Looking for update files ==="
-          find release/ -type f \( -name "latest*.yml" -o -name "latest*.json" \) 2>/dev/null || echo "No update files found"
+          echo "=== Update files found ==="
+          find release/ -type f \( -name "latest*.yml" -o -name "latest*.json" \) 2>/dev/null | head -5 || echo "No update files found"
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.platform }}-build
+          name: ${{ matrix.platform }}-build-${{ github.run_id }}
           path: |
             release/**/*.exe
             release/**/*.dmg
@@ -120,53 +172,80 @@ jobs:
             release/latest*.yml
             release/latest*.json
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
   create-release:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/maintenance/v1.0.0'
+    
+    # Run for tag pushes OR manual dispatch
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
+      CLEAN_PREVIOUS: ${{ github.event_name == 'workflow_dispatch' && inputs.clean_previous || 'true' }}
     
     steps:
+      - name: Debug release info
+        run: |
+          echo "Creating release for tag: ${{ env.RELEASE_TAG }}"
+          echo "Clean previous release: ${{ env.CLEAN_PREVIOUS }}"
+          echo "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
       
-      - name: Download all artifacts
+      - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: '*-build'
+          pattern: '*-build-${{ github.run_id }}'
           merge-multiple: true
       
-      - name: Display structure of downloaded files
+      - name: List downloaded artifacts
         run: |
-          echo "=== Downloaded artifacts structure ==="
-          find artifacts/ -type f -name "*" | head -20 || echo "No files found"
+          echo "=== Artifacts structure ==="
+          find artifacts/ -type f -name "*" 2>/dev/null | head -30 || echo "No artifacts found"
           echo ""
-          echo "=== Looking for installers and YML files ==="
-          find artifacts/ -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "latest*.yml" | head -20
+          echo "=== Total files ==="
+          find artifacts/ -type f 2>/dev/null | wc -l || echo "0"
       
-      - name: Delete existing release (if updating same tag)
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Delete existing release (if enabled)
+        if: env.CLEAN_PREVIOUS == 'true'
         run: |
-          gh release delete "${{ github.ref_name }}" --yes || true
+          echo "Deleting previous release: ${{ env.RELEASE_TAG }}"
+          gh release delete "${{ env.RELEASE_TAG }}" --yes 2>/dev/null || echo "No existing release to delete"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            artifacts/**/*.exe
-            artifacts/**/*.dmg
-            artifacts/**/*.AppImage
-            artifacts/**/*.deb
-            artifacts/**/*.zip
-            artifacts/**/latest*.yml
-            artifacts/**/latest*.json
+          files: artifacts/**
           draft: true
-          prerelease: ${{ github.ref == 'refs/heads/maintenance/v1.0.0' }}
+          prerelease: ${{ contains(env.RELEASE_TAG, 'beta') || contains(env.RELEASE_TAG, 'alpha') || contains(env.RELEASE_TAG, 'rc') || contains(env.RELEASE_TAG, 'test') }}
           generate_release_notes: true
-          tag_name: ${{ github.ref == 'refs/heads/maintenance/v1.0.0' && 'v1.0.0-patch.latest' || github.ref_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Release ${{ env.RELEASE_TAG }}
+          body: |
+            Automated build triggered via ${{ github.event_name }}
+            
+            **Build Details:**
+            - Workflow Run: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - Trigger: ${{ github.event_name }}
+            - Commit: ${{ github.sha }}
+            
+            **Platforms included:**
+            - Windows (x64)
+            - macOS (x64/arm64)
+            - Linux (AppImage, deb)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Output release URL
+        run: |
+          echo "🎉 Release created successfully!"
+          echo "📦 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ env.RELEASE_TAG }}"
+          echo "⚡ Actions URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
