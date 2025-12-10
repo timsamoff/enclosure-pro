@@ -6,7 +6,7 @@ import ComponentPalette from "@/components/ComponentPalette";
 import EnclosureSelector from "@/components/EnclosureSelector";
 import GridSelector from "@/components/GridSelector";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
-import ShortcutDebugger from "@/components/ShortcutDebugger";
+// import ShortcutDebugger from "@/components/ShortcutDebugger";
 
 import { usePrintScaleTest } from "@/hooks/usePrintScaleTest";
 
@@ -36,7 +36,7 @@ export default function Designer() {
   
   // Debug logging
   const debugLog = (message: string, data?: any) => {
-    console.log(`[Designer] ${message}`, data || '');
+    // console.log(`[Designer] ${message}`, data || '');
   };
 
   debugLog("Component rendering");
@@ -210,27 +210,27 @@ export default function Designer() {
   handleZoomIn: () => setZoom(prev => snapZoom(prev + 0.1)),
   handleZoomOut: () => setZoom(prev => snapZoom(prev - 0.1)),
   handleSave: () => {
-    console.log('🎹 handleSave from useKeyboardShortcuts');
+    // console.log('🎹 handleSave from useKeyboardShortcuts');
     handleMenuSave(); // Use the same handler as the menu!
   },
   handleSaveAs: () => {
-    console.log('🎹 handleSaveAs from useKeyboardShortcuts');
+    // console.log('🎹 handleSaveAs from useKeyboardShortcuts');
     handleMenuSaveAs(); // Use the same handler as the menu!
   },
   handleLoad: () => {
-    console.log('🎹 handleLoad from useKeyboardShortcuts');
+    // console.log('🎹 handleLoad from useKeyboardShortcuts');
     handleMenuOpen(); // Use the same handler as the menu!
   },
   handlePrint: () => {
-    console.log('🎹 handlePrint from useKeyboardShortcuts');
+    // console.log('🎹 handlePrint from useKeyboardShortcuts');
     handleMenuPrint(); // Use the same handler as the menu!
   },
   handleExportPDF: () => {
-    console.log('🎹 handleExportPDF from useKeyboardShortcuts');
+    // console.log('🎹 handleExportPDF from useKeyboardShortcuts');
     handleMenuExportPDF(); // Use the same handler as the menu!
   },
   handleQuit: () => {
-    console.log('🎹 handleQuit from useKeyboardShortcuts');
+    // console.log('🎹 handleQuit from useKeyboardShortcuts');
     handleMenuQuit(); // Use the same handler as the menu!
   }
 });
@@ -793,13 +793,13 @@ export default function Designer() {
         <button
           onClick={() => {
             debugLog("Testing file open API...");
-            console.log("window.electronAPI:", window.electronAPI);
-            console.log("openProjectFile available:", !!window.electronAPI?.openProjectFile);
-            console.log("openFile available:", !!window.electronAPI?.openFile);
+            // console.log("window.electronAPI:", window.electronAPI);
+            // console.log("openProjectFile available:", !!window.electronAPI?.openProjectFile);
+            // console.log("openFile available:", !!window.electronAPI?.openFile);
             
             if (window.electronAPI?.openProjectFile) {
               window.electronAPI.openProjectFile().then((result: any) => {
-                console.log("Test openProjectFile result:", result);
+                // console.log("Test openProjectFile result:", result);
               });
             }
           }}
@@ -808,7 +808,7 @@ export default function Designer() {
           Test Open API
         </button>
       )}
-      <ShortcutDebugger />
+      {/* <ShortcutDebugger /> */}
     </div>
   );
 }

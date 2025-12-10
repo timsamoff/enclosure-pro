@@ -11,6 +11,9 @@ on:
 permissions:
   contents: write
 
+env:
+  NODE_ENV: production  # Set production environment for all build steps
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -88,11 +91,17 @@ jobs:
           echo "Build directory contents:"
           ls -la build/
       
+      - name: Set production environment for build
+        run: |
+          echo "Setting NODE_ENV=production for build"
+          echo "NODE_ENV=${{ env.NODE_ENV }}"
+      
       - name: Build Electron app
         run: npm run electron:build:only
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PUBLISH: never
+          NODE_ENV: production  # Ensure production build
       
       - name: Verify build artifacts
         run: |

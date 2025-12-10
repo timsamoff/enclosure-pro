@@ -10,6 +10,7 @@ let isWindowReady = false;
 // Create application menu with accelerators
 function createApplicationMenu() {
   const isMac = process.platform === 'darwin';
+  const isDevelopment = process.env.NODE_ENV === 'development';
   
   const template = [
     // File menu
@@ -20,7 +21,7 @@ function createApplicationMenu() {
           label: 'New Project',
           accelerator: isMac ? 'Cmd+N' : 'Ctrl+N',
           click: () => {
-            console.log('🆕 New via accelerator');
+            // console.log('🆕 New via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('menu-action', 'new');
             }
@@ -30,7 +31,7 @@ function createApplicationMenu() {
           label: 'Open Project...',
           accelerator: isMac ? 'Cmd+O' : 'Ctrl+O',
           click: () => {
-            console.log('📂 Open via accelerator');
+            // console.log('📂 Open via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('menu-action', 'open');
             }
@@ -41,7 +42,7 @@ function createApplicationMenu() {
           label: 'Save',
           accelerator: isMac ? 'Cmd+S' : 'Ctrl+S',
           click: () => {
-            console.log('💾 Save via accelerator');
+            // console.log('💾 Save via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('menu-action', 'save');
             }
@@ -51,7 +52,7 @@ function createApplicationMenu() {
           label: 'Save As...',
           accelerator: isMac ? 'Cmd+Shift+S' : 'Ctrl+Shift+S',
           click: () => {
-            console.log('💾 Save As via accelerator');
+            // console.log('💾 Save As via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('menu-action', 'save-as');
             }
@@ -62,7 +63,7 @@ function createApplicationMenu() {
           label: 'Print...',
           accelerator: isMac ? 'Cmd+P' : 'Ctrl+P',
           click: () => {
-            console.log('🖨️ Print via accelerator');
+            // console.log('🖨️ Print via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('menu-action', 'print');
             }
@@ -72,7 +73,7 @@ function createApplicationMenu() {
           label: 'Export as PDF...',
           accelerator: isMac ? 'Cmd+E' : 'Ctrl+E',
           click: () => {
-            console.log('📄 Export PDF via accelerator');
+            // console.log('📄 Export PDF via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('menu-action', 'export-pdf');
             }
@@ -83,7 +84,7 @@ function createApplicationMenu() {
           label: 'Quit',
           accelerator: isMac ? 'Cmd+Q' : 'Alt+F4',
           click: () => {
-            console.log('🚪 Quit via accelerator');
+            // console.log('🚪 Quit via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('menu-action', 'quit');
             }
@@ -104,20 +105,29 @@ function createApplicationMenu() {
         { role: 'selectAll' }
       ]
     },
-    // View menu
+    // View menu - Dev tools only in development
     {
       label: 'View',
-      submenu: [
-        { role: 'reload' },
-        { role: 'forceReload' },
-        { role: 'toggleDevTools' },
-        { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' }
-      ]
+      submenu: (function() {
+        const submenu = [
+          { role: 'reload' },
+          { role: 'forceReload' },
+          { type: 'separator' },
+          { role: 'resetZoom' },
+          { role: 'zoomIn' },
+          { role: 'zoomOut' },
+          { type: 'separator' },
+          { role: 'togglefullscreen' }
+        ];
+        
+        // Only add toggleDevTools in development
+        if (isDevelopment) {
+          // Insert toggleDevTools at position 2 (after forceReload, before separator)
+          submenu.splice(2, 0, { role: 'toggleDevTools' });
+        }
+        
+        return submenu;
+      })()
     }
   ];
 
@@ -161,12 +171,12 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on('checking-for-update', () => {
-    console.log('🔍 Checking for updates...');
+    // console.log('🔍 Checking for updates...');
     mainWindow?.webContents.send('checking-for-update');
   });
 
   autoUpdater.on('update-available', (info) => {
-    console.log('✅ Update available:', info);
+    // console.log('✅ Update available:', info);
     mainWindow?.webContents.send('update-available', info);
     
     // Ensure mainWindow exists before showing dialog
@@ -182,11 +192,11 @@ function setupAutoUpdater() {
       cancelId: 1
     }).then((result) => {
       if (result.response === 0) {
-        console.log('📥 User chose to download update');
+        // console.log('📥 User chose to download update');
         mainWindow?.webContents.send('download-started');
         autoUpdater.downloadUpdate();
       } else {
-        console.log('⏰ User chose to download later');
+        // console.log('⏰ User chose to download later');
       }
     }).catch((error) => {
       console.error('❌ Error showing update dialog:', error);
@@ -194,17 +204,17 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on('update-not-available', (info) => {
-    console.log('ℹ️ No updates available:', info);
+    // console.log('ℹ️ No updates available:', info);
     mainWindow?.webContents.send('update-not-available', info);
   });
 
   autoUpdater.on('download-progress', (progressObj) => {
-    console.log('📊 Download progress:', Math.round(progressObj.percent) + '%');
+    // console.log('📊 Download progress:', Math.round(progressObj.percent) + '%');
     mainWindow?.webContents.send('download-progress', progressObj);
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('🎉 Update downloaded and ready to install:', info);
+    // console.log('🎉 Update downloaded and ready to install:', info);
     mainWindow?.webContents.send('update-downloaded', info);
     
     // Ensure mainWindow exists before showing dialog
@@ -222,13 +232,13 @@ function setupAutoUpdater() {
         cancelId: 1
       }).then((result) => {
         if (result.response === 0) {
-          console.log('🔄 User chose to restart, calling quitAndInstall...');
+          // console.log('🔄 User chose to restart, calling quitAndInstall...');
           // isSilent = false (show install progress), isForceRunAfter = true (restart app)
           setImmediate(() => {
             autoUpdater.quitAndInstall(false, true);
           });
         } else {
-          console.log('⏰ User chose to restart later');
+          // console.log('⏰ User chose to restart later');
         }
       }).catch((error) => {
         console.error('❌ Error showing restart dialog:', error);
@@ -263,7 +273,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      devTools: true,
+      devTools: isDevelopment, // Only enable devTools in development
       sandbox: true,
     },
     title: 'Enclosure Pro',
@@ -286,17 +296,20 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     
+    // Only open dev tools in development
     if (isDevelopment) {
       mainWindow.webContents.openDevTools();
     }
   });
 
-  // F12 shortcut for DevTools and prevent Alt key from opening menu
+  // F12 shortcut for DevTools - only in development
   mainWindow.webContents.on('before-input-event', (event, input) => {
-    // F12 for DevTools
+    // F12 for DevTools - only in development
     if (input.key === 'F12') {
-      mainWindow.webContents.toggleDevTools();
-      event.preventDefault();
+      if (isDevelopment) {
+        mainWindow.webContents.toggleDevTools();
+      }
+      event.preventDefault(); // Always prevent F12 in production
       return;
     }
     
@@ -332,12 +345,12 @@ function createWindow() {
   
   mainWindow.webContents.once('did-finish-load', () => {
     isWindowReady = true;
-    console.log('✅ Window is ready');
+    // console.log('✅ Window is ready');
     
     if (fileToOpen) {
       setTimeout(() => {
         if (mainWindow && !mainWindow.isDestroyed()) {
-          console.log('📂 Opening queued file:', fileToOpen);
+          // console.log('📂 Opening queued file:', fileToOpen);
           mainWindow.webContents.send('file-open-request', fileToOpen);
         }
         fileToOpen = null;
@@ -349,13 +362,13 @@ function createWindow() {
 // Handle file open events (macOS)
 app.on('open-file', (event, filePath) => {
   event.preventDefault();
-  console.log('📂 macOS open-file event:', filePath);
+  // console.log('📂 macOS open-file event:', filePath);
   
   if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
-    console.log('📂 Sending file-open-request to renderer:', filePath);
+    // console.log('📂 Sending file-open-request to renderer:', filePath);
     mainWindow.webContents.send('file-open-request', filePath);
   } else {
-    console.log('📂 Window not ready yet, storing file path:', filePath);
+    // console.log('📂 Window not ready yet, storing file path:', filePath);
     fileToOpen = filePath;
   }
 });
@@ -367,7 +380,7 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    console.log('📂 Second instance detected');
+    // console.log('📂 Second instance detected');
     
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
@@ -375,12 +388,12 @@ if (!gotTheLock) {
       
       const filePath = getFilePathFromArgs(commandLine);
       if (filePath) {
-        console.log('📂 File from command line:', filePath);
+        // console.log('📂 File from command line:', filePath);
         if (isWindowReady && !mainWindow.isDestroyed()) {
-          console.log('📂 Sending file-open-request to renderer:', filePath);
+          // console.log('📂 Sending file-open-request to renderer:', filePath);
           mainWindow.webContents.send('file-open-request', filePath);
         } else {
-          console.log('📂 Window not ready yet, storing file path');
+          // console.log('📂 Window not ready yet, storing file path');
           fileToOpen = filePath;
         }
       }
@@ -389,11 +402,11 @@ if (!gotTheLock) {
 }
 
 app.whenReady().then(() => {
-  console.log('🚀 App is ready');
+  // console.log('🚀 App is ready');
   
   const filePath = getFilePathFromArgs(process.argv);
   if (filePath) {
-    console.log('📂 Initial file from command line:', filePath);
+    // console.log('📂 Initial file from command line:', filePath);
     fileToOpen = filePath;
   }
   
@@ -401,16 +414,16 @@ app.whenReady().then(() => {
 
   // Check for updates 5 seconds after app starts
   setTimeout(() => {
-    console.log('🔄 Checking for updates...');
+    // console.log('🔄 Checking for updates...');
     autoUpdater.checkForUpdates().then(result => {
-      console.log('✅ Initial update check result:', result);
+      // console.log('✅ Initial update check result:', result);
     }).catch(error => {
       console.error('❌ Initial update check failed:', error);
     });
   }, 5000);
 
   app.on('activate', () => {
-    console.log('🔵 App activated');
+    // console.log('🔵 App activated');
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
@@ -421,7 +434,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  console.log('👋 All windows closed');
+  // console.log('👋 All windows closed');
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -431,32 +444,32 @@ app.on('window-all-closed', () => {
 function getFilePathFromArgs(args) {
   if (!args || !Array.isArray(args)) return null;
   
-  console.log('📂 Processing args:', args);
+  // console.log('📂 Processing args:', args);
   
   if (process.platform === 'win32') {
     const potentialFiles = args.slice(1).filter(arg => 
       arg && typeof arg === 'string' && arg.endsWith('.enc') && !arg.startsWith('--')
     );
-    console.log('📂 Windows potential files:', potentialFiles);
+    // console.log('📂 Windows potential files:', potentialFiles);
     return potentialFiles[0] || null;
   } else if (process.platform === 'darwin') {
     const potentialFiles = args.slice(1).filter(arg => 
       arg && typeof arg === 'string' && arg.endsWith('.enc')
     );
-    console.log('📂 macOS potential files:', potentialFiles);
+    // console.log('📂 macOS potential files:', potentialFiles);
     return potentialFiles[0] || null;
   } else {
     const fileArg = args.find(arg => 
       arg && typeof arg === 'string' && arg.endsWith('.enc') && !arg.startsWith('-')
     );
-    console.log('📂 Linux potential file:', fileArg);
+    // console.log('📂 Linux potential file:', fileArg);
     return fileArg || null;
   }
 }
 
 // IPC handler to actually close the window
 ipcMain.handle('window:close', () => {
-  console.log('🚪 Closing window via IPC');
+  // console.log('🚪 Closing window via IPC');
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.destroy();
   }
@@ -469,12 +482,12 @@ ipcMain.handle('app:get-version', () => {
 });
 
 ipcMain.handle('app:check-for-updates', () => {
-  console.log('🔍 Manual update check via IPC');
+  // console.log('🔍 Manual update check via IPC');
   return autoUpdater.checkForUpdates();
 });
 
 ipcMain.handle('app:restart-and-update', () => {
-  console.log('🔄 Manual restart and update via IPC');
+  // console.log('🔄 Manual restart and update via IPC');
   setImmediate(() => {
     autoUpdater.quitAndInstall(false, true);
   });
@@ -482,9 +495,9 @@ ipcMain.handle('app:restart-and-update', () => {
 
 ipcMain.handle('app:manual-check-updates', async () => {
   try {
-    console.log('🔍 Manual update check requested via IPC');
+    // console.log('🔍 Manual update check requested via IPC');
     const result = await autoUpdater.checkForUpdates();
-    console.log('✅ Manual update check result:', result);
+    // console.log('✅ Manual update check result:', result);
     
     if (!result?.updateInfo) {
       return { 
@@ -510,7 +523,7 @@ ipcMain.handle('app:manual-check-updates', async () => {
 
 // FIXED: Direct file open handler with consistent return format
 ipcMain.handle('file:open', async () => {
-  console.log('📂 file:open called from renderer');
+  // console.log('📂 file:open called from renderer');
   
   if (!mainWindow || mainWindow.isDestroyed()) {
     console.error('❌ Main window not available');
@@ -534,7 +547,7 @@ ipcMain.handle('file:open', async () => {
     }
 
     const filePath = result.filePaths[0];
-    console.log('📂 Selected file (file:open):', filePath);
+    // console.log('📂 Selected file (file:open):', filePath);
     
     // Send the file-open-request event for backward compatibility
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -556,49 +569,49 @@ ipcMain.handle('file:open', async () => {
 
 // Direct menu action triggers
 ipcMain.handle('menu:new-project', () => {
-  console.log('🆕 Menu: New Project requested via IPC');
+  // console.log('🆕 Menu: New Project requested via IPC');
   if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('menu-action', 'new');
   }
 });
 
 ipcMain.handle('menu:open-project', () => {
-  console.log('📂 Menu: Open Project requested via IPC');
+  // console.log('📂 Menu: Open Project requested via IPC');
   if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('menu-action', 'open');
   }
 });
 
 ipcMain.handle('menu:save-project', () => {
-  console.log('💾 Menu: Save Project requested via IPC');
+  // console.log('💾 Menu: Save Project requested via IPC');
   if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('menu-action', 'save');
   }
 });
 
 ipcMain.handle('menu:save-as-project', () => {
-  console.log('💾 Menu: Save As Project requested via IPC');
+  // console.log('💾 Menu: Save As Project requested via IPC');
   if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('menu-action', 'save-as');
   }
 });
 
 ipcMain.handle('menu:print-project', () => {
-  console.log('🖨️ Menu: Print Project requested via IPC');
+  // console.log('🖨️ Menu: Print Project requested via IPC');
   if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('menu-action', 'print');
   }
 });
 
 ipcMain.handle('menu:export-pdf-project', () => {
-  console.log('📄 Menu: Export PDF requested via IPC');
+  // console.log('📄 Menu: Export PDF requested via IPC');
   if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('menu-action', 'export-pdf');
   }
 });
 
 ipcMain.handle('menu:quit-project', () => {
-  console.log('🚪 Menu: Quit requested via IPC');
+  // console.log('🚪 Menu: Quit requested via IPC');
   if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('menu-action', 'quit');
   }
@@ -626,7 +639,7 @@ ipcMain.handle('dialog:saveFile', async (event, { defaultPath, filters }) => {
 });
 
 ipcMain.handle('dialog:openFile', async (event, { filters }) => {
-  console.log('📂 dialog:openFile called from renderer');
+  // console.log('📂 dialog:openFile called from renderer');
   
   if (!mainWindow || mainWindow.isDestroyed()) {
     console.error('❌ Main window not available');
@@ -642,15 +655,15 @@ ipcMain.handle('dialog:openFile', async (event, { filters }) => {
       ],
     });
 
-    console.log('📂 Open dialog result:', result);
+    // console.log('📂 Open dialog result:', result);
 
     if (result.canceled) {
-      console.log('📂 Open dialog was cancelled');
+      // console.log('📂 Open dialog was cancelled');
       return { canceled: true };
     }
 
     const filePath = result.filePaths[0];
-    console.log('📂 Selected file:', filePath);
+    // console.log('📂 Selected file:', filePath);
     
     return { 
       canceled: false, 
@@ -697,7 +710,7 @@ ipcMain.handle('file:open-external', async (event, filePath) => {
 
 // TEST: Simulate update handler
 ipcMain.handle('test:simulate-update', () => {
-  console.log('🎭 test:simulate-update IPC handler called');
+  // console.log('🎭 test:simulate-update IPC handler called');
   
   if (!mainWindow || mainWindow.isDestroyed()) {
     return { success: false, error: 'Main window not available' };
@@ -706,7 +719,7 @@ ipcMain.handle('test:simulate-update', () => {
   const currentVersion = app.getVersion();
   const nextVersion = getNextVersion(currentVersion);
   
-  console.log(`🔧 Simulating update from ${currentVersion} to ${nextVersion}...`);
+  // console.log(`🔧 Simulating update from ${currentVersion} to ${nextVersion}...`);
   
   mainWindow.webContents.send('update-available', {
     version: nextVersion,
@@ -722,12 +735,12 @@ ipcMain.handle('test:simulate-update', () => {
     cancelId: 1
   }).then((result) => {
     if (result.response === 0) {
-      console.log('🔧 User chose to download update');
+      // console.log('🔧 User chose to download update');
       
       let progress = 0;
       const interval = setInterval(() => {
         progress += 10;
-        console.log(`🔧 Download progress: ${progress}%`);
+        // console.log(`🔧 Download progress: ${progress}%`);
         
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('download-progress', {
@@ -740,7 +753,7 @@ ipcMain.handle('test:simulate-update', () => {
         
         if (progress >= 100) {
           clearInterval(interval);
-          console.log('🔧 Download complete, simulating update downloaded');
+          // console.log('🔧 Download complete, simulating update downloaded');
           
           setTimeout(() => {
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -757,7 +770,7 @@ ipcMain.handle('test:simulate-update', () => {
                 cancelId: 1
               }).then((restartResult) => {
                 if (restartResult.response === 0) {
-                  console.log('🔧 User chose to restart (simulation only - no actual restart)');
+                  // console.log('🔧 User chose to restart (simulation only - no actual restart)');
                   dialog.showMessageBox(mainWindow, {
                     type: 'info',
                     title: 'TEST - Simulation Complete',

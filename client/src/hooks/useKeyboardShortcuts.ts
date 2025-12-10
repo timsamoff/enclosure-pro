@@ -76,7 +76,7 @@ export function useKeyboardShortcuts({
       // Ctrl/Cmd + O - Open
       else if (modifier && e.key.toLowerCase() === 'o') {
         e.preventDefault();
-        console.log('🎹 Keyboard shortcut: Ctrl+O triggered');
+        // console.log('🎹 Keyboard shortcut: Ctrl+O triggered');
         handlersRef.current.handleLoad();
       } 
       // Ctrl/Cmd + P - Print

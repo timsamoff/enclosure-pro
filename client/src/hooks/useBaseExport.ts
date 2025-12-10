@@ -248,11 +248,11 @@ export function useBaseExport({
         const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
         const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
 
-        console.log('=== CANVAS GENERATION ===');
-        console.log('Total dimensions in MM:', totalWidthMM, 'x', totalHeightMM);
-        console.log('Pixels per MM:', pixelsPerMM);
-        console.log('Canvas size in pixels:', canvasWidth, 'x', canvasHeight);
-        console.log('Expected: 1mm = ', pixelsPerMM, 'pixels');
+        // console.log('=== CANVAS GENERATION ===');
+        // console.log('Total dimensions in MM:', totalWidthMM, 'x', totalHeightMM);
+        // console.log('Pixels per MM:', pixelsPerMM);
+        // console.log('Canvas size in pixels:', canvasWidth, 'x', canvasHeight);
+        // console.log('Expected: 1mm = ', pixelsPerMM, 'pixels');
 
         const canvas = document.createElement('canvas');
         canvas.width = canvasWidth;
@@ -321,11 +321,11 @@ export function useBaseExport({
           },
         };
 
-        console.log('=== FRONT PANEL SIZE ===');
-        console.log('Front panel dimensions in MM:', frontW, 'x', frontH);
-        console.log('Front panel dimensions in pixels:', layout.front.width, 'x', layout.front.height);
-        console.log('Pixels per MM:', pixelsPerMM);
-        console.log('Expected at 72 DPI: frontW=' + frontW + 'mm should be', frontW * pixelsPerMM, 'pixels');
+        // console.log('=== FRONT PANEL SIZE ===');
+        // console.log('Front panel dimensions in MM:', frontW, 'x', frontH);
+        // console.log('Front panel dimensions in pixels:', layout.front.width, 'x', layout.front.height);
+        // console.log('Pixels per MM:', pixelsPerMM);
+        // console.log('Expected at 72 DPI: frontW=' + frontW + 'mm should be', frontW * pixelsPerMM, 'pixels');
 
         const drawSide = (sideKey: keyof typeof layout, originalLabel: string) => {
           const side = layout[sideKey];
@@ -632,7 +632,7 @@ export function useBaseExport({
     // Use disableRotation flag if provided, otherwise use optimal rotation
     const shouldRotate = options.disableRotation ? false : getOptimalRotation(enclosureType);
     
-    console.log('prepareExportData - disableRotation:', options.disableRotation, 'shouldRotate:', shouldRotate);
+    // console.log('prepareExportData - disableRotation:', options.disableRotation, 'shouldRotate:', shouldRotate);
     
     const pageDimensions = getPageDimensions(enclosureType, shouldRotate);
 

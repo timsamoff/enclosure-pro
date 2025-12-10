@@ -17,6 +17,6 @@ fs.readdirSync(sourceDir).forEach(file => {
   // Check if it's a file (not a directory)
   if (fs.statSync(sourceFile).isFile()) {
     fs.copyFileSync(sourceFile, destFile);
-    console.log(`Copied: ${file} to build/`);
+    // console.log(`Copied: ${file} to build/`);
   }
 });

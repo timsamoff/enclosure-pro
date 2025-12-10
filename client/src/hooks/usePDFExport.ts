@@ -42,16 +42,16 @@ export function usePDFExport({
       const trueWidth = dimensions.left.width + dimensions.front.width + dimensions.right.width;
       const trueHeight = dimensions.top.height + dimensions.front.height + dimensions.bottom.height;
       
-      console.log('TRUE template dimensions (mm):', trueWidth, 'x', trueHeight);
+      // console.log('TRUE template dimensions (mm):', trueWidth, 'x', trueHeight);
       
       // Determine if we need to rotate for portrait
       const needsRotation = trueWidth > trueHeight;
-      console.log('Needs rotation to portrait:', needsRotation);
+      // console.log('Needs rotation to portrait:', needsRotation);
       
       // Check if ORIGINAL (unrotated) template fits on A4
       // This determines page size choice - not affected by rotation
       const originalFitsOnA4 = trueWidth <= 210 && trueHeight <= 297;
-      console.log('Original template fits on A4:', originalFitsOnA4);
+      // console.log('Original template fits on A4:', originalFitsOnA4);
       
       // Generate canvas WITHOUT any rotation - we'll rotate in PDF if needed
       const imageData = await renderCanvas(
@@ -67,7 +67,7 @@ export function usePDFExport({
       let finalHeight = trueHeight;
       
       if (needsRotation) {
-        console.log('Rotating image 90° clockwise before adding to PDF');
+        // console.log('Rotating image 90° clockwise before adding to PDF');
         
         // Create a canvas to rotate the image
         const img = new Image();
@@ -104,7 +104,7 @@ export function usePDFExport({
         finalWidth = trueHeight;   // After rotation
         finalHeight = trueWidth;   // After rotation
         
-        console.log('Image rotated. New dimensions:', finalWidth, 'x', finalHeight);
+        // console.log('Image rotated. New dimensions:', finalWidth, 'x', finalHeight);
       }
       
       // Page setup - HYBRID APPROACH
@@ -122,13 +122,13 @@ export function usePDFExport({
           // Original template fits on A4 - use A4 page size
           pdfPageWidth = A4_WIDTH;
           pdfPageHeight = A4_HEIGHT;
-          console.log('Print mode: Original template fits on A4, using A4 page');
+          // console.log('Print mode: Original template fits on A4, using A4 page');
         } else {
           // Original template too large for A4 - use exact final size (after rotation)
           pdfPageWidth = finalWidth;
           pdfPageHeight = finalHeight;
-          console.log('Print mode: Original template larger than A4, using exact template size');
-          console.log('User will need A3/tabloid or print will be cropped');
+          // console.log('Print mode: Original template larger than A4, using exact template size');
+          // console.log('User will need A3/tabloid or print will be cropped');
         }
         
         skipHeadersFooters = true; // Skip extended headers for print mode
@@ -163,12 +163,12 @@ export function usePDFExport({
         const centerY = pdfPageHeight / 2;
         imageX = centerX - (finalWidth / 2);
         imageY = centerY - (finalHeight / 2);
-        console.log('Centering small enclosure on A4');
+        // console.log('Centering small enclosure on A4');
       } else if (options.forPrint && !originalFitsOnA4) {
         // Large enclosures: Position at top-left (0,0)
         imageX = 0;
         imageY = 0;
-        console.log('Positioning large enclosure at 0,0');
+        // console.log('Positioning large enclosure at 0,0');
       } else {
         // Export mode: center with header space
         const centerX = pdfPageWidth / 2;
@@ -177,14 +177,14 @@ export function usePDFExport({
         imageY = centerY - (finalHeight / 2);
       }
       
-      console.log('Center point:', imageX + (finalWidth / 2), imageY + (finalHeight / 2));
-      console.log('Final image dimensions:', finalWidth, 'x', finalHeight);
-      console.log('Image position:', imageX, imageY);
+      // console.log('Center point:', imageX + (finalWidth / 2), imageY + (finalHeight / 2));
+      // console.log('Final image dimensions:', finalWidth, 'x', finalHeight);
+      // console.log('Image position:', imageX, imageY);
       
-      console.log('=== ADDING IMAGE TO PDF ===');
-      console.log('PDF Page size:', pdfPageWidth, 'x', pdfPageHeight, 'mm');
-      console.log('Image dimensions being added:', finalWidth, 'x', finalHeight, 'mm');
-      console.log('Image position:', imageX, imageY);
+      // console.log('=== ADDING IMAGE TO PDF ===');
+      // console.log('PDF Page size:', pdfPageWidth, 'x', pdfPageHeight, 'mm');
+      // console.log('Image dimensions being added:', finalWidth, 'x', finalHeight, 'mm');
+      // console.log('Image position:', imageX, imageY);
       
       // Get the actual pixel dimensions of the image we're adding
       const img = new Image();
@@ -193,9 +193,9 @@ export function usePDFExport({
         img.src = finalImageData;
       });
       
-      console.log('Image pixel dimensions:', img.width, 'x', img.height);
-      console.log('Calculated DPI: X=' + (img.width / finalWidth * 25.4) + ', Y=' + (img.height / finalHeight * 25.4));
-      console.log('Should be 72 DPI for both');
+      // console.log('Image pixel dimensions:', img.width, 'x', img.height);
+      // console.log('Calculated DPI: X=' + (img.width / finalWidth * 25.4) + ', Y=' + (img.height / finalHeight * 25.4));
+      // console.log('Should be 72 DPI for both');
       
       // CRITICAL FIX: jsPDF might be using the image's pixel dimensions to recalculate
       // We need to ensure jsPDF uses OUR specified mm dimensions, not its own calculation
@@ -215,9 +215,9 @@ export function usePDFExport({
         0              // No rotation
       );
       
-      console.log('Image added');
-      console.log('For 1590XX front face: should be 153mm x 122.5mm');
-      console.log('Total template added:', finalWidth, 'x', finalHeight);
+      // console.log('Image added');
+      // console.log('For 1590XX front face: should be 153mm x 122.5mm');
+      // console.log('Total template added:', finalWidth, 'x', finalHeight);
 
       // Add minimal header/footer overlay for ALL modes (including print)
       const pdfTitle = projectName ? `${projectName} - Drill Template` : "Enclosure Pro - Drill Template";

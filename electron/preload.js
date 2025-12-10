@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-console.log('🔌 Preload script loading...');
+// console.log('🔌 Preload script loading...');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   isElectron: true,
@@ -127,4 +127,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
 });
 
-console.log('🔌 Preload script loaded, electronAPI exposed');
+// console.log('🔌 Preload script loaded, electronAPI exposed');

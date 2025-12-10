@@ -30,7 +30,7 @@ export function useContextMenu({
   const handleCanvasRightClick = (e: React.MouseEvent, componentId: string | null) => {
     e.preventDefault();
     
-    console.log("Right click - componentId:", componentId, "selectedComponent:", selectedComponent);
+    // console.log("Right click - componentId:", componentId, "selectedComponent:", selectedComponent);
     
     // Always close any existing context menu first
     if (contextMenu) {
@@ -43,7 +43,7 @@ export function useContextMenu({
     // 1. We have a selected component
     // 2. AND we're right-clicking on that same component
     if (componentId && selectedComponent && componentId === selectedComponent) {
-      console.log("Showing context menu for selected component");
+      // console.log("Showing context menu for selected component");
       setContextMenu({
         x: e.clientX,
         y: e.clientY,
@@ -52,7 +52,7 @@ export function useContextMenu({
       setPreventCanvasClick(true);
     } else if (!componentId) {
       // If right-clicking on empty canvas, clear selection
-      console.log("Right-click on empty canvas - clearing selection");
+      // console.log("Right-click on empty canvas - clearing selection");
       setSelectedComponent(null);
     }
   };
@@ -60,7 +60,7 @@ export function useContextMenu({
   const handleDuplicate = () => {
     if (!contextMenu?.componentId) return;
     
-    console.log("Duplicating component:", contextMenu.componentId);
+    // console.log("Duplicating component:", contextMenu.componentId);
     
     const original = components.find(c => c.id === contextMenu.componentId);
     if (!original) return;
@@ -80,14 +80,14 @@ export function useContextMenu({
       rotation: original.rotation,
     };
     
-    console.log("Created duplicate with new ID:", newId);
+    // console.log("Created duplicate with new ID:", newId);
     
     // Track the new duplicated ID
     justDuplicatedRef.current = newId;
     
     // Close context menu and prevent further interactions
     setContextMenu(null);
-    console.log("Setting preventCanvasClick to TRUE, blocking original:", originalId);
+    // console.log("Setting preventCanvasClick to TRUE, blocking original:", originalId);
     setPreventCanvasClick(true);
     
     // Add component first
@@ -114,7 +114,7 @@ export function useContextMenu({
   const handleRotate = () => {
     if (!contextMenu?.componentId) return;
     
-    console.log("Rotating component:", contextMenu.componentId);
+    // console.log("Rotating component:", contextMenu.componentId);
     
     setComponents(
       components.map(c => {
@@ -122,7 +122,7 @@ export function useContextMenu({
           const currentRotation = c.rotation || 0;
           // Toggle between 0° and 90° only
           const newRotation = currentRotation === 0 ? 90 : 0;
-          console.log(`Rotating from ${currentRotation}° to ${newRotation}°`);
+          // console.log(`Rotating from ${currentRotation}° to ${newRotation}°`);
           return { ...c, rotation: newRotation };
         }
         return c;
@@ -144,7 +144,7 @@ export function useContextMenu({
   const handleTogglePrint = () => {
     if (!contextMenu?.componentId) return;
     
-    console.log("Toggling print for component:", contextMenu.componentId);
+    // console.log("Toggling print for component:", contextMenu.componentId);
     
     const currentComponent = components.find(c => c.id === contextMenu.componentId);
     if (!currentComponent) return;

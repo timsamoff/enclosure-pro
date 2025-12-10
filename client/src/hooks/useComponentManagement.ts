@@ -33,14 +33,14 @@ export function useComponentManagement({
   rotation
 }: UseComponentManagementProps) {
   const handleComponentMove = (id: string, x: number, y: number, side?: EnclosureSide) => {
-    console.log("handleComponentMove called:", { id, x, y, side, componentsCount: components.length });
+    // console.log("handleComponentMove called:", { id, x, y, side, componentsCount: components.length });
     
     const rotatesLabels = ENCLOSURE_TYPES[enclosureType].rotatesLabels || false;
     
     setComponents(
       components.map(c => {
         if (c.id === id) {
-          console.log("Moving component:", c);
+          // console.log("Moving component:", c);
           let targetSide = side || c.side;
           if (side && rotatesLabels && rotation !== 0) {
             const reverseMap = {
@@ -62,13 +62,13 @@ export function useComponentManagement({
   };
 
   const handleComponentDelete = (id: string) => {
-    console.log("Deleting component:", id);
+    // console.log("Deleting component:", id);
     setComponents(components.filter(c => c.id !== id));
     markDirty();
   };
 
   const handleComponentSelect = (type: ComponentType) => {
-    console.log("Adding new component of type:", type);
+    // console.log("Adding new component of type:", type);
     
     let initialX = 0;
     let initialY = 0;
@@ -97,7 +97,7 @@ export function useComponentManagement({
       excludeFromPrint: isFootprintGuide,
     };
     
-    console.log("New component created:", newComponent);
+    // console.log("New component created:", newComponent);
     setComponents([...components, newComponent]);
     setSelectedComponent(newComponent.id);
     setShowPalette(false);
