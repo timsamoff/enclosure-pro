@@ -244,15 +244,12 @@ export function useBaseExport({
         const MM_PER_INCH = 25.4;
         const pixelsPerMM = PIXELS_PER_INCH / MM_PER_INCH; // 2.834645669291339
 
+        // Canvas component positions use this conversion (from UnwrappedCanvas.tsx)
+        const CANVAS_MM_TO_PIXELS = 3.7795275591;
+
         // Round UP to nearest pixel to ensure full coverage
         const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
         const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
-
-        // console.log('=== CANVAS GENERATION ===');
-        // console.log('Total dimensions in MM:', totalWidthMM, 'x', totalHeightMM);
-        // console.log('Pixels per MM:', pixelsPerMM);
-        // console.log('Canvas size in pixels:', canvasWidth, 'x', canvasHeight);
-        // console.log('Expected: 1mm = ', pixelsPerMM, 'pixels');
 
         const canvas = document.createElement('canvas');
         canvas.width = canvasWidth;
@@ -320,12 +317,6 @@ export function useBaseExport({
             height: rightH * pixelsPerMM 
           },
         };
-
-        // console.log('=== FRONT PANEL SIZE ===');
-        // console.log('Front panel dimensions in MM:', frontW, 'x', frontH);
-        // console.log('Front panel dimensions in pixels:', layout.front.width, 'x', layout.front.height);
-        // console.log('Pixels per MM:', pixelsPerMM);
-        // console.log('Expected at 72 DPI: frontW=' + frontW + 'mm should be', frontW * pixelsPerMM, 'pixels');
 
         const drawSide = (sideKey: keyof typeof layout, originalLabel: string) => {
           const side = layout[sideKey];
@@ -401,13 +392,20 @@ export function useBaseExport({
           const sideComponents = printableComponents.filter((c: any) => c.side === originalLabel);
 
           sideComponents.forEach((component: any) => {
-          const compData = COMPONENT_TYPES[component.type];
-          if (!compData) {
-            console.warn(`Unknown component type: ${component.type}`);
-            return;
-          }
-          const centerX = x + (w / 2) + component.x;
-            const centerY = y + (h / 2) + component.y;
+            const compData = COMPONENT_TYPES[component.type];
+            if (!compData) {
+              console.warn(`Unknown component type: ${component.type}`);
+              return;
+            }
+            
+            // Component positions are stored in pixels in UnwrappedCanvas (using CANVAS_MM_TO_PIXELS)
+            // But for export, we need to convert them using our export pixelsPerMM
+            // Convert component position from canvas pixels back to mm, then to export pixels
+            const componentXmm = component.x / CANVAS_MM_TO_PIXELS;
+            const componentYmm = component.y / CANVAS_MM_TO_PIXELS;
+            
+            const centerX = x + (w / 2) + (componentXmm * pixelsPerMM);
+            const centerY = y + (h / 2) + (componentYmm * pixelsPerMM);
 
             // Check if this is a utility guide (Footprint Guide)
             const isUtilityGuide = compData.category === "Footprint Guides";
@@ -635,8 +633,6 @@ export function useBaseExport({
     // CRITICAL: For print mode, NEVER rotate the canvas
     // Use disableRotation flag if provided, otherwise use optimal rotation
     const shouldRotate = options.disableRotation ? false : getOptimalRotation(enclosureType);
-    
-    // console.log('prepareExportData - disableRotation:', options.disableRotation, 'shouldRotate:', shouldRotate);
     
     const pageDimensions = getPageDimensions(enclosureType, shouldRotate);
 
