@@ -37,13 +37,13 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
-            artifact_pattern: '**/*.exe'
+            artifact_pattern: 'release/**/*.exe'
           - os: macos-latest  
             platform: macos
-            artifact_pattern: '**/*.dmg'
+            artifact_pattern: 'release/**/*.dmg'
           - os: ubuntu-latest
             platform: linux
-            artifact_pattern: '**/*.AppImage,**/*.deb'
+            artifact_pattern: 'release/**/*.AppImage'
     
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
@@ -70,7 +70,7 @@ jobs:
           cache: 'npm'
       
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci --legacy-peer-deps
       
       - name: Verify installation
         run: |
@@ -89,7 +89,7 @@ jobs:
       - name: Copy icon files for CI build
         shell: bash
         run: |
-          echo "📁 Copying icon files..."
+          echo "📋 Copying icon files..."
           
           # Windows icons
           if [ -f "images/EnclosureProIcon.ico" ]; then
@@ -127,6 +127,9 @@ jobs:
           echo "📊 Build directory contents:"
           ls -la build/
       
+      - name: Build Vite app
+        run: npm run build
+      
       - name: Build Electron app
         run: npx electron-builder --publish=never
         env:
@@ -153,7 +156,7 @@ jobs:
       - name: Upload update files
         uses: actions/upload-artifact@v4
         with:
-          name: update-files-${{ github.run_number }}
+          name: update-files-${{ matrix.platform }}-${{ github.run_number }}
           path: |
             release/latest*.yml
             release/latest*.json
@@ -193,7 +196,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts/updates
-          pattern: 'update-files-${{ github.run_number }}'
+          pattern: 'update-files-*-${{ github.run_number }}'
           merge-multiple: false
       
       - name: List all downloaded files
@@ -208,6 +211,7 @@ jobs:
         run: |
           echo "🗑️ Deleting previous release: ${{ env.RELEASE_TAG }}"
           gh release delete "${{ env.RELEASE_TAG }}" --yes 2>/dev/null || echo "No existing release found"
+          git push --delete origin "${{ env.RELEASE_TAG }}" 2>/dev/null || echo "No existing tag found on remote"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       

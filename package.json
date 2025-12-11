@@ -22,11 +22,11 @@
     "precopy-icons": "node -e \"const fs = require('fs'); if (!fs.existsSync('build')) fs.mkdirSync('build', { recursive: true }); console.log('Build directory ready')\"",
     "copy-icons": "node scripts/copy-icons.js",
     "electron:build": "npm run build && npm run copy-icons && npm run electron:build:only",
-    "electron:build:only": "electron-builder --publish=never",
+    "electron:build:only": "npx electron-builder --publish=never",
     "electron:build:clean": "npm run clean:release && npm run electron:build",
     "electron:build:full": "npm run clean && npm run electron:build",
-    "electron:build:installer": "npm run build && npm run copy-icons && electron-builder --win nsis --publish=never",
-    "electron:build:portable": "npm run build && npm run copy-icons && electron-builder --win portable --publish=never",
+    "electron:build:installer": "npm run build && npm run copy-icons && npx electron-builder --win nsis --publish=never",
+    "electron:build:portable": "npm run build && npm run copy-icons && npx electron-builder --win portable --publish=never",
     "check": "tsc"
   },
   "build": {
