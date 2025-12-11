@@ -6,7 +6,7 @@ A cross-platform precision layout tool for guitar pedal enclosures.
 
 Created by Tim Samoff ([@circuitous.fx](https://www.instagram.com/circuitous.fx/))
 
-<img  src="https://github.com/timsamoff/enclosure-pro/blob/main/docs/Fa-Team-Fontawesome-FontAwesome-Mug-Saucer.512.png?raw=true"  width="20px"  alt="Buy Me a Cup of Coffee"> [Buy Me a Cup of Coffee](https://www.paypal.com/paypalme/circuitousfx)
+<img  src="https://github.com/timsamoff/enclosure-pro/blob/main/docs/fa-hand-holding-money.png?raw=true"  width="20px"  alt="Support This App!"> [Support This App!](https://ko-fi.com/enclosurepro)
 
 ## Features
 
@@ -15,6 +15,8 @@ Created by Tim Samoff ([@circuitous.fx](https://www.instagram.com/circuitous.fx/
 * Multi-side design views
 
 * Drag-and-drop components
+
+* Component footprint guides
 
 * Metric/imperial units
 
