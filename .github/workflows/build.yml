@@ -34,13 +34,13 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
-            artifact_pattern: 'release/**/*.exe'
+            artifact_pattern: 'release/*.exe'
           - os: macos-latest  
             platform: macos
-            artifact_pattern: 'release/**/*.dmg'
+            artifact_pattern: 'release/*.dmg'
           - os: ubuntu-latest
             platform: linux
-            artifact_pattern: 'release/**/*.AppImage'
+            artifact_pattern: 'release/*.AppImage'
     
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
@@ -257,7 +257,7 @@ jobs:
             - **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
             
             **📦 Included Platforms:**
-            - ✅ Windows (x64) - `.exe` installer
+            - ✅ Windows (x64) - `.exe` installer & portable
             - ✅ macOS (Intel & Apple Silicon) - `.dmg`
             - ✅ Linux - `.AppImage` & `.deb`
             
