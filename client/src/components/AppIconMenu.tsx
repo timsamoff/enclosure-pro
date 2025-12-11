@@ -1,5 +1,5 @@
 import { SiInstagram } from "react-icons/si";
-import { Book, Coffee, Download, RefreshCw, MessageSquare } from "lucide-react";
+import { Book, HandCoins, Download, RefreshCw, MessageSquare } from "lucide-react"; // Changed to HandCoins
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -215,19 +215,19 @@ export default function AppIconMenu() {
             <span>{isChecking ? 'Checking...' : 'Check for Updates'}</span>
           </DropdownMenuItem>
 
-          {/* Buy Me a Cup of Coffee */}
+          {/* Support This App! */}
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <a
-              href="https://www.paypal.com/paypalme/circuitousfx"
+              href="https://ko-fi.com/enclosurepro"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 cursor-pointer"
-              data-testid="link-buy-me-coffee"
+              className="flex items-center gap-2 cursor-pointer bg-amber-50 hover:bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100"
+              data-testid="link-support-app"
               onClick={handleMenuItemClick}
             >
-              <Coffee className="w-4 h-4" />
-              <span>Buy Me a Cup of Coffee</span>
+              <HandCoins className="w-4 h-4" />
+              <span>Support This App!</span>
             </a>
           </DropdownMenuItem>
         </DropdownMenuContent>
