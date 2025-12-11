@@ -25,9 +25,6 @@ on:
 permissions:
   contents: write
 
-env:
-  NODE_ENV: production
-
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -129,9 +126,11 @@ jobs:
       
       - name: Build Vite app
         run: npm run build
+        env:
+          NODE_ENV: production
       
       - name: Build Electron app
-        run: npx electron-builder --publish=never
+        run: npm run electron:build:only
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
