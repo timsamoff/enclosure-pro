@@ -28,7 +28,7 @@
   "electron:build:installer": "npm run build && npm run copy-icons && npx electron-builder --win nsis --publish=never",
   "electron:build:portable": "npm run build && npm run copy-icons && npx electron-builder --win portable --publish=never",
   "check": "tsc"
-}
+},
   "build": {
     "appId": "com.enclosurepro.app",
     "productName": "Enclosure Pro",
