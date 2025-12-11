@@ -169,9 +169,8 @@ export function usePrint(props: UsePrintProps) {
                   <li>Set "Page Scaling" to "None" or "Actual Size"</li>
                   <li>Disable "Fit to Page" or "Shrink to Fit"</li>
                   <li>Set "Scale" to 100%</li>
-                  <li>Print, then measure the red 1" (25.4mm) mark with a ruler</li>
                 </ol>
-                <em style="margin-top: 15px; display: block;">For larger enclosures, consider export to PDF to print on A3 or tabloid (11x17\") paper.</em>
+                <em style="margin-top: 15px; display: block;">For larger enclosures, consider exporting to PDF to print on A3 or tabloid (11x17\") paper.</em>
               </div>
               <div class="pdf-container">
                 <iframe 
