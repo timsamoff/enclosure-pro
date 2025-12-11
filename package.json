@@ -144,7 +144,7 @@
       "artifactName": "Enclosure-Pro-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "Enclosure-Pro-Portable-${version}.${ext}"
+      "artifactName": "Enclosure-Pro-${version}.${ext}"
     }
   },
   "dependencies": {
