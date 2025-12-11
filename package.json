@@ -13,22 +13,22 @@
     "Tim Samoff <samoff@gmail.com>"
   ],
   "scripts": {
-    "start": "electron .",
-    "dev": "vite",
-    "build": "vite build",
-    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "clean": "rimraf dist release build",
-    "clean:release": "rimraf release",
-    "precopy-icons": "node -e \"const fs = require('fs'); if (!fs.existsSync('build')) fs.mkdirSync('build', { recursive: true }); console.log('Build directory ready')\"",
-    "copy-icons": "node scripts/copy-icons.js",
-    "electron:build": "npm run build && npm run copy-icons && npm run electron:build:only",
-    "electron:build:only": "npx electron-builder --publish=never",
-    "electron:build:clean": "npm run clean:release && npm run electron:build",
-    "electron:build:full": "npm run clean && npm run electron:build",
-    "electron:build:installer": "npm run build && npm run copy-icons && npx electron-builder --win nsis --publish=never",
-    "electron:build:portable": "npm run build && npm run copy-icons && npx electron-builder --win portable --publish=never",
-    "check": "tsc"
-  },
+  "start": "electron .",
+  "dev": "npx vite",
+  "build": "npx vite build",
+  "electron:dev": "concurrently \"npx vite\" \"wait-on http://localhost:5173 && electron .\"",
+  "clean": "rimraf dist release build",
+  "clean:release": "rimraf release",
+  "precopy-icons": "node -e \"const fs = require('fs'); if (!fs.existsSync('build')) fs.mkdirSync('build', { recursive: true }); console.log('Build directory ready')\"",
+  "copy-icons": "node scripts/copy-icons.js",
+  "electron:build": "npm run build && npm run copy-icons && npm run electron:build:only",
+  "electron:build:only": "npx electron-builder --publish=never",
+  "electron:build:clean": "npm run clean:release && npm run electron:build",
+  "electron:build:full": "npm run clean && npm run electron:build",
+  "electron:build:installer": "npm run build && npm run copy-icons && npx electron-builder --win nsis --publish=never",
+  "electron:build:portable": "npm run build && npm run copy-icons && npx electron-builder --win portable --publish=never",
+  "check": "tsc"
+}
   "build": {
     "appId": "com.enclosurepro.app",
     "productName": "Enclosure Pro",
