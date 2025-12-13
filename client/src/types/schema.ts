@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export type EnclosureSide = "Front" | "Right" | "Left" | "Top" | "Bottom";
 export type MeasurementUnit = "metric" | "imperial";
+export type EnclosureManufacturer = "Hammond" | "CNC Pro" | "GØRVA design" | "Tayda";
 
 export const CORNER_RADIUS = 5;
 
@@ -13,21 +14,57 @@ export interface EnclosureDimensions {
   frontDepth?: number;
   isTrapezoidal?: boolean;
   rotatesLabels?: boolean;
+  manufacturer: EnclosureManufacturer;
+  displayName?: string; // For showing "1590BB" instead of "Hammond-1590BB"
 }
 
 export const ENCLOSURE_TYPES = {
-  "1590A": { width: 39, height: 93, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590B": { width: 60, height: 113, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590LB": { width: 51, height: 51, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const },
-  "125B": { width: 66.98, height: 121, depth: 35.94, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590BB": { width: 119, height: 94, depth: 33, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590BB2": { width: 119, height: 94, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590BBS": { width: 120, height: 94, depth: 38.3, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590DD": { width: 188, height: 120, depth: 36, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590XX": { width: 153, height: 122.5, depth: 38, rotatesLabels: true, cornerStyle: "rounded" as const },
+  // Hammond enclosures (prefixed)
+  "Hammond-1590A": { width: 39, height: 93, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590A" },
+  "Hammond-1590B": { width: 60, height: 113, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590B" },
+  "Hammond-1590LB": { width: 51, height: 51, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590LB" },
+  "Hammond-125B": { width: 66.98, height: 121, depth: 35.94, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "125B" },
+  "Hammond-1590BB": { width: 119, height: 94, depth: 33, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BB" },
+  "Hammond-1590BB2": { width: 119, height: 94, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BB2" },
+  "Hammond-1590BBS": { width: 120, height: 94, depth: 38.3, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BBS" },
+  "Hammond-1590DD": { width: 188, height: 120, depth: 36, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590DD" },
+  "Hammond-1590XX": { width: 153, height: 122.5, depth: 38, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590XX" },
+  
+  // Legacy names (backward compatibility - map to Hammond)
+  "1590A": { width: 39, height: 93, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590A" },
+  "1590B": { width: 60, height: 113, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590B" },
+  "1590LB": { width: 51, height: 51, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590LB" },
+  "125B": { width: 66.98, height: 121, depth: 35.94, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "125B" },
+  "1590BB": { width: 119, height: 94, depth: 33, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BB" },
+  "1590BB2": { width: 119, height: 94, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BB2" },
+  "1590BBS": { width: 120, height: 94, depth: 38.3, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BBS" },
+  "1590DD": { width: 188, height: 120, depth: 36, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590DD" },
+  "1590XX": { width: 153, height: 122.5, depth: 38, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590XX" },
+  
+  // Other manufacturers
+  "CNC-1590BB": { width: 119.5, height: 94.5, depth: 33.2, rotatesLabels: true, cornerStyle: "sharp" as const, manufacturer: "CNC Pro" as const, displayName: "1590BB" },
+  "GORVA-125B": { width: 67, height: 121.5, depth: 36, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "GØRVA design" as const, displayName: "125B" },
+  "Tayda-1590BB": { width: 119.2, height: 94.3, depth: 33.1, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Tayda" as const, displayName: "1590BB" },
 } as const;
 
 export type EnclosureType = keyof typeof ENCLOSURE_TYPES;
+
+// Helper to get manufacturer icon/prefix
+export function getManufacturerPrefix(manufacturer: EnclosureManufacturer): string {
+  const prefixes: Record<EnclosureManufacturer, string> = {
+    "Hammond": "H",
+    "CNC Pro": "C",
+    "GØRVA design": "G",
+    "Tayda": "T"
+  };
+  return prefixes[manufacturer];
+}
+
+// Helper to get display name for enclosure
+export function getEnclosureDisplayName(type: EnclosureType): string {
+  const enclosure = ENCLOSURE_TYPES[type];
+  return enclosure?.displayName || type;
+}
 
 export interface ComponentTypeData {
   name: string;
@@ -471,8 +508,8 @@ export interface PlacedComponent {
   x: number;
   y: number;
   side: EnclosureSide;
-  rotation: number; // Added: 0, 90, 180, 270 degrees
-  excludeFromPrint?: boolean; // Added: Controls whether component prints/exports
+  rotation: number;
+  excludeFromPrint?: boolean;
 }
 
 export interface SideDimensions {

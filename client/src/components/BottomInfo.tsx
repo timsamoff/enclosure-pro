@@ -1,4 +1,4 @@
-import { EnclosureType, ENCLOSURE_TYPES, MeasurementUnit } from "@/types/schema";
+import { EnclosureType, ENCLOSURE_TYPES, MeasurementUnit, getManufacturerPrefix, getEnclosureDisplayName } from "@/types/schema";
 import { Box, Grid3x3, Package } from "lucide-react";
 import { mmToFraction } from "@/lib/utils";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -41,6 +41,9 @@ export default function BottomInfo({
     releaseFocus();
   };
 
+  const manufacturerPrefix = getManufacturerPrefix(enclosure.manufacturer);
+  const displayName = getEnclosureDisplayName(enclosureType);
+
   return (
     <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-6 py-2 bg-background/95 backdrop-blur-md border-t border-border z-50 pointer-events-none">
       {/* Left: Enclosure selector */}
@@ -48,11 +51,17 @@ export default function BottomInfo({
         <button
           onClick={() => handleClick(onEnclosureClick)}
           onMouseUp={releaseFocus}
-          className="flex items-center gap-2 px-3 min-h-9 rounded-md hover-elevate active-elevate-2 border border-border w-32 cursor-pointer"
+          className="flex items-center gap-2 px-3 min-h-9 rounded-md hover-elevate active-elevate-2 border border-border min-w-32 cursor-pointer"
           data-testid="button-enclosure-select-bottom"
         >
-          <Box className="w-4 h-4" />
-          <span>{enclosureType}</span>
+          <Box className="w-4 h-4 flex-shrink-0" />
+          <span className="flex-1 truncate">{displayName}</span>
+          <span 
+            className="flex-shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground"
+            title={enclosure.manufacturer}
+          >
+            {manufacturerPrefix}
+          </span>
         </button>
       </div>
 
