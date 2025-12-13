@@ -3,6 +3,21 @@ const path = require('path');
 const fs = require('fs').promises;
 const { autoUpdater } = require('electron-updater');
 
+// Load dev config
+let devConfig = { DEV_MODE: false, AUTO_OPEN_DEVTOOLS: false, VERBOSE_LOGGING: false };
+try {
+  devConfig = require('../dev.config.js');
+  console.log('📋 Dev config loaded:', devConfig);
+} catch (error) {
+  // If dev.config.js doesn't exist, use defaults (production mode)
+  console.log('ℹ️ No dev.config.js found, using production defaults');
+}
+
+// Use devConfig instead of process.env.NODE_ENV
+const isDevelopment = devConfig.DEV_MODE || process.env.NODE_ENV === 'development';
+
+console.log('🚀 Starting in', isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION', 'mode');
+
 let mainWindow;
 let fileToOpen = null;
 let isWindowReady = false;
@@ -10,7 +25,6 @@ let isWindowReady = false;
 // Create application menu with accelerators
 function createApplicationMenu() {
   const isMac = process.platform === 'darwin';
-  const isDevelopment = process.env.NODE_ENV === 'development';
   
   const template = [
     // File menu
@@ -157,7 +171,7 @@ function setupAutoUpdater() {
 
   // Set logger for debug output
   autoUpdater.logger = {
-    info: (message) => console.log('📝 AutoUpdater Info:', message),
+    info: (message) => console.log('🔍 AutoUpdater Info:', message),
     warn: (message) => console.log('⚠️ AutoUpdater Warn:', message),
     error: (message) => console.log('❌ AutoUpdater Error:', message),
     debug: (message) => console.log('🐛 AutoUpdater Debug:', message)
@@ -264,8 +278,6 @@ function setupAutoUpdater() {
 }
 
 function createWindow() {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -273,7 +285,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      devTools: isDevelopment, // Only enable devTools in development
+      devTools: isDevelopment,
       sandbox: true,
     },
     title: 'Enclosure Pro',
@@ -296,8 +308,8 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     
-    // Only open dev tools in development
-    if (isDevelopment) {
+    // Use config for auto-opening DevTools
+    if (isDevelopment && devConfig.AUTO_OPEN_DEVTOOLS) {
       mainWindow.webContents.openDevTools();
     }
   });
@@ -710,8 +722,6 @@ ipcMain.handle('file:open-external', async (event, filePath) => {
 
 // TEST: Simulate update handler
 ipcMain.handle('test:simulate-update', () => {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  
   if (!isDevelopment) {
     return { success: false, error: 'Simulation only available in development' };
   }
