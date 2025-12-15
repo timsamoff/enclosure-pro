@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Window operations
   closeWindow: () => ipcRenderer.invoke('window:close'),
   
+  // Development mode check
+  isDevMode: () => ipcRenderer.invoke('app:is-dev-mode'),
+  
   // Auto-updater functions
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
   checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),

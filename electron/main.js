@@ -720,6 +720,11 @@ ipcMain.handle('file:open-external', async (event, filePath) => {
   }
 });
 
+// IPC handler for dev mode check
+ipcMain.handle('app:is-dev-mode', () => {
+  return isDevelopment;
+});
+
 // TEST: Simulate update handler
 ipcMain.handle('test:simulate-update', () => {
   if (!isDevelopment) {

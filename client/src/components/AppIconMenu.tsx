@@ -1,5 +1,5 @@
 import { SiInstagram } from "react-icons/si";
-import { Book, HandCoins, Download, RefreshCw, MessageSquare } from "lucide-react"; // Changed to HandCoins
+import { Book, HandCoins, Download, RefreshCw, MessageSquare } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,22 @@ export default function AppIconMenu() {
   const [showProgress, setShowProgress] = useState(false);
   const [progressDetails, setProgressDetails] = useState({} as any);
   const [isOpen, setIsOpen] = useState(false);
+  const [isDevelopment, setIsDevelopment] = useState(false);
+
+  useEffect(() => {
+    // Check if we're in development mode
+    if (window.electronAPI?.isDevMode) {
+      window.electronAPI.isDevMode().then(devMode => {
+        setIsDevelopment(devMode);
+      });
+    } else {
+      // Fallback for web version
+      setIsDevelopment(
+        process.env.NODE_ENV === 'development' || 
+        (typeof window !== 'undefined' && window.location.href.includes('localhost'))
+      );
+    }
+  }, []);
 
   useEffect(() => {
     // Get version from Electron
@@ -92,7 +108,10 @@ export default function AppIconMenu() {
   };
 
   const handleSimulateUpdate = async () => {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI?.simulateUpdate) {
+      console.error('simulateUpdate not available');
+      return;
+    }
     
     setIsOpen(false);
     releaseFocus();
@@ -108,9 +127,6 @@ export default function AppIconMenu() {
     setIsOpen(false);
     releaseFocus();
   };
-
-  // Simple development detection (always show test option when running locally)
-  const isDevelopment = false; // Set this to false when building for production
 
   return (
     <>
@@ -186,13 +202,14 @@ export default function AppIconMenu() {
             </a>
           </DropdownMenuItem>
 
-          {/* Test Simulate Update - Always show in development */}
+          {/* Test Simulate Update - Show when DEV_MODE is enabled */}
           {isDevelopment && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={handleSimulateUpdate}
                 className="flex items-center gap-2 cursor-pointer text-yellow-600"
+                data-testid="menu-item-simulate-update"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span>TEST: Simulate Update</span>
