@@ -5,8 +5,8 @@ import BottomInfo from "@/components/BottomInfo";
 import ComponentPalette from "@/components/ComponentPalette";
 import EnclosureSelector from "@/components/EnclosureSelector";
 import GridSelector from "@/components/GridSelector";
+import BlankCanvas from "@/components/BlankCanvas";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
-// import ShortcutDebugger from "@/components/ShortcutDebugger";
 
 import { usePrintScaleTest } from "@/hooks/usePrintScaleTest";
 
@@ -41,8 +41,8 @@ export default function Designer() {
 
   debugLog("Component rendering");
   
-  // State
-  const [enclosureType, setEnclosureType] = useState<EnclosureType>("125B");
+  // State - DEFAULT TO NULL FOR BLANK CANVAS
+  const [enclosureType, setEnclosureType] = useState<EnclosureType>(null);
   const [components, setComponents] = useState<any[]>([]);
   const [gridEnabled, setGridEnabled] = useState(true);
   const [gridSize, setGridSize] = useState(5);
@@ -207,33 +207,27 @@ export default function Designer() {
   }, [fileOperations, print, pdfExport, confirmDialogs]);
 
   useKeyboardShortcuts({
-  handleZoomIn: () => setZoom(prev => snapZoom(prev + 0.1)),
-  handleZoomOut: () => setZoom(prev => snapZoom(prev - 0.1)),
-  handleSave: () => {
-    // console.log('🎹 handleSave from useKeyboardShortcuts');
-    handleMenuSave(); // Use the same handler as the menu!
-  },
-  handleSaveAs: () => {
-    // console.log('🎹 handleSaveAs from useKeyboardShortcuts');
-    handleMenuSaveAs(); // Use the same handler as the menu!
-  },
-  handleLoad: () => {
-    // console.log('🎹 handleLoad from useKeyboardShortcuts');
-    handleMenuOpen(); // Use the same handler as the menu!
-  },
-  handlePrint: () => {
-    // console.log('🎹 handlePrint from useKeyboardShortcuts');
-    handleMenuPrint(); // Use the same handler as the menu!
-  },
-  handleExportPDF: () => {
-    // console.log('🎹 handleExportPDF from useKeyboardShortcuts');
-    handleMenuExportPDF(); // Use the same handler as the menu!
-  },
-  handleQuit: () => {
-    // console.log('🎹 handleQuit from useKeyboardShortcuts');
-    handleMenuQuit(); // Use the same handler as the menu!
-  }
-});
+    handleZoomIn: () => setZoom(prev => snapZoom(prev + 0.1)),
+    handleZoomOut: () => setZoom(prev => snapZoom(prev - 0.1)),
+    handleSave: () => {
+      handleMenuSave();
+    },
+    handleSaveAs: () => {
+      handleMenuSaveAs();
+    },
+    handleLoad: () => {
+      handleMenuOpen();
+    },
+    handlePrint: () => {
+      handleMenuPrint();
+    },
+    handleExportPDF: () => {
+      handleMenuExportPDF();
+    },
+    handleQuit: () => {
+      handleMenuQuit();
+    }
+  });
 
   // UI Handlers
   const handleZoomIn = () => {
@@ -251,28 +245,6 @@ export default function Designer() {
 
   const rotationDirection: 'cw' | 'ccw' = rotation === 0 ? 'cw' : 'ccw';
 
-  const enclosure = ENCLOSURE_TYPES[enclosureType];
-  
-  const getSideDimensions = (side: EnclosureSide) => {
-    const unwrapped = getUnwrappedDimensions(enclosureType);
-    return unwrapped[side.toLowerCase() as keyof ReturnType<typeof getUnwrappedDimensions>];
-  };
-
-  // Helper function to get rotation icon and label
-  const getRotationInfo = (componentId: string | null) => {
-    if (!componentId) return { icon: RotateCw, label: "Rotate 90°" };
-    
-    const component = components.find(c => c.id === componentId);
-    const currentRotation = component?.rotation || 0;
-    
-    const isAlignedWithGrid = currentRotation === 0 || currentRotation === 180;
-    
-    return {
-      icon: isAlignedWithGrid ? RotateCw : RotateCcw,
-      label: isAlignedWithGrid ? "Rotate 90°" : "Rotate 90°"
-    };
-  };
-
   const printScaleTest = usePrintScaleTest();
 
   // BULLETPROOF SOLUTION: Create stable handler functions that use refs
@@ -283,11 +255,9 @@ export default function Designer() {
     }
   }).current;
 
-  // FIXED: handleMenuOpen function
   const handleMenuOpen = useRef(() => {
     debugLog("Menu: Open triggered (via ref)");
     
-    // Use the direct openProjectFile API which has consistent return format
     if (window.electronAPI?.openProjectFile) {
       debugLog("Using openProjectFile API");
       window.electronAPI.openProjectFile().then((result: any) => {
@@ -298,11 +268,9 @@ export default function Designer() {
           
           if (fileOperationsRef.current) {
             if (fileOperationsRef.current.isDirty) {
-              // Show save confirmation dialog
               fileOperationsRef.current.setPendingFilePath(result.filePath);
               confirmDialogsRef.current?.setShowOpenConfirmDialog(true);
             } else {
-              // Load the file directly
               if (fileOperationsRef.current.openFileFromPath) {
                 fileOperationsRef.current.openFileFromPath(result.filePath);
               } else {
@@ -329,9 +297,7 @@ export default function Designer() {
           variant: "destructive",
         });
       });
-    } 
-    // Fallback to the original openFile API
-    else if (window.electronAPI?.openFile) {
+    } else if (window.electronAPI?.openFile) {
       debugLog("Using openFile API (fallback)");
       window.electronAPI.openFile({
         filters: [{ name: 'Enclosure Project Files', extensions: ['enc'] }]
@@ -359,9 +325,7 @@ export default function Designer() {
       }).catch((error: any) => {
         debugLog("Error with openFile API:", error);
       });
-    } 
-    // Last resort: try the hook method
-    else if (fileOperationsRef.current?.handleLoad) {
+    } else if (fileOperationsRef.current?.handleLoad) {
       debugLog("Using fileOperations.handleLoad (last resort)");
       fileOperationsRef.current.handleLoad();
     } else {
@@ -403,31 +367,27 @@ export default function Designer() {
   }).current;
 
   const handleMenuQuit = useRef(() => {
-  debugLog("Menu: Quit triggered (via ref)");
-  
-  // Check if there are unsaved changes via the ref
-  if (fileOperationsRef.current?.isDirty) {
-    debugLog("Quit: Project is dirty, showing confirm dialog");
-    // Show the quit confirmation dialog
-    if (confirmDialogsRef.current?.setShowQuitConfirmDialog) {
-      confirmDialogsRef.current.setShowQuitConfirmDialog(true);
+    debugLog("Menu: Quit triggered (via ref)");
+    
+    if (fileOperationsRef.current?.isDirty) {
+      debugLog("Quit: Project is dirty, showing confirm dialog");
+      if (confirmDialogsRef.current?.setShowQuitConfirmDialog) {
+        confirmDialogsRef.current.setShowQuitConfirmDialog(true);
+      } else {
+        debugLog("Quit: confirmDialogsRef not available");
+      }
     } else {
-      debugLog("Quit: confirmDialogsRef not available");
+      debugLog("Quit: Project is clean, closing window");
+      if (window.electronAPI?.isElectron) {
+        window.electronAPI.closeWindow();
+      } else {
+        toast({
+          title: "Quit",
+          description: "Close the browser tab to quit",
+        });
+      }
     }
-  } else {
-    debugLog("Quit: Project is clean, closing window");
-    // No unsaved changes, close directly
-    if (window.electronAPI?.isElectron) {
-      window.electronAPI.closeWindow();
-    } else {
-      // For web version, just show a message
-      toast({
-        title: "Quit",
-        description: "Close the browser tab to quit",
-      });
-    }
-  }
-}).current;
+  }).current;
 
   // Set up Electron menu listeners with proper cleanup
   useEffect(() => {
@@ -438,12 +398,10 @@ export default function Designer() {
       return;
     }
     
-    // Set up menu listeners with cleanup functions
     const cleanupFunctions: (() => void)[] = [];
     
     debugLog("Registering menu listeners");
     
-    // New
     if (window.electronAPI.onMenuNew) {
       const cleanup = window.electronAPI.onMenuNew(() => {
         debugLog("Menu: New triggered");
@@ -452,7 +410,6 @@ export default function Designer() {
       cleanupFunctions.push(cleanup);
     }
     
-    // Open
     if (window.electronAPI.onMenuOpen) {
       const cleanup = window.electronAPI.onMenuOpen(() => {
         debugLog("Menu: Open triggered");
@@ -461,7 +418,6 @@ export default function Designer() {
       cleanupFunctions.push(cleanup);
     }
     
-    // Save
     if (window.electronAPI.onMenuSave) {
       const cleanup = window.electronAPI.onMenuSave(() => {
         debugLog("Menu: Save triggered");
@@ -470,7 +426,6 @@ export default function Designer() {
       cleanupFunctions.push(cleanup);
     }
     
-    // Save As
     if (window.electronAPI.onMenuSaveAs) {
       const cleanup = window.electronAPI.onMenuSaveAs(() => {
         debugLog("Menu: Save As triggered");
@@ -479,7 +434,6 @@ export default function Designer() {
       cleanupFunctions.push(cleanup);
     }
     
-    // Print
     if (window.electronAPI.onMenuPrint) {
       const cleanup = window.electronAPI.onMenuPrint(() => {
         debugLog("Menu: Print triggered");
@@ -488,7 +442,6 @@ export default function Designer() {
       cleanupFunctions.push(cleanup);
     }
     
-    // Export PDF
     if (window.electronAPI.onMenuExportPDF) {
       const cleanup = window.electronAPI.onMenuExportPDF(() => {
         debugLog("Menu: Export PDF triggered");
@@ -497,7 +450,6 @@ export default function Designer() {
       cleanupFunctions.push(cleanup);
     }
     
-    // Quit
     if (window.electronAPI.onMenuQuit) {
       const cleanup = window.electronAPI.onMenuQuit(() => {
         debugLog("Menu: Quit triggered");
@@ -522,7 +474,6 @@ export default function Designer() {
     handleMenuQuit
   ]);
 
-  // Electron event listeners for window close and file open requests
   useEffect(() => {
     debugLog("Setting up Electron window event listeners");
     
@@ -562,7 +513,6 @@ export default function Designer() {
     }
   }, [fileOperations.isDirty, fileOperations, confirmDialogs]);
 
-  // Hide printer test button for end users - only show in development
   const isDevelopment = process.env.NODE_ENV === 'development' || 
                        (typeof window !== 'undefined' && window.location.href.includes('localhost'));
 
@@ -570,245 +520,284 @@ export default function Designer() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden">
-      <UnwrappedCanvas
-        enclosureType={enclosureType}
-        components={components}
-        zoom={zoom}
-        rotation={rotation}
-        gridEnabled={gridEnabled}
-        gridSize={gridSize}
-        unit={unit}
-        onComponentMove={componentManagement.handleComponentMove}
-        onComponentDelete={componentManagement.handleComponentDelete}
-        selectedComponent={selectedComponent}
-        onSelectComponent={(id) => {
-          const shouldPrevent = contextMenu.shouldPreventCanvasClick();
-          const duplicatedId = contextMenu.justDuplicatedRef?.current;
-          const isSelectingDuplicate = id === duplicatedId;
-          
-          debugLog("onSelectComponent - shouldPrevent:", shouldPrevent, "id:", id, "duplicatedId:", duplicatedId, "isSelectingDuplicate:", isSelectingDuplicate);
-          
-          if (shouldPrevent && !isSelectingDuplicate) {
-            debugLog("BLOCKED - preventing canvas click for non-duplicate, clearing flag now");
-            contextMenu.closeContextMenu();
-            return;
-          }
-          
-          if (isSelectingDuplicate && contextMenu.justDuplicatedRef) {
-            contextMenu.justDuplicatedRef.current = null;
-            contextMenu.closeContextMenu();
-          }
-          
-          wrappedSetSelectedComponent(id);
-        }}
-        onCanvasClick={() => {
-          if (!contextMenu.shouldPreventCanvasClick()) {
-            setShowPalette(false);
-            setShowEnclosureSelector(false);
-            wrappedSetSelectedComponent(null);
-          }
-          contextMenu.closeContextMenu();
-        }}
-        onZoomChange={setZoom}
-        rotatesLabels={ENCLOSURE_TYPES[enclosureType].rotatesLabels || false}
-        onRightClick={contextMenu.handleCanvasRightClick}
-      />
-
-      {contextMenu.contextMenu && (
-        <div 
-          className="fixed bg-white border border-gray-300 rounded-lg shadow-lg py-2 z-50 min-w-48"
-          style={{
-            left: contextMenu.contextMenu.x,
-            top: contextMenu.contextMenu.y,
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onMouseUp={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              contextMenu.handleDuplicate();
-            }}
-            className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center gap-2 cursor-pointer"
-          >
-            <Copy className="w-4 h-4 mr-2 text-gray-600" />
-            <span>Duplicate</span>
-          </button>
-          
-          <div className="border-t border-gray-200 my-1"></div>
-          
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              contextMenu.handleRotate();
-            }}
-            className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center gap-2 cursor-pointer"
-          >
-            {(() => {
-              const currentComponent = components.find(c => c.id === contextMenu.contextMenu?.componentId);
-              const currentRotation = currentComponent?.rotation || 0;
-              const isAtDefault = currentRotation === 0;
-              const Icon = isAtDefault ? RotateCw : RotateCcw;
-              const label = isAtDefault ? "Rotate 90°" : "Rotate 90°";
+      {enclosureType === null ? (
+        <>
+          {/* Blank canvas when no enclosure selected */}
+    <BlankCanvas 
+      onSelectEnclosure={() => setShowEnclosureSelector(true)}
+      appIcon={appIcon}
+      appVersion="1.1.0-beta.1"
+    />
+    
+    <TopControls
+      currentSide={undefined}
+      zoom={1}
+      fileName={fileOperations.projectName}
+      isDirty={false}
+      onZoomIn={() => {}}
+      onZoomOut={() => {}}
+      onRotate={undefined}
+      onPrevSide={undefined}
+      onNextSide={undefined}
+      onNew={handleMenuNew}
+      onSave={handleMenuSave}
+      onSaveAs={handleMenuSaveAs}
+      onOpen={handleMenuOpen}
+      onExportPDF={handleMenuExportPDF}
+      onPrint={handleMenuPrint}
+      onQuit={handleMenuQuit}
+    />
+    
+    <EnclosureSelector
+      open={showEnclosureSelector}
+      onClose={() => setShowEnclosureSelector(false)}
+      currentType={enclosureType}
+      onSelect={(type) => {
+        debugLog("Enclosure type changed to:", type);
+        setEnclosureType(type);
+        setShowEnclosureSelector(false);
+        fileOperations.markDirty();
+      }}
+      unit={unit}
+    />
+  </>
+) : (
+        <>
+          {/* Normal canvas when enclosure is selected */}
+          <UnwrappedCanvas
+            enclosureType={enclosureType}
+            components={components}
+            zoom={zoom}
+            rotation={rotation}
+            gridEnabled={gridEnabled}
+            gridSize={gridSize}
+            unit={unit}
+            onComponentMove={componentManagement.handleComponentMove}
+            onComponentDelete={componentManagement.handleComponentDelete}
+            selectedComponent={selectedComponent}
+            onSelectComponent={(id) => {
+              const shouldPrevent = contextMenu.shouldPreventCanvasClick();
+              const duplicatedId = contextMenu.justDuplicatedRef?.current;
+              const isSelectingDuplicate = id === duplicatedId;
               
-              return (
-                <>
-                  <Icon className="w-4 h-4 mr-2 text-gray-600" />
-                  <span>{label}</span>
-                </>
-              );
-            })()}
-          </button>
-          
-          <div className="border-t border-gray-200 my-1"></div>
-          
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              contextMenu.handleTogglePrint();
+              debugLog("onSelectComponent - shouldPrevent:", shouldPrevent, "id:", id, "duplicatedId:", duplicatedId, "isSelectingDuplicate:", isSelectingDuplicate);
+              
+              if (shouldPrevent && !isSelectingDuplicate) {
+                debugLog("BLOCKED - preventing canvas click for non-duplicate, clearing flag now");
+                contextMenu.closeContextMenu();
+                return;
+              }
+              
+              if (isSelectingDuplicate && contextMenu.justDuplicatedRef) {
+                contextMenu.justDuplicatedRef.current = null;
+                contextMenu.closeContextMenu();
+              }
+              
+              wrappedSetSelectedComponent(id);
             }}
-            className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center justify-between cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <Download className="w-4 h-4 mr-2 text-gray-600" />
-              <span>Print/Export</span>
+            onCanvasClick={() => {
+              if (!contextMenu.shouldPreventCanvasClick()) {
+                setShowPalette(false);
+                setShowEnclosureSelector(false);
+                wrappedSetSelectedComponent(null);
+              }
+              contextMenu.closeContextMenu();
+            }}
+            onZoomChange={setZoom}
+            rotatesLabels={ENCLOSURE_TYPES[enclosureType].rotatesLabels || false}
+            onRightClick={contextMenu.handleCanvasRightClick}
+          />
+
+          {contextMenu.contextMenu && (
+            <div 
+              className="fixed bg-white border border-gray-300 rounded-lg shadow-lg py-2 z-50 min-w-48"
+              style={{
+                left: contextMenu.contextMenu.x,
+                top: contextMenu.contextMenu.y,
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onMouseUp={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  contextMenu.handleDuplicate();
+                }}
+                className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center gap-2 cursor-pointer"
+              >
+                <Copy className="w-4 h-4 mr-2 text-gray-600" />
+                <span>Duplicate</span>
+              </button>
+              
+              <div className="border-t border-gray-200 my-1"></div>
+              
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  contextMenu.handleRotate();
+                }}
+                className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center gap-2 cursor-pointer"
+              >
+                {(() => {
+                  const currentComponent = components.find(c => c.id === contextMenu.contextMenu?.componentId);
+                  const currentRotation = currentComponent?.rotation || 0;
+                  const isAtDefault = currentRotation === 0;
+                  const Icon = isAtDefault ? RotateCw : RotateCcw;
+                  const label = isAtDefault ? "Rotate 90°" : "Rotate 90°";
+                  
+                  return (
+                    <>
+                      <Icon className="w-4 h-4 mr-2 text-gray-600" />
+                      <span>{label}</span>
+                    </>
+                  );
+                })()}
+              </button>
+              
+              <div className="border-t border-gray-200 my-1"></div>
+              
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  contextMenu.handleTogglePrint();
+                }}
+                className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm flex items-center justify-between cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <Download className="w-4 h-4 mr-2 text-gray-600" />
+                  <span>Print/Export</span>
+                </div>
+                <span className="ml-2">
+                  {(() => {
+                    const currentComponent = components.find(c => c.id === contextMenu.contextMenu?.componentId);
+                    return currentComponent?.excludeFromPrint ? (
+                      <Square className="w-4 h-4" />
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    );
+                  })()}
+                </span>
+              </button>
             </div>
-            <span className="ml-2">
-              {(() => {
-                const currentComponent = components.find(c => c.id === contextMenu.contextMenu?.componentId);
-                return currentComponent?.excludeFromPrint ? (
-                  <Square className="w-4 h-4" />
-                ) : (
-                  <Check className="w-4 h-4" />
-                );
-              })()}
-            </span>
+          )}
+
+          <TopControls
+            currentSide={undefined}
+            zoom={zoom}
+            fileName={fileOperations.projectName}
+            isDirty={fileOperations.isDirty}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onRotate={handleRotateCanvas}
+            rotationDirection={rotationDirection}
+            onPrevSide={undefined}
+            onNextSide={undefined}
+            onNew={handleMenuNew}
+            onSave={handleMenuSave}
+            onSaveAs={handleMenuSaveAs}
+            onOpen={handleMenuOpen}
+            onExportPDF={handleMenuExportPDF}
+            onPrint={handleMenuPrint}
+            onQuit={handleMenuQuit}
+          />
+
+          <BottomInfo
+            gridEnabled={gridEnabled}
+            gridSize={gridSize}
+            enclosureType={enclosureType}
+            unit={unit}
+            onEnclosureClick={() => setShowEnclosureSelector(true)}
+            onGridClick={() => setShowGridSelector(true)}
+            onComponentsClick={() => setShowPalette(true)}
+            onUnitChange={(newUnit) => {
+              setUnit(newUnit);
+              fileOperations.markDirty();
+            }}
+          />
+
+          {showPalette && (
+            <ComponentPalette
+              onComponentSelect={componentManagement.handleComponentSelect}
+              onClose={() => setShowPalette(false)}
+              unit={unit}
+            />
+          )}
+
+          <ConfirmDialog {...confirmDialogs.newConfirmDialog} />
+          <ConfirmDialog {...confirmDialogs.quitConfirmDialog} />
+          <ConfirmDialog {...confirmDialogs.openConfirmDialog} />
+
+          <EnclosureSelector
+            open={showEnclosureSelector}
+            onClose={() => setShowEnclosureSelector(false)}
+            currentType={enclosureType}
+            onSelect={(type) => {
+              debugLog("Enclosure type changed to:", type);
+              setEnclosureType(type);
+              fileOperations.markDirty();
+            }}
+            unit={unit}
+          />
+
+          <GridSelector
+            open={showGridSelector}
+            onOpenChange={setShowGridSelector}
+            gridEnabled={gridEnabled}
+            onGridEnabledChange={(enabled) => {
+              setGridEnabled(enabled);
+              fileOperations.markDirty();
+            }}
+            gridSize={gridSize}
+            onGridSizeChange={(size) => {
+              setGridSize(size);
+              fileOperations.markDirty();
+            }}
+            unit={unit}
+          />
+
+          <button
+            onClick={() => setShowPalette(true)}
+            className="hidden lg:block absolute left-4 top-20 px-4 py-3 bg-primary text-primary-foreground rounded-lg shadow-lg hover-elevate active-elevate-2 font-medium z-40 cursor-pointer"
+            data-testid="button-show-palette"
+          >
+            Add Component
           </button>
-        </div>
+
+          {isDevelopment && (
+            <button
+              onClick={() => {
+                printScaleTest.downloadScaleTest();
+                toast({
+                  title: "Printer Test Downloaded",
+                  description: "Print and measure to verify your printer scale is 100%",
+                  duration: 5000,
+                });
+              }}
+              className="absolute right-4 top-20 px-4 py-2 bg-amber-500 text-white rounded-lg shadow hover:bg-amber-600 z-40"
+            >
+              Printer Scale Test
+            </button>
+          )}
+
+          {isDevelopment && (
+            <button
+              onClick={() => {
+                debugLog("Testing file open API...");
+                
+                if (window.electronAPI?.openProjectFile) {
+                  window.electronAPI.openProjectFile().then((result: any) => {
+                    // console.log("Test openProjectFile result:", result);
+                  });
+                }
+              }}
+              className="absolute right-4 top-32 px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 z-40"
+            >
+              Test Open API
+            </button>
+          )}
+        </>
       )}
-
-      <TopControls
-        currentSide={undefined}
-        zoom={zoom}
-        fileName={fileOperations.projectName}
-        isDirty={fileOperations.isDirty}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onRotate={handleRotateCanvas}
-        rotationDirection={rotationDirection}
-        onPrevSide={undefined}
-        onNextSide={undefined}
-        onNew={handleMenuNew}
-        onSave={handleMenuSave}
-        onSaveAs={handleMenuSaveAs}
-        onOpen={handleMenuOpen}
-        onExportPDF={handleMenuExportPDF}
-        onPrint={handleMenuPrint}
-        onQuit={handleMenuQuit}
-      />
-
-      <BottomInfo
-        gridEnabled={gridEnabled}
-        gridSize={gridSize}
-        enclosureType={enclosureType}
-        unit={unit}
-        onEnclosureClick={() => setShowEnclosureSelector(true)}
-        onGridClick={() => setShowGridSelector(true)}
-        onComponentsClick={() => setShowPalette(true)}
-        onUnitChange={(newUnit) => {
-          setUnit(newUnit);
-          fileOperations.markDirty();
-        }}
-      />
-
-      {showPalette && (
-        <ComponentPalette
-          onComponentSelect={componentManagement.handleComponentSelect}
-          onClose={() => setShowPalette(false)}
-          unit={unit}
-        />
-      )}
-
-      {/* Confirmation Dialogs */}
-      <ConfirmDialog {...confirmDialogs.newConfirmDialog} />
-      <ConfirmDialog {...confirmDialogs.quitConfirmDialog} />
-      <ConfirmDialog {...confirmDialogs.openConfirmDialog} />
-
-      <EnclosureSelector
-        open={showEnclosureSelector}
-        onClose={() => setShowEnclosureSelector(false)}
-        currentType={enclosureType}
-        onSelect={(type) => {
-          debugLog("Enclosure type changed to:", type);
-          setEnclosureType(type);
-          fileOperations.markDirty();
-        }}
-        unit={unit}
-      />
-
-      <GridSelector
-        open={showGridSelector}
-        onOpenChange={setShowGridSelector}
-        gridEnabled={gridEnabled}
-        onGridEnabledChange={(enabled) => {
-          setGridEnabled(enabled);
-          fileOperations.markDirty();
-        }}
-        gridSize={gridSize}
-        onGridSizeChange={(size) => {
-          setGridSize(size);
-          fileOperations.markDirty();
-        }}
-        unit={unit}
-      />
-
-      <button
-        onClick={() => setShowPalette(true)}
-        className="hidden lg:block absolute left-4 top-20 px-4 py-3 bg-primary text-primary-foreground rounded-lg shadow-lg hover-elevate active-elevate-2 font-medium z-40 cursor-pointer"
-        data-testid="button-show-palette"
-      >
-        Add Component
-      </button>
-
-      {/* Hide printer test button from end users - only show in development */}
-      {isDevelopment && (
-        <button
-          onClick={() => {
-            printScaleTest.downloadScaleTest();
-            toast({
-              title: "Printer Test Downloaded",
-              description: "Print and measure to verify your printer scale is 100%",
-              duration: 5000,
-            });
-          }}
-          className="absolute right-4 top-20 px-4 py-2 bg-amber-500 text-white rounded-lg shadow hover:bg-amber-600 z-40"
-        >
-          Printer Scale Test
-        </button>
-      )}
-
-      {/* DEBUG: Test button for file operations */}
-      {isDevelopment && (
-        <button
-          onClick={() => {
-            debugLog("Testing file open API...");
-            // console.log("window.electronAPI:", window.electronAPI);
-            // console.log("openProjectFile available:", !!window.electronAPI?.openProjectFile);
-            // console.log("openFile available:", !!window.electronAPI?.openFile);
-            
-            if (window.electronAPI?.openProjectFile) {
-              window.electronAPI.openProjectFile().then((result: any) => {
-                // console.log("Test openProjectFile result:", result);
-              });
-            }
-          }}
-          className="absolute right-4 top-32 px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 z-40"
-        >
-          Test Open API
-        </button>
-      )}
-      {/* <ShortcutDebugger /> */}
     </div>
   );
 }

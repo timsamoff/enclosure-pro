@@ -13,7 +13,7 @@ import { z } from "zod";
 import { snapZoom } from "@/lib/zoom";
 
 interface UseFileOperationsProps {
-  enclosureType: EnclosureType;
+  enclosureType: EnclosureType | null;
   components: PlacedComponent[];
   gridEnabled: boolean;
   gridSize: number;
@@ -21,7 +21,7 @@ interface UseFileOperationsProps {
   rotation: number;
   unit: MeasurementUnit;
   appIcon: string | null;
-  setEnclosureType: (type: EnclosureType) => void;
+  setEnclosureType: (type: EnclosureType | null) => void;
   setComponents: (components: PlacedComponent[]) => void;
   setGridEnabled: (enabled: boolean) => void;
   setGridSize: (size: number) => void;
@@ -87,7 +87,7 @@ export function useFileOperations({
   };
 
   const performNewProject = () => {
-    setEnclosureType("125B");
+    setEnclosureType(null);
     setComponents([]);
     setGridEnabled(true);
     setGridSize(5);
@@ -267,7 +267,7 @@ export function useFileOperations({
 
   const handleSaveWithFilename = async (defaultFilename: string): Promise<void> => {
     const projectState: ProjectState = {
-      enclosureType,
+      enclosureType: enclosureType || undefined,
       components,
       gridEnabled,
       gridSize,
@@ -377,7 +377,7 @@ export function useFileOperations({
   const handleSave = useCallback(async () => {
     if (projectFilePathRef.current && window.electronAPI?.isElectron) {
       const projectState: ProjectState = {
-        enclosureType,
+        enclosureType: enclosureType || undefined,
         components,
         gridEnabled,
         gridSize,
@@ -420,7 +420,7 @@ export function useFileOperations({
 
   const handleSaveAs = async () => {
     try {
-      await handleSaveWithFilename(projectName || enclosureType);
+      await handleSaveWithFilename(projectName || enclosureType || "untitled");
     } catch (err: any) {
       if (err.message !== 'User canceled save operation') {
         console.error('Save As failed:', err);
@@ -451,7 +451,7 @@ export function useFileOperations({
       });
 
       const projectFileSchema = z.object({
-        enclosureType: z.string().optional(),
+        enclosureType: z.string().optional().nullable(),
         currentSide: z.string().optional(),
         components: z.array(legacyComponentSchema).optional(),
         gridEnabled: z.boolean().optional(),
@@ -474,7 +474,7 @@ export function useFileOperations({
 
       const normalizedEnclosureType = (rawData.enclosureType && rawData.enclosureType in ENCLOSURE_TYPES)
         ? (rawData.enclosureType as EnclosureType)
-        : "1590B";
+        : null;
 
       const validComponents: PlacedComponent[] = (rawData.components || [])
         .filter(c => c.type && c.type in COMPONENT_TYPES)

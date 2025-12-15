@@ -23,7 +23,7 @@ export const ENCLOSURE_TYPES = {
   "Hammond-1590A": { width: 39, height: 93, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590A" },
   "Hammond-1590B": { width: 60, height: 113, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590B" },
   "Hammond-1590LB": { width: 51, height: 51, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590LB" },
-  "Hammond-125B": { width: 66.98, height: 121, depth: 35.94, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "125B" },
+  "Hammond-1590N1": { width: 66, height: 121, depth: 38, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "125B" },
   "Hammond-1590BB": { width: 119, height: 94, depth: 33, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BB" },
   "Hammond-1590BB2": { width: 119, height: 94, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BB2" },
   "Hammond-1590BBS": { width: 120, height: 94, depth: 38.3, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BBS" },
@@ -41,13 +41,25 @@ export const ENCLOSURE_TYPES = {
   "1590DD": { width: 188, height: 120, depth: 36, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590DD" },
   "1590XX": { width: 153, height: 122.5, depth: 38, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590XX" },
   
-  // Other manufacturers
-  "CNC-1590BB": { width: 119.5, height: 94.5, depth: 33.2, rotatesLabels: true, cornerStyle: "sharp" as const, manufacturer: "CNC Pro" as const, displayName: "1590BB" },
+  // LMS CNC Pro enclosures
+  "CNC-1590A": { width: 39, height: 93, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590A" },
+  "CNC-1590B": { width: 60, height: 113, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590B" },
+  "CNC-1590LB": { width: 51, height: 51, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590LB" },
+  "CNC-125B": { width: 66.98, height: 121, depth: 35.94, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "125B" },
+  "CNC-1590BB": { width: 119, height: 94, depth: 33, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BB" },
+  "CNC-1590BB2": { width: 119, height: 94, depth: 37, rotatesLabels: true, cornerStyle:"rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BB2" },
+  "CNC-1590BBS": { width: 120, height: 94, depth: 38.3, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BBS" },
+  "CNC-1590DD": { width: 188, height: 120, depth: 36, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590DD" },
+  "CNC-1590XX": { width: 153, height: 122.5, depth: 38, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590XX" },
+  
+  // GØRVA design enclosures
   "GORVA-125B": { width: 67, height: 121.5, depth: 36, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "GØRVA design" as const, displayName: "125B" },
+  
+  // Tayda enclosures
   "Tayda-1590BB": { width: 119.2, height: 94.3, depth: 33.1, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Tayda" as const, displayName: "1590BB" },
 } as const;
 
-export type EnclosureType = keyof typeof ENCLOSURE_TYPES;
+export type EnclosureType = keyof typeof ENCLOSURE_TYPES | null;
 
 // Helper to get manufacturer icon/prefix
 export function getManufacturerPrefix(manufacturer: EnclosureManufacturer): string {

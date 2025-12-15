@@ -220,6 +220,10 @@ export default function UnwrappedCanvas({
   rotatesLabels = false,
   onRightClick,
 }: UnwrappedCanvasProps) {
+  if (!enclosureType || !ENCLOSURE_TYPES[enclosureType]) {
+    return null;
+  }
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
