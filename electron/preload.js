@@ -16,6 +16,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Window operations
   closeWindow: () => ipcRenderer.invoke('window:close'),
   
+  // Send messages to main process
+  send: (channel, data) => {
+    ipcRenderer.send(channel, data);
+  },
+  
   // Development mode check
   isDevMode: () => ipcRenderer.invoke('app:is-dev-mode'),
   

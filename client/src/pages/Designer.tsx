@@ -65,6 +65,9 @@ export default function Designer() {
   const [projectName, setProjectName] = useState("");
   const [projectFilePath, setProjectFilePath] = useState<string | null>(null);
 
+  // Derived state to control menu item enabled/disabled status
+  const isEnclosureSelected = enclosureType !== null;
+
   // Refs for stability
   const fileOperationsRef = useRef<any>(null);
   const printRef = useRef<any>(null);
@@ -205,47 +208,6 @@ export default function Designer() {
     confirmDialogsRef.current = confirmDialogs;
     debugLog("Hook refs updated");
   }, [fileOperations, print, pdfExport, confirmDialogs]);
-
-  useKeyboardShortcuts({
-    handleZoomIn: () => setZoom(prev => snapZoom(prev + 0.1)),
-    handleZoomOut: () => setZoom(prev => snapZoom(prev - 0.1)),
-    handleSave: () => {
-      handleMenuSave();
-    },
-    handleSaveAs: () => {
-      handleMenuSaveAs();
-    },
-    handleLoad: () => {
-      handleMenuOpen();
-    },
-    handlePrint: () => {
-      handleMenuPrint();
-    },
-    handleExportPDF: () => {
-      handleMenuExportPDF();
-    },
-    handleQuit: () => {
-      handleMenuQuit();
-    }
-  });
-
-  // UI Handlers
-  const handleZoomIn = () => {
-    setZoom(prev => snapZoom(prev + 0.1));
-  };
-
-  const handleZoomOut = () => {
-    setZoom(prev => snapZoom(prev - 0.1));
-  };
-
-  const handleRotateCanvas = () => {
-    setRotation(prev => prev === 0 ? 90 : 0);
-    fileOperations.markDirty();
-  };
-
-  const rotationDirection: 'cw' | 'ccw' = rotation === 0 ? 'cw' : 'ccw';
-
-  const printScaleTest = usePrintScaleTest();
 
   // BULLETPROOF SOLUTION: Create stable handler functions that use refs
   const handleMenuNew = useRef(() => {
@@ -389,6 +351,38 @@ export default function Designer() {
     }
   }).current;
 
+  // Use keyboard shortcuts hook - MUST BE CALLED AFTER HANDLERS ARE DEFINED
+  useKeyboardShortcuts({
+    handleZoomIn: () => setZoom(prev => snapZoom(prev + 0.1)),
+    handleZoomOut: () => setZoom(prev => snapZoom(prev - 0.1)),
+    handleSave: handleMenuSave,
+    handleSaveAs: handleMenuSaveAs,
+    handleLoad: handleMenuOpen,
+    handlePrint: handleMenuPrint,
+    handleExportPDF: handleMenuExportPDF,
+    handleQuit: handleMenuQuit,
+    handleNew: handleMenuNew,
+    isEnclosureSelected: isEnclosureSelected, // Uses the new derived state
+  });
+
+  // UI Handlers
+  const handleZoomIn = () => {
+    setZoom(prev => snapZoom(prev + 0.1));
+  };
+
+  const handleZoomOut = () => {
+    setZoom(prev => snapZoom(prev - 0.1));
+  };
+
+  const handleRotateCanvas = () => {
+    setRotation(prev => prev === 0 ? 90 : 0);
+    fileOperations.markDirty();
+  };
+
+  const rotationDirection: 'cw' | 'ccw' = rotation === 0 ? 'cw' : 'ccw';
+
+  const printScaleTest = usePrintScaleTest();
+
   // Set up Electron menu listeners with proper cleanup
   useEffect(() => {
     debugLog("Setting up Electron menu listeners");
@@ -399,6 +393,12 @@ export default function Designer() {
     }
     
     const cleanupFunctions: (() => void)[] = [];
+    
+    // Set initial menu state when listeners are set up
+    if (window.electronAPI.send) {
+      const isSelected = enclosureType !== null;
+      window.electronAPI.send('app:update-menu-state', isSelected);
+    }
     
     debugLog("Registering menu listeners");
     
@@ -471,8 +471,20 @@ export default function Designer() {
     handleMenuSaveAs, 
     handleMenuPrint, 
     handleMenuExportPDF, 
-    handleMenuQuit
+    handleMenuQuit,
+    enclosureType
   ]);
+
+  // Update menu state when enclosure changes
+  useEffect(() => {
+    if (window.electronAPI?.isElectron && window.electronAPI.send) {
+      const isSelected = enclosureType !== null;
+      debugLog("Updating menu state:", isSelected);
+      
+      // Send menu state update to main process
+      window.electronAPI.send('app:update-menu-state', isSelected);
+    }
+  }, [enclosureType]);
 
   useEffect(() => {
     debugLog("Setting up Electron window event listeners");
@@ -523,45 +535,46 @@ export default function Designer() {
       {enclosureType === null ? (
         <>
           {/* Blank canvas when no enclosure selected */}
-    <BlankCanvas 
-      onSelectEnclosure={() => setShowEnclosureSelector(true)}
-      appIcon={appIcon}
-      appVersion="1.1.0-beta.1"
-    />
-    
-    <TopControls
-      currentSide={undefined}
-      zoom={1}
-      fileName={fileOperations.projectName}
-      isDirty={false}
-      onZoomIn={() => {}}
-      onZoomOut={() => {}}
-      onRotate={undefined}
-      onPrevSide={undefined}
-      onNextSide={undefined}
-      onNew={handleMenuNew}
-      onSave={handleMenuSave}
-      onSaveAs={handleMenuSaveAs}
-      onOpen={handleMenuOpen}
-      onExportPDF={handleMenuExportPDF}
-      onPrint={handleMenuPrint}
-      onQuit={handleMenuQuit}
-    />
-    
-    <EnclosureSelector
-      open={showEnclosureSelector}
-      onClose={() => setShowEnclosureSelector(false)}
-      currentType={enclosureType}
-      onSelect={(type) => {
-        debugLog("Enclosure type changed to:", type);
-        setEnclosureType(type);
-        setShowEnclosureSelector(false);
-        fileOperations.markDirty();
-      }}
-      unit={unit}
-    />
-  </>
-) : (
+          <BlankCanvas 
+            onSelectEnclosure={() => setShowEnclosureSelector(true)}
+            appIcon={appIcon}
+            appVersion="1.1.0-beta.1"
+          />
+          
+          <TopControls
+            currentSide={undefined}
+            zoom={1}
+            fileName={fileOperations.projectName}
+            isDirty={false}
+            onZoomIn={() => {}}
+            onZoomOut={() => {}}
+            onRotate={undefined}
+            onPrevSide={undefined}
+            onNextSide={undefined}
+            onNew={handleMenuNew}
+            onSave={handleMenuSave}
+            onSaveAs={handleMenuSaveAs}
+            onOpen={handleMenuOpen}
+            onExportPDF={handleMenuExportPDF}
+            onPrint={handleMenuPrint}
+            onQuit={handleMenuQuit}
+            isEnclosureSelected={isEnclosureSelected}
+          />
+          
+          <EnclosureSelector
+            open={showEnclosureSelector}
+            onClose={() => setShowEnclosureSelector(false)}
+            currentType={enclosureType}
+            onSelect={(type) => {
+              debugLog("Enclosure type changed to:", type);
+              setEnclosureType(type);
+              setShowEnclosureSelector(false);
+              fileOperations.markDirty();
+            }}
+            unit={unit}
+          />
+        </>
+      ) : (
         <>
           {/* Normal canvas when enclosure is selected */}
           <UnwrappedCanvas
@@ -700,6 +713,7 @@ export default function Designer() {
             onExportPDF={handleMenuExportPDF}
             onPrint={handleMenuPrint}
             onQuit={handleMenuQuit}
+            isEnclosureSelected={isEnclosureSelected}
           />
 
           <BottomInfo

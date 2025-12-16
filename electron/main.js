@@ -22,6 +22,38 @@ let mainWindow;
 let fileToOpen = null;
 let isWindowReady = false;
 
+// Function to update menu state based on enclosure selection
+function updateMenuState(isEnclosureSelected) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  
+  const menu = Menu.getApplicationMenu();
+  if (!menu) return;
+  
+  // Find the File menu
+  const fileMenu = menu.items.find(item => item.label === 'File');
+  if (!fileMenu || !fileMenu.submenu) return;
+  
+  // Update enabled state for specific menu items
+  const itemsToUpdate = [
+    { label: 'Save', accelerator: process.platform === 'darwin' ? 'Cmd+S' : 'Ctrl+S' },
+    { label: 'Save As...', accelerator: process.platform === 'darwin' ? 'Cmd+Shift+S' : 'Ctrl+Shift+S' },
+    { label: 'Print...', accelerator: process.platform === 'darwin' ? 'Cmd+P' : 'Ctrl+P' },
+    { label: 'Export as PDF...', accelerator: process.platform === 'darwin' ? 'Cmd+E' : 'Ctrl+E' },
+  ];
+  
+  itemsToUpdate.forEach(itemToUpdate => {
+    const menuItem = fileMenu.submenu.items.find(item => 
+      item.label === itemToUpdate.label && item.accelerator === itemToUpdate.accelerator
+    );
+    if (menuItem) {
+      menuItem.enabled = isEnclosureSelected;
+    }
+  });
+  
+  // Set the updated menu
+  Menu.setApplicationMenu(menu);
+}
+
 // Create application menu with accelerators
 function createApplicationMenu() {
   const isMac = process.platform === 'darwin';
@@ -55,6 +87,7 @@ function createApplicationMenu() {
         {
           label: 'Save',
           accelerator: isMac ? 'Cmd+S' : 'Ctrl+S',
+          enabled: false, // Initially disabled
           click: () => {
             // console.log('💾 Save via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -65,6 +98,7 @@ function createApplicationMenu() {
         {
           label: 'Save As...',
           accelerator: isMac ? 'Cmd+Shift+S' : 'Ctrl+Shift+S',
+          enabled: false, // Initially disabled
           click: () => {
             // console.log('💾 Save As via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -76,6 +110,7 @@ function createApplicationMenu() {
         {
           label: 'Print...',
           accelerator: isMac ? 'Cmd+P' : 'Ctrl+P',
+          enabled: false, // Initially disabled
           click: () => {
             // console.log('🖨️ Print via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -86,6 +121,7 @@ function createApplicationMenu() {
         {
           label: 'Export as PDF...',
           accelerator: isMac ? 'Cmd+E' : 'Ctrl+E',
+          enabled: false, // Initially disabled
           click: () => {
             // console.log('📄 Export PDF via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -123,22 +159,28 @@ function createApplicationMenu() {
     {
       label: 'View',
       submenu: (function() {
-        const submenu = [
-          { role: 'reload' },
-          { role: 'forceReload' },
-          { type: 'separator' },
+        const submenu = [];
+        
+        if (isDevelopment) {
+          submenu.push(
+            { role: 'reload' },        // Handles Ctrl+R / Cmd+R
+            { role: 'forceReload' },   // Handles Ctrl+Shift+R / Cmd+Shift+R
+            { role: 'toggleDevTools' },// Handles Ctrl+Shift+I / F12
+            { type: 'separator' }
+          );
+        } else {
+          // If not in development, the submenu starts with zoom controls,
+          // effectively removing the reload shortcuts.
+        }
+
+        // Add standard view options (always present)
+        submenu.push(
           { role: 'resetZoom' },
           { role: 'zoomIn' },
           { role: 'zoomOut' },
           { type: 'separator' },
           { role: 'togglefullscreen' }
-        ];
-        
-        // Only add toggleDevTools in development
-        if (isDevelopment) {
-          // Insert toggleDevTools at position 2 (after forceReload, before separator)
-          submenu.splice(2, 0, { role: 'toggleDevTools' });
-        }
+        );
         
         return submenu;
       })()
@@ -561,11 +603,6 @@ ipcMain.handle('file:open', async () => {
     const filePath = result.filePaths[0];
     // console.log('📂 Selected file (file:open):', filePath);
     
-    // Send the file-open-request event for backward compatibility
-    // if (mainWindow && !mainWindow.isDestroyed()) {
-    //   mainWindow.webContents.send('file-open-request', filePath);
-    // }
-    
     return { 
       success: true, 
       filePath 
@@ -823,6 +860,12 @@ function getNextVersion(currentVersion) {
   parts[parts.length - 1] = (lastPart + 1).toString();
   return parts.join('.');
 }
+
+// IPC handler to update menu state
+ipcMain.handle('app:update-menu-state', (event, isEnclosureSelected) => {
+  // console.log('📋 Updating menu state:', isEnclosureSelected ? 'enabled' : 'disabled');
+  updateMenuState(isEnclosureSelected);
+});
 
 // Error handling for uncaught exceptions
 process.on('uncaughtException', (error) => {
