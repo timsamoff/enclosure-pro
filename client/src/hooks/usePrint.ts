@@ -24,75 +24,82 @@ export function usePrint(props: UsePrintProps) {
         const pdfBuffer = await pdfBlob.arrayBuffer();
         
         try {
-          // Get PDF dimensions for paper size
+          // Get PDF dimensions - these are now EXACT template dimensions
           const pageWidth = pdf.internal.pageSize.getWidth();
           const pageHeight = pdf.internal.pageSize.getHeight();
           
-          // Determine closest standard paper size
-          let paperSize = 'Custom';
-          if (Math.abs(pageWidth - 210) < 5 && Math.abs(pageHeight - 297) < 5) {
-            paperSize = 'A4';
-          } else if (Math.abs(pageWidth - 297) < 5 && Math.abs(pageHeight - 420) < 5) {
-            paperSize = 'A3';
-          } else if (Math.abs(pageWidth - 148) < 5 && Math.abs(pageHeight - 210) < 5) {
-            paperSize = 'A5';
-          }
+          console.log('Print PDF page size:', pageWidth, 'x', pageHeight, 'mm');
           
-          // CRITICAL: Use silent printing with explicit scale settings
-          // Some Electron versions support disabling fit-to-page via these options
+          // CRITICAL: Always use Custom paper size with exact dimensions
+          // This is the ONLY way to prevent printer scaling
+          const printOpts: any = {
+            printBackground: true,
+            // REMOVED: scale property - let it default
+            // Setting scale: 1.0 might still trigger fit-to-page
+            landscape: false,
+            margins: {
+              marginType: 'none',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              right: 0
+            },
+            pageSize: 'Custom',
+            // Convert mm to points (1 point = 1/72 inch)
+            pageWidth: pageWidth * 72 / 25.4,
+            pageHeight: pageHeight * 72 / 25.4,
+            // CRITICAL: Disable all auto-fitting
+            scaleFactor: 100,
+            shouldPrintBackgrounds: true,
+            printScaling: 'none', // Chromium-specific: disable scaling
+          };
+          
+          console.log('Print options:', printOpts);
+          
+          // CRITICAL: Use silent printing to bypass dialog that might apply scaling
           await window.electronAPI.printPDF({
-  pdfData: Array.from(new Uint8Array(pdfBuffer)),
-  printOptions: {
-    printBackground: true,
-    scale: 1.0,
-    landscape: false,
-    pageSize: 'Custom',
-    pageWidth: pdf.internal.pageSize.getWidth() * 72 / 25.4, // Convert mm to points
-    pageHeight: pdf.internal.pageSize.getHeight() * 72 / 25.4,
-    margins: {
-      marginType: 'none',
-      top: 0,
-      bottom: 0,
-      left: 0,
-      right: 0
-    },
-  },
-  silent: true
-});
-          
-          // Add parenthetical about larger printing formats
-          const formatNote = paperSize === 'A3' 
-            ? " For larger enclosures, consider export to PDF to print on A3 or tabloid (11x17\") paper."
-            : paperSize === 'A4'
-            ? " For larger enclosures, consider export to PDF to print on A3 or tabloid (11x17\") paper."
-            : "";
+            pdfData: Array.from(new Uint8Array(pdfBuffer)),
+            printOptions: printOpts,
+            silent: true
+          });
           
           props.toast({
-  title: "Print Sent",
-  description: `Printing at 100% scale on ${paperSize} paper. Verify calibration mark.`,
-  duration: 5000,
-});
+            title: "Print Sent",
+            description: `Printing at exact 100% scale (${pageWidth.toFixed(1)}mm × ${pageHeight.toFixed(1)}mm). Verify with ruler or calibration mark if available.`,
+            duration: 5000,
+          });
           return;
         } catch (error) {
           console.warn('Electron silent print failed, trying with dialog:', error);
           
-          // Fallback: Try with dialog but add explicit instructions
+          // Fallback: Try with dialog
           try {
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            
             await window.electronAPI.printPDF({
               pdfData: Array.from(new Uint8Array(pdfBuffer)),
               printOptions: {
                 printBackground: true,
-                scale: 1.0,
                 landscape: false,
-                pageSize: 'A4',
+                pageSize: 'Custom',
+                pageWidth: pageWidth * 72 / 25.4,
+                pageHeight: pageHeight * 72 / 25.4,
+                margins: {
+                  marginType: 'none',
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  right: 0
+                },
               },
-              silent: false // Show dialog
+              silent: false
             });
             
             props.toast({
-              title: "Check Printer Settings!",
-              description: "In print dialog, SET 'Scale: 100%' and DISABLE 'Fit to Page'. Check 25.4mm (1\") mark. For larger enclosures, use A3 or tabloid (11x17\") format.",
-              duration: 6000,
+              title: "⚠️ VERIFY PRINT SETTINGS!",
+              description: "In print dialog: Set 'Scale' to 100% or 'Actual Size'. DISABLE 'Fit to Page'. Template size: " + pageWidth.toFixed(1) + "mm × " + pageHeight.toFixed(1) + "mm",
+              duration: 8000,
               variant: "default"
             });
             return;
@@ -107,6 +114,9 @@ export function usePrint(props: UsePrintProps) {
       const pdfBlob = pdf.output('blob');
       const pdfUrl = URL.createObjectURL(pdfBlob);
       const printWindow = window.open(pdfUrl, '_blank', 'width=900,height=700,scrollbars=yes');
+      
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
       
       if (printWindow) {
         // Simple preview with just the warning and PDF
@@ -164,13 +174,19 @@ export function usePrint(props: UsePrintProps) {
             </head>
             <body>
               <div class="no-print warning">
-                ⚠️ CRITICAL: When printing, in the print dialog:
+                ⚠️ CRITICAL: Template size is ${pageWidth.toFixed(1)}mm × ${pageHeight.toFixed(1)}mm
+                <br><br>
+                When printing, in the print dialog:
                 <ol style="margin-left: 20px; margin-top: 8px;">
-                  <li>Set "Page Scaling" to "None" or "Actual Size"</li>
-                  <li>Disable "Fit to Page" or "Shrink to Fit"</li>
-                  <li>Set "Scale" to 100%</li>
+                  <li><strong>Set "Page Scaling" to "None" or "Actual Size"</strong></li>
+                  <li><strong>DISABLE "Fit to Page" or "Shrink to Fit"</strong></li>
+                  <li><strong>Set "Scale" to 100%</strong></li>
+                  <li>Use custom paper size or a paper larger than template</li>
                 </ol>
-                <em style="margin-top: 15px; display: block;">For larger enclosures, consider exporting to PDF to print on A3 or tabloid (11x17\") paper.</em>
+                <p style="margin-top: 10px; color: #d63031;">
+                  ⚠️ If your printer doesn't support custom sizes, the template may be cropped or scaled. 
+                  Consider exporting to PDF and printing from Adobe Reader with "Actual Size" selected.
+                </p>
               </div>
               <div class="pdf-container">
                 <iframe 
@@ -184,23 +200,23 @@ export function usePrint(props: UsePrintProps) {
         printWindow.document.close();
         
         props.toast({
-          title: "Print Preview (100% Scale)",
-          description: "Print preview opened.",
+          title: "Print Preview (Exact Size)",
+          description: `Template: ${pageWidth.toFixed(1)}mm × ${pageHeight.toFixed(1)}mm. MUST print at 100% scale.`,
           duration: 6000,
         });
       } else {
         // If popup blocked, download and instruct
         const link = document.createElement('a');
         link.href = pdfUrl;
-        link.download = `${props.projectName || props.enclosureType}.pdf`;
+        link.download = `${props.projectName || props.enclosureType}-print.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         
         props.toast({
           title: "PDF Downloaded",
-          description: "PDF downloaded. Open and print with 'Scale: 100%' setting. For larger enclosures, use A3 or tabloid (11x17\") format.",
-          duration: 5000,
+          description: `Template: ${pageWidth.toFixed(1)}mm × ${pageHeight.toFixed(1)}mm. Open and print with 'Actual Size' or '100% Scale' - NO SCALING.`,
+          duration: 6000,
         });
       }
 
@@ -224,11 +240,14 @@ export function usePrint(props: UsePrintProps) {
       const pdfBlob = pdf.output('blob');
       const pdfUrl = URL.createObjectURL(pdfBlob);
       
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      
       const previewWindow = window.open(pdfUrl, '_blank', 'width=900,height=700,scrollbars=yes');
       if (previewWindow) {
         props.toast({
-          title: "Print Preview (100% Scale)",
-          description: "Preview opened. Check 25.4mm (1\") calibration mark. For larger enclosures, use A3 or tabloid (11x17\") format.",
+          title: "Print Preview (Exact Size)",
+          description: `Template: ${pageWidth.toFixed(1)}mm × ${pageHeight.toFixed(1)}mm. Print at 100% scale only.`,
         });
       }
     } catch (error) {

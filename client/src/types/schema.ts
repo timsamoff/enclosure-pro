@@ -73,10 +73,10 @@ export type EnclosureType = keyof typeof ENCLOSURE_TYPES | null;
 // Helper to get manufacturer icon/prefix
 export function getManufacturerPrefix(manufacturer: EnclosureManufacturer): string {
   const prefixes: Record<EnclosureManufacturer, string> = {
-    "Hammond": "H",
-    "CNC Pro": "C",
-    "GØRVA design": "G",
-    "Tayda": "T"
+    "Hammond": "HAM",
+    "CNC Pro": "CNC",
+    "GØRVA design": "GOR",
+    "Tayda": "TAY"
   };
   return prefixes[manufacturer];
 }

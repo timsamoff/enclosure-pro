@@ -133,10 +133,17 @@ export function usePDFExport({
         
         skipHeadersFooters = true; // Skip extended headers for print mode
       } else {
-        // For export: Custom size with margins for headers/footers
-        const EXTRA_MARGIN = 50;
-        pdfPageWidth = finalWidth + EXTRA_MARGIN;
-        pdfPageHeight = finalHeight + EXTRA_MARGIN + 100;
+        // For export: Use A4 if template fits, otherwise use custom size with margins
+        if (originalFitsOnA4) {
+          // Small enclosures: Use A4 page size
+          pdfPageWidth = A4_WIDTH;
+          pdfPageHeight = A4_HEIGHT;
+        } else {
+          // Large enclosures: Custom size with margins for headers/footers
+          const EXTRA_MARGIN = 50;
+          pdfPageWidth = finalWidth + EXTRA_MARGIN;
+          pdfPageHeight = finalHeight + EXTRA_MARGIN + 100;
+        }
       }
       
       const pdf = new jsPDF({
@@ -148,29 +155,33 @@ export function usePDFExport({
       const INCH_TO_MM = 25.4;
       const TOP_MARGIN = 0.5 * INCH_TO_MM;
       
-      // Header positions
+      // Header positions for export mode
       const titleY = TOP_MARGIN + 10;
       const enclosureInfoY = TOP_MARGIN + 16;
       const dimensionsInfoY = TOP_MARGIN + 22;
+      
+      // SAFE MARGINS for print mode headers/footers
+      const SAFE_MARGIN = 10; // mm from edges
       
       // Centering logic - different for small vs large enclosures
       let imageX: number;
       let imageY: number;
       
       if (options.forPrint && originalFitsOnA4) {
-        // Small enclosures: Center on A4
+        // SMALL ENCLOSURES ON A4: Center on ENTIRE page to prevent auto-scaling
+        // Headers/footers will be overlaid in safe margins, but template is truly centered
         const centerX = pdfPageWidth / 2;
         const centerY = pdfPageHeight / 2;
         imageX = centerX - (finalWidth / 2);
         imageY = centerY - (finalHeight / 2);
-        // console.log('Centering small enclosure on A4');
+        // console.log('Centering small enclosure on entire A4 page');
       } else if (options.forPrint && !originalFitsOnA4) {
-        // Large enclosures: Position at top-left (0,0)
+        // Large enclosures: Position at top-left (0,0) - no headers/footers for custom sizes
         imageX = 0;
         imageY = 0;
         // console.log('Positioning large enclosure at 0,0');
       } else {
-        // Export mode: center with header space
+        // Export mode: center with header space (existing logic)
         const centerX = pdfPageWidth / 2;
         const centerY = TOP_MARGIN + 40 + (finalHeight / 2);
         imageX = centerX - (finalWidth / 2);
@@ -180,6 +191,10 @@ export function usePDFExport({
       // console.log('Center point:', imageX + (finalWidth / 2), imageY + (finalHeight / 2));
       // console.log('Final image dimensions:', finalWidth, 'x', finalHeight);
       // console.log('Image position:', imageX, imageY);
+      // console.log('Page dimensions:', pdfPageWidth, 'x', pdfPageHeight);
+      // if (options.forPrint && originalFitsOnA4) {
+      //   console.log('Available height between headers/footers:', pdfPageHeight - (2 * SAFE_MARGIN));
+      // }
       
       // console.log('=== ADDING IMAGE TO PDF ===');
       // console.log('PDF Page size:', pdfPageWidth, 'x', pdfPageHeight, 'mm');
@@ -219,22 +234,29 @@ export function usePDFExport({
       // console.log('For 1590XX front face: should be 153mm x 122.5mm');
       // console.log('Total template added:', finalWidth, 'x', finalHeight);
 
-      // Add minimal header/footer overlay for ALL modes (including print)
+      // Add minimal header/footer overlay ONLY for print mode
       const pdfTitle = projectName ? `${projectName} - Drill Template` : "Enclosure Pro - Drill Template";
       
-      // Simple header at top
-      pdf.setFontSize(8);
-      pdf.setFont("helvetica", "bold");
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(pdfTitle, pdfPageWidth / 2, 5, { align: "center" });
-      
-      // Simple footer at bottom
-      pdf.setFontSize(7);
-      pdf.setFont("helvetica", "normal");
-      const dateStr = new Date().toLocaleDateString();
-      pdf.text(`${currentEnclosureType} | ${currentUnit}`, 5, pdfPageHeight - 3);
-      pdf.text(`100% Scale`, pdfPageWidth / 2, pdfPageHeight - 3, { align: "center" });
-      pdf.text(dateStr, pdfPageWidth - 5, pdfPageHeight - 3, { align: "right" });
+      // Simple header at top - ONLY FOR PRINT MODE
+      // Positioned at SAFE_MARGIN from edges
+      if (options.forPrint) {
+        // Only add headers/footers if we're on A4 (small enclosures)
+        // Large enclosures on custom paper don't get headers/footers
+        if (originalFitsOnA4) {
+          pdf.setFontSize(8);
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(pdfTitle, pdfPageWidth / 2, SAFE_MARGIN, { align: "center" });
+          
+          // Simple footer at bottom
+          pdf.setFontSize(7);
+          pdf.setFont("helvetica", "normal");
+          const dateStr = new Date().toLocaleDateString();
+          pdf.text(`${currentEnclosureType} | ${currentUnit}`, SAFE_MARGIN, pdfPageHeight - SAFE_MARGIN);
+          pdf.text(`100% Scale`, pdfPageWidth / 2, pdfPageHeight - SAFE_MARGIN, { align: "center" });
+          pdf.text(dateStr, pdfPageWidth - SAFE_MARGIN, pdfPageHeight - SAFE_MARGIN, { align: "right" });
+        }
+      }
 
       // Only add full headers/footers/calibration for export mode
       if (!skipHeadersFooters) {

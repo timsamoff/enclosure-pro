@@ -1,5 +1,5 @@
 import { EnclosureType, ENCLOSURE_TYPES, MeasurementUnit, getManufacturerPrefix, getEnclosureDisplayName } from "@/types/schema";
-import { Box, Grid3x3, Package } from "lucide-react";
+import { Box, Grid3x3, Package, CircleDot } from "lucide-react";
 import { mmToFraction } from "@/lib/utils";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useFocusManagement } from "@/hooks/useFocusManagement";
@@ -46,26 +46,28 @@ export default function BottomInfo({
 
   return (
     <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-6 py-2 bg-background/95 backdrop-blur-md border-t border-border z-50 pointer-events-none">
-      {/* Left: Enclosure selector */}
-      <div className="flex items-center gap-6 text-sm pointer-events-auto">
-        <button
-          onClick={() => handleClick(onEnclosureClick)}
-          onMouseUp={releaseFocus}
-          className="flex items-center gap-2 px-3 min-h-9 rounded-md hover-elevate active-elevate-2 border border-border min-w-32 cursor-pointer"
-          data-testid="button-enclosure-select-bottom"
-        >
-          <Box className="w-4 h-4 flex-shrink-0" />
-          <span className="flex-1 truncate">{displayName}</span>
-          <span 
-            className="flex-shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground"
-            title={enclosure.manufacturer}
+      {/* Left: Enclosure selector - fixed width container */}
+      <div className="flex-1 flex justify-start">
+        <div className="flex items-center gap-6 text-sm pointer-events-auto">
+          <button
+            onClick={() => handleClick(onEnclosureClick)}
+            onMouseUp={releaseFocus}
+            className="flex items-center gap-2 px-3 min-h-9 rounded-md hover-elevate active-elevate-2 border border-border w-40 cursor-pointer"
+            data-testid="button-enclosure-select-bottom"
           >
-            {manufacturerPrefix}
-          </span>
-        </button>
+            <Box className="w-4 h-4 flex-shrink-0" />
+            <span className="flex-1 truncate text-center">{displayName}</span>
+            <span 
+              className="flex-shrink-0 px-2 py-0.5 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground min-w-[2.5rem]"
+              title={enclosure.manufacturer}
+            >
+              {manufacturerPrefix}
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* Center: Unit toggle and Grid selector */}
+      {/* Center: Unit toggle and Grid selector - centered */}
       <div className="flex items-center gap-3 text-sm pointer-events-auto">
         <ToggleGroup 
           type="single" 
@@ -109,17 +111,19 @@ export default function BottomInfo({
         </button>
       </div>
 
-      {/* Right: Components button */}
-      <div className="flex items-center gap-3 text-sm pointer-events-auto">
-        <button
-          onClick={() => handleClick(onComponentsClick)}
-          onMouseUp={releaseFocus}
-          className="flex items-center gap-2 px-3 min-h-9 rounded-md hover-elevate active-elevate-2 border border-border w-32 cursor-pointer"
-          data-testid="button-components-bottom"
-        >
-          <Package className="w-4 h-4" />
-          <span>Components</span>
-        </button>
+      {/* Right: Components button - fixed width container */}
+      <div className="flex-1 flex justify-end">
+        <div className="flex items-center gap-3 text-sm pointer-events-auto">
+          <button
+            onClick={() => handleClick(onComponentsClick)}
+            onMouseUp={releaseFocus}
+            className="flex items-center gap-2 px-3 min-h-9 rounded-md hover-elevate active-elevate-2 border border-border w-40 cursor-pointer"
+            data-testid="button-components-bottom"
+          >
+            <CircleDot className="w-4 h-4" />
+            <span className="flex-1 text-center">Components</span>
+          </button>
+        </div>
       </div>
     </div>
   );
