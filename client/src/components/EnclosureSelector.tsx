@@ -195,7 +195,7 @@ export default function EnclosureSelector({
                   onClick={() => handleEnclosureSelect(type)}
                   onMouseUp={releaseFocus}
                   className={`w-full flex items-center justify-between p-4 border rounded-lg text-left transition-all hover-elevate active-elevate-2 ${
-                    isSelected ? "border-primary bg-primary/5" : "border-border"
+                    isSelected ? "border-[#ff8c42] bg-[#ff8c42]/5" : "border-border" // Changed from border-primary bg-primary/5
                   }`}
                   data-testid={`button-enclosure-${type}`}
                 >
@@ -206,7 +206,7 @@ export default function EnclosureSelector({
                     </div>
                   </div>
                   {isSelected && (
-                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <div className="w-2 h-2 rounded-full bg-[#ff8c42]" /> // Changed from bg-primary
                   )}
                 </button>
               );

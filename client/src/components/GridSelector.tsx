@@ -83,6 +83,7 @@ export default function GridSelector({
                 checked={gridEnabled}
                 onCheckedChange={handleGridEnabledChange}
                 data-testid="switch-grid-enabled-dialog"
+                className="data-[state=checked]:bg-[#ff8c42]" // Added orange color for checked state
               />
             </div>
 
@@ -97,14 +98,14 @@ export default function GridSelector({
                         key={size}
                         onClick={() => handleGridSizeChange(size)}
                         onMouseUp={releaseFocus}
-                        className={`px-4 py-3 border rounded-lg text-left transition-all hover-elevate active-elevate-2 cursor-pointer ${
-                          isSelected ? "border-primary bg-primary/5" : "border-border"
+                        className={`px-4 py-3 border rounded-lg text-left transition-all hover-elevate active-elevate-2 cursor-pointer flex items-center justify-between ${
+                          isSelected ? "border-[#ff8c42] bg-[#ff8c42]/5" : "border-border"
                         }`}
                         data-testid={`button-grid-size-${size}`}
                       >
                         <div className="font-semibold">{formatGridSize(size)}</div>
                         {isSelected && (
-                          <div className="w-2 h-2 rounded-full bg-primary mt-1" />
+                          <div className="w-2 h-2 rounded-full bg-[#ff8c42] ml-2 flex-shrink-0" />
                         )}
                       </button>
                     );
