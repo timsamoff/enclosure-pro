@@ -1,8 +1,21 @@
 import { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { X, ChevronRight } from "lucide-react";
-import { EnclosureType, ENCLOSURE_TYPES, MeasurementUnit, EnclosureManufacturer, getEnclosureDisplayName } from "@/types/schema";
+import { X, ChevronRight, AlertTriangle } from "lucide-react";
+import { 
+  EnclosureType, 
+  ENCLOSURE_TYPES,
+  EnclosureManufacturer, 
+  MANUFACTURERS,
+  getEnclosureDisplayName,
+  getEnclosureManufacturer,
+  getAllEnclosuresGrouped,
+  normalizeEnclosureType,
+  is125BMigrationCase,
+  getManufacturerBadge,
+  getManufacturerBadgeColor,
+  MeasurementUnit 
+} from "@/types/schema";
 import { mmToFraction } from "@/lib/utils";
 import { useFocusManagement } from "@/hooks/useFocusManagement";
 
@@ -23,6 +36,15 @@ export default function EnclosureSelector({
 }: EnclosureSelectorProps) {
   const { releaseFocus } = useFocusManagement();
   const [selectedManufacturer, setSelectedManufacturer] = useState<EnclosureManufacturer | null>(null);
+  const [enclosuresByManufacturer, setEnclosuresByManufacturer] = useState<Record<EnclosureManufacturer, EnclosureType[]>>(
+    {} as Record<EnclosureManufacturer, EnclosureType[]>
+  );
+
+  // Normalize current type for display
+  const normalizedCurrentType = normalizeEnclosureType(currentType);
+  const isLegacy125B = is125BMigrationCase(currentType || "");
+  const currentBadge = getManufacturerBadge(currentType);
+  const currentBadgeColor = getManufacturerBadgeColor(currentType);
 
   const formatDimension = (mm: number) => {
     if (unit === "metric") {
@@ -31,6 +53,12 @@ export default function EnclosureSelector({
       return mmToFraction(mm);
     }
   };
+
+  // Initialize enclosures on component mount
+  useEffect(() => {
+    const grouped = getAllEnclosuresGrouped();
+    setEnclosuresByManufacturer(grouped);
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -82,45 +110,7 @@ export default function EnclosureSelector({
 
   if (!open) return null;
 
-  // Safety check for ENCLOSURE_TYPES
-  if (!ENCLOSURE_TYPES || typeof ENCLOSURE_TYPES !== 'object') {
-    console.error('ENCLOSURE_TYPES is not available');
-    return null;
-  }
-
-  // Group enclosures by manufacturer (exclude legacy entries)
-  const enclosuresByManufacturer: Record<EnclosureManufacturer, EnclosureType[]> = {
-    "Hammond": [],
-    "CNC Pro": [],
-    "GØRVA design": [],
-    "Tayda": []
-  };
-
-  try {
-    Object.entries(ENCLOSURE_TYPES).forEach(([key, value]) => {
-      // Safety check
-      if (!value || !value.manufacturer) {
-        console.warn('Invalid enclosure entry:', key, value);
-        return;
-      }
-      
-      // Only include prefixed versions (exclude legacy names)
-      if (key.includes('-')) {
-        const manufacturer = value.manufacturer;
-        
-        // Safety check: make sure the manufacturer exists in our object
-        if (enclosuresByManufacturer[manufacturer]) {
-          enclosuresByManufacturer[manufacturer].push(key as EnclosureType);
-        } else {
-          console.warn('Unknown manufacturer:', manufacturer, 'for enclosure:', key);
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error grouping enclosures:', error);
-  }
-
-  const manufacturers: EnclosureManufacturer[] = ["Hammond", "CNC Pro", "GØRVA design", "Tayda"];
+  const manufacturers = Object.keys(MANUFACTURERS) as EnclosureManufacturer[];
 
   return (
     <div className="absolute left-4 top-20 w-80 bg-background/95 backdrop-blur-md border border-border rounded-lg shadow-lg z-50 flex flex-col">
@@ -138,7 +128,7 @@ export default function EnclosureSelector({
             </Button>
           )}
           <h3 className="font-semibold">
-            {selectedManufacturer || "Enclosures"}
+            {selectedManufacturer ? MANUFACTURERS[selectedManufacturer].displayName : "Enclosures"}
           </h3>
         </div>
         <Button
@@ -152,12 +142,32 @@ export default function EnclosureSelector({
         </Button>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-200px)]">
+      {/* Legacy 125B warning with LEG badge */}
+      {isLegacy125B && (
+        <div className="mx-4 mt-2 p-2 bg-amber-50 border border-amber-200 rounded-md flex items-start gap-2 text-sm text-amber-800">
+          <div 
+            className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+            style={{ backgroundColor: currentBadgeColor }}
+          >
+            {currentBadge}
+          </div>
+          <div className="flex-1">
+            <div className="font-medium">Legacy 125B enclosure detected</div>
+            <div className="text-xs mt-1">
+              Please select a manufacturer's 125B version from the list below
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ScrollArea className="h-[calc(100vh-220px)]">
         <div className="p-4 space-y-3">
           {!selectedManufacturer ? (
             // Show manufacturer list
             manufacturers.map((manufacturer) => {
               const count = enclosuresByManufacturer[manufacturer]?.length || 0;
+              const manufacturerData = MANUFACTURERS[manufacturer];
+              
               return (
                 <button
                   key={manufacturer}
@@ -165,9 +175,13 @@ export default function EnclosureSelector({
                   onMouseUp={releaseFocus}
                   className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
                   data-testid={`button-manufacturer-${manufacturer}`}
+                  style={{
+                    borderLeftColor: manufacturerData.color,
+                    borderLeftWidth: '4px'
+                  }}
                 >
                   <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
-                    {manufacturer}
+                    {manufacturerData.displayName}
                   </span>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -181,36 +195,62 @@ export default function EnclosureSelector({
           ) : (
             // Show enclosure list for selected manufacturer
             <div className="space-y-3">
-              {enclosuresByManufacturer[selectedManufacturer]?.map((type) => {
-              const dimensions = ENCLOSURE_TYPES[type];
-              if (!dimensions) return null; // Safety check
-              
-              // Check if this enclosure is selected (handle both legacy and prefixed names)
-              const isSelected = type === currentType || 
-                                 (currentType && !currentType.includes('-') && type === `Hammond-${currentType}`);
-              const displayName = getEnclosureDisplayName(type);
-              return (
-                <button
-                  key={type}
-                  onClick={() => handleEnclosureSelect(type)}
-                  onMouseUp={releaseFocus}
-                  className={`w-full flex items-center justify-between p-4 border rounded-lg text-left transition-all hover-elevate active-elevate-2 ${
-                    isSelected ? "border-[#ff8c42] bg-[#ff8c42]/5" : "border-border" // Changed from border-primary bg-primary/5
-                  }`}
-                  data-testid={`button-enclosure-${type}`}
-                >
-                  <div>
-                    <div className="font-semibold text-lg">{displayName}</div>
-                    <div className="text-sm text-muted-foreground font-mono mt-1">
-                      {formatDimension(dimensions.width)} × {formatDimension(dimensions.height)} × {formatDimension(dimensions.depth)}
-                    </div>
-                  </div>
-                  {isSelected && (
-                    <div className="w-2 h-2 rounded-full bg-[#ff8c42]" /> // Changed from bg-primary
-                  )}
-                </button>
-              );
-            }) || <div className="text-sm text-muted-foreground p-4 text-center">No enclosures found</div>}
+              {enclosuresByManufacturer[selectedManufacturer]?.length > 0 ? (
+                enclosuresByManufacturer[selectedManufacturer].map((type) => {
+                  const dimensions = ENCLOSURE_TYPES[type];
+                  if (!dimensions) return null;
+                  
+                  const isSelected = type === normalizedCurrentType;
+                  const displayName = getEnclosureDisplayName(type);
+                  const manufacturer = getEnclosureManufacturer(type);
+                  const manufacturerColor = manufacturer ? MANUFACTURERS[manufacturer]?.color : "#ff8c42";
+                  const is125BOption = type.includes("125B");
+                  const isRecommendedForLegacy = isLegacy125B && is125BOption;
+                  
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => handleEnclosureSelect(type)}
+                      onMouseUp={releaseFocus}
+                      className={`w-full flex items-center justify-between p-4 border rounded-lg text-left transition-all hover-elevate active-elevate-2 ${
+                        isSelected ? "border-[#ff8c42] bg-[#ff8c42]/5" : "border-border"
+                      } ${isRecommendedForLegacy ? "ring-1 ring-amber-300" : ""}`}
+                      data-testid={`button-enclosure-${type}`}
+                      style={{
+                        borderLeftColor: manufacturerColor,
+                        borderLeftWidth: '4px'
+                      }}
+                    >
+                      <div>
+                        <div className="font-semibold text-lg flex items-center gap-2">
+                          {displayName}
+                          {isRecommendedForLegacy && (
+                            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                              Update recommended
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground font-mono mt-1">
+                          {formatDimension(dimensions.width)} × {formatDimension(dimensions.height)} × {formatDimension(dimensions.depth)}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {dimensions.manufacturer}
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: manufacturerColor }}
+                        />
+                      )}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="text-sm text-muted-foreground p-4 text-center">
+                  No enclosures found for this manufacturer
+                </div>
+              )}
             </div>
           )}
         </div>
