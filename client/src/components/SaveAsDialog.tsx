@@ -85,22 +85,24 @@ export default function SaveAsDialog({
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSaving}
-            data-testid="button-cancel-save"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!filename.trim() || isSaving}
-            data-testid="button-confirm-save"
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </Button>
-        </DialogFooter>
+  <Button
+    variant="outline"
+    onClick={() => onOpenChange(false)}
+    disabled={isSaving}
+    data-testid="button-cancel-save"
+    className="border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900 bg-white"
+  >
+    Cancel
+  </Button>
+  <Button
+    onClick={handleSave}
+    disabled={!filename.trim() || isSaving}
+    data-testid="button-confirm-save"
+    className="bg-[#ff8c42] hover:bg-[#e67e3b] text-white disabled:bg-[#ffb38a] disabled:cursor-not-allowed"
+  >
+    {isSaving ? "Saving..." : "Save"}
+  </Button>
+</DialogFooter>
       </DialogContent>
     </Dialog>
   );

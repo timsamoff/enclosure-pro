@@ -324,7 +324,7 @@ export function usePDFExport({
       <title>Export Template - Printing Instructions</title>
       <style>
         :root {
-            --primary-color: #cc5500;
+            --primary-color: #ff8c42;
             --secondary-color: #333333;
             --text-color: #212121;
             --bg-color: #e8dcc8;
