@@ -3,14 +3,60 @@ const path = require('path');
 const fs = require('fs').promises;
 const { autoUpdater } = require('electron-updater');
 
+// Load dev config
+let devConfig = { DEV_MODE: false, AUTO_OPEN_DEVTOOLS: false, VERBOSE_LOGGING: false };
+try {
+  devConfig = require('../dev.config.js');
+  console.log('📋 Dev config loaded:', devConfig);
+} catch (error) {
+  // If dev.config.js doesn't exist, use defaults (production mode)
+  console.log('ℹ️ No dev.config.js found, using production defaults');
+}
+
+// Use devConfig instead of process.env.NODE_ENV
+const isDevelopment = devConfig.DEV_MODE || process.env.NODE_ENV === 'development';
+
+console.log('🚀 Starting in', isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION', 'mode');
+
 let mainWindow;
 let fileToOpen = null;
 let isWindowReady = false;
 
+// Function to update menu state based on enclosure selection
+function updateMenuState(isEnclosureSelected) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  
+  const menu = Menu.getApplicationMenu();
+  if (!menu) return;
+  
+  // Find the File menu
+  const fileMenu = menu.items.find(item => item.label === 'File');
+  if (!fileMenu || !fileMenu.submenu) return;
+  
+  // Update enabled state for specific menu items
+  const itemsToUpdate = [
+    { label: 'Save', accelerator: process.platform === 'darwin' ? 'Cmd+S' : 'Ctrl+S' },
+    { label: 'Save As...', accelerator: process.platform === 'darwin' ? 'Cmd+Shift+S' : 'Ctrl+Shift+S' },
+    { label: 'Print...', accelerator: process.platform === 'darwin' ? 'Cmd+P' : 'Ctrl+P' },
+    { label: 'Export as PDF...', accelerator: process.platform === 'darwin' ? 'Cmd+E' : 'Ctrl+E' },
+  ];
+  
+  itemsToUpdate.forEach(itemToUpdate => {
+    const menuItem = fileMenu.submenu.items.find(item => 
+      item.label === itemToUpdate.label && item.accelerator === itemToUpdate.accelerator
+    );
+    if (menuItem) {
+      menuItem.enabled = isEnclosureSelected;
+    }
+  });
+  
+  // Set the updated menu
+  Menu.setApplicationMenu(menu);
+}
+
 // Create application menu with accelerators
 function createApplicationMenu() {
   const isMac = process.platform === 'darwin';
-  const isDevelopment = process.env.NODE_ENV === 'development';
   
   const template = [
     // File menu
@@ -41,6 +87,7 @@ function createApplicationMenu() {
         {
           label: 'Save',
           accelerator: isMac ? 'Cmd+S' : 'Ctrl+S',
+          enabled: false, // Initially disabled
           click: () => {
             // console.log('💾 Save via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -51,6 +98,7 @@ function createApplicationMenu() {
         {
           label: 'Save As...',
           accelerator: isMac ? 'Cmd+Shift+S' : 'Ctrl+Shift+S',
+          enabled: false, // Initially disabled
           click: () => {
             // console.log('💾 Save As via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -62,6 +110,7 @@ function createApplicationMenu() {
         {
           label: 'Print...',
           accelerator: isMac ? 'Cmd+P' : 'Ctrl+P',
+          enabled: false, // Initially disabled
           click: () => {
             // console.log('🖨️ Print via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -72,6 +121,7 @@ function createApplicationMenu() {
         {
           label: 'Export as PDF...',
           accelerator: isMac ? 'Cmd+E' : 'Ctrl+E',
+          enabled: false, // Initially disabled
           click: () => {
             // console.log('📄 Export PDF via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -109,22 +159,28 @@ function createApplicationMenu() {
     {
       label: 'View',
       submenu: (function() {
-        const submenu = [
-          { role: 'reload' },
-          { role: 'forceReload' },
-          { type: 'separator' },
+        const submenu = [];
+        
+        if (isDevelopment) {
+          submenu.push(
+            { role: 'reload' },        // Handles Ctrl+R / Cmd+R
+            { role: 'forceReload' },   // Handles Ctrl+Shift+R / Cmd+Shift+R
+            { role: 'toggleDevTools' },// Handles Ctrl+Shift+I / F12
+            { type: 'separator' }
+          );
+        } else {
+          // If not in development, the submenu starts with zoom controls,
+          // effectively removing the reload shortcuts.
+        }
+
+        // Add standard view options (always present)
+        submenu.push(
           { role: 'resetZoom' },
           { role: 'zoomIn' },
           { role: 'zoomOut' },
           { type: 'separator' },
           { role: 'togglefullscreen' }
-        ];
-        
-        // Only add toggleDevTools in development
-        if (isDevelopment) {
-          // Insert toggleDevTools at position 2 (after forceReload, before separator)
-          submenu.splice(2, 0, { role: 'toggleDevTools' });
-        }
+        );
         
         return submenu;
       })()
@@ -157,7 +213,7 @@ function setupAutoUpdater() {
 
   // Set logger for debug output
   autoUpdater.logger = {
-    info: (message) => console.log('📝 AutoUpdater Info:', message),
+    info: (message) => console.log('🔍 AutoUpdater Info:', message),
     warn: (message) => console.log('⚠️ AutoUpdater Warn:', message),
     error: (message) => console.log('❌ AutoUpdater Error:', message),
     debug: (message) => console.log('🐛 AutoUpdater Debug:', message)
@@ -264,8 +320,6 @@ function setupAutoUpdater() {
 }
 
 function createWindow() {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -273,7 +327,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      devTools: isDevelopment, // Only enable devTools in development
+      devTools: isDevelopment,
       sandbox: true,
     },
     title: 'Enclosure Pro',
@@ -296,8 +350,8 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     
-    // Only open dev tools in development
-    if (isDevelopment) {
+    // Use config for auto-opening DevTools
+    if (isDevelopment && devConfig.AUTO_OPEN_DEVTOOLS) {
       mainWindow.webContents.openDevTools();
     }
   });
@@ -521,7 +575,7 @@ ipcMain.handle('app:manual-check-updates', async () => {
   }
 });
 
-// FIXED: Direct file open handler with consistent return format
+// Direct file open handler with consistent return format
 ipcMain.handle('file:open', async () => {
   // console.log('📂 file:open called from renderer');
   
@@ -548,11 +602,6 @@ ipcMain.handle('file:open', async () => {
 
     const filePath = result.filePaths[0];
     // console.log('📂 Selected file (file:open):', filePath);
-    
-    // Send the file-open-request event for backward compatibility
-    // if (mainWindow && !mainWindow.isDestroyed()) {
-    //   mainWindow.webContents.send('file-open-request', filePath);
-    // }
     
     return { 
       success: true, 
@@ -708,10 +757,13 @@ ipcMain.handle('file:open-external', async (event, filePath) => {
   }
 });
 
+// IPC handler for dev mode check
+ipcMain.handle('app:is-dev-mode', () => {
+  return isDevelopment;
+});
+
 // TEST: Simulate update handler
 ipcMain.handle('test:simulate-update', () => {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  
   if (!isDevelopment) {
     return { success: false, error: 'Simulation only available in development' };
   }
@@ -797,6 +849,34 @@ ipcMain.handle('test:simulate-update', () => {
   return { success: true, message: 'Update simulation started' };
 });
 
+// Better print handler using printToPDF
+ipcMain.handle('print:pdf', async (event, options) => {
+  const { pdfData, printOptions, silent } = options;
+  
+  console.log('🖨️ Print PDF handler called');
+  
+  try {
+    // Just save to temp and open in system PDF viewer for printing
+    // This is more reliable than Electron's print API
+    const tmpDir = app.getPath('temp');
+    const tmpFile = path.join(tmpDir, `drill-template-${Date.now()}.pdf`);
+    
+    const pdfBuffer = Buffer.from(pdfData);
+    await fs.writeFile(tmpFile, pdfBuffer);
+    
+    console.log('PDF saved to:', tmpFile);
+    
+    // Open in system default PDF viewer
+    const { shell } = require('electron');
+    await shell.openPath(tmpFile);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Print PDF error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Helper function to calculate next version for simulation
 function getNextVersion(currentVersion) {
   if (!currentVersion) return '1.0.0';
@@ -808,6 +888,12 @@ function getNextVersion(currentVersion) {
   parts[parts.length - 1] = (lastPart + 1).toString();
   return parts.join('.');
 }
+
+// IPC handler to update menu state
+ipcMain.handle('app:update-menu-state', (event, isEnclosureSelected) => {
+  // console.log('📋 Updating menu state:', isEnclosureSelected ? 'enabled' : 'disabled');
+  updateMenuState(isEnclosureSelected);
+});
 
 // Error handling for uncaught exceptions
 process.on('uncaughtException', (error) => {

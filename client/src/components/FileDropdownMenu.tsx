@@ -12,6 +12,7 @@ import { shortcuts } from "@/lib/hotkeys";
 interface FileDropdownMenuProps {
   fileName: string;
   isDirty: boolean;
+  isEnclosureSelected: boolean;
   onNew: () => void;
   onSave: () => void;
   onSaveAs: () => void;
@@ -24,6 +25,7 @@ interface FileDropdownMenuProps {
 export default function FileDropdownMenu({
   fileName,
   isDirty,
+  isEnclosureSelected,
   onNew,
   onSave,
   onSaveAs,
@@ -51,17 +53,18 @@ export default function FileDropdownMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" data-testid="menu-file-dropdown">
         <DropdownMenuItem 
-          onClick={onNew} 
+          onClick={onNew}
+          disabled={!isEnclosureSelected}
           data-testid="menu-item-new"
-          className="cursor-pointer"
+          className={`${isEnclosureSelected ? "cursor-pointer" : "cursor-not-allowed !cursor-not-allowed"}`}
         >
           <FileText className="w-4 h-4 mr-2" />
           <span className="flex-1">New</span>
           <span className="text-xs text-muted-foreground ml-4">{shortcuts.new}</span>
         </DropdownMenuItem>
-        {/* MOVED: Open is now after New */}
+        {/* Open is always enabled */}
         <DropdownMenuItem 
-          onClick={onOpen} 
+          onClick={onOpen}
           data-testid="menu-item-open"
           className="cursor-pointer"
         >
@@ -69,47 +72,54 @@ export default function FileDropdownMenu({
           <span className="flex-1">Open</span>
           <span className="text-xs text-muted-foreground ml-4">{shortcuts.open}</span>
         </DropdownMenuItem>
-        {/* MOVED: Save is now after Open */}
+        {/* Save - disabled when no enclosure */}
         <DropdownMenuItem 
-          onClick={onSave} 
+          onClick={onSave}
+          disabled={!isEnclosureSelected}
           data-testid="menu-item-save"
-          className="cursor-pointer"
+          className={`${isEnclosureSelected ? "cursor-pointer" : "cursor-not-allowed !cursor-not-allowed"}`}
         >
           <Save className="w-4 h-4 mr-2" />
           <span className="flex-1">Save</span>
           <span className="text-xs text-muted-foreground ml-4">{shortcuts.save}</span>
         </DropdownMenuItem>
-        {/* MOVED: Save As is now after Save */}
+        {/* Save As - disabled when no enclosure */}
         <DropdownMenuItem 
-          onClick={onSaveAs} 
+          onClick={onSaveAs}
+          disabled={!isEnclosureSelected}
           data-testid="menu-item-save-as"
-          className="cursor-pointer"
+          className={`${isEnclosureSelected ? "cursor-pointer" : "cursor-not-allowed !cursor-not-allowed"}`}
         >
           <FilePlus className="w-4 h-4 mr-2" />
           <span className="flex-1">Save As</span>
           <span className="text-xs text-muted-foreground ml-4">{shortcuts.saveAs}</span>
         </DropdownMenuItem>
         <DropdownMenuItem 
-          onClick={onPrint} 
+          onClick={onExportPDF}
+          disabled={!isEnclosureSelected}
+          data-testid="menu-item-export-pdf"
+          className={`${isEnclosureSelected ? "cursor-pointer" : "cursor-not-allowed !cursor-not-allowed"}`}
+        >
+          <Download className="w-4 h-4 mr-2" />
+          <span className="flex-1">Print/Export to PDF</span>
+          <span className="text-xs text-muted-foreground ml-4">{shortcuts.print}</span>
+        </DropdownMenuItem>
+        {/* Commented out separate Print item
+        <DropdownMenuItem 
+          onClick={onPrint}
+          disabled={!isEnclosureSelected}
           data-testid="menu-item-print"
-          className="cursor-pointer"
+          className={`${isEnclosureSelected ? "cursor-pointer" : "cursor-not-allowed !cursor-not-allowed"}`}
         >
           <Printer className="w-4 h-4 mr-2" />
           <span className="flex-1">Print</span>
           <span className="text-xs text-muted-foreground ml-4">{shortcuts.print}</span>
         </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={onExportPDF} 
-          data-testid="menu-item-export-pdf"
-          className="cursor-pointer"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          <span className="flex-1">Export PDF</span>
-          <span className="text-xs text-muted-foreground ml-4">{shortcuts.exportPDF}</span>
-        </DropdownMenuItem>
+        */}
         <DropdownMenuSeparator />
+        {/* Quit is always enabled */}
         <DropdownMenuItem 
-          onClick={onQuit} 
+          onClick={onQuit}
           data-testid="menu-item-quit"
           className="cursor-pointer"
         >

@@ -76,8 +76,14 @@ export default function FileMenu({
               data-testid="button-export-pdf"
             >
               <Download className="w-4 h-4 mr-2" />
-              Export PDF
+              Print/Export to PDF
+              <span className="text-xs text-muted-foreground ml-2">
+                {/* Show Ctrl+P as the shortcut hint */}
+                {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘P' : 'Ctrl+P'}
+              </span>
             </Button>
+            {/* Commented out the separate Print button */}
+            {/*
             <Button
               onClick={() => {
                 onPrint();
@@ -90,6 +96,7 @@ export default function FileMenu({
               <Printer className="w-4 h-4 mr-2" />
               Print
             </Button>
+            */}
           </div>
 
           <Separator />

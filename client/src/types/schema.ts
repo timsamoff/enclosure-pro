@@ -3,6 +3,48 @@ import { z } from "zod";
 export type EnclosureSide = "Front" | "Right" | "Left" | "Top" | "Bottom";
 export type MeasurementUnit = "metric" | "imperial";
 
+// Centralized manufacturer configuration
+export const MANUFACTURERS = {
+  "Amplified Parts": {
+    prefix: "AMP",
+    displayName: "Amplified Parts",
+    color: "rgba(219, 135, 57, 1)",
+  },
+
+  "Hammond": {
+    prefix: "HAM",
+    displayName: "Hammond",
+    color: "#b42025",
+    legacyNames: ["1590A", "1590B", "1590LB", "1590BB", "1590BB2", "1590BBS", "1590DD", "1590XX"]
+  },
+
+    "GØRVA design": {
+    prefix: "GOR",
+    displayName: "GØRVA design",
+    color: "#7e7868"
+  },
+  
+  "Love My Switches": {
+    prefix: "LMS",
+    displayName: "Love My Switches",
+    color: "#fb2868"
+  },
+
+  "Stomp Box Parts": {
+    prefix: "SBP",
+    displayName: "Stomp Box Parts",
+    color: "#1269b3"
+  },
+
+  "Tayda": {
+    prefix: "TAY",
+    displayName: "Tayda",
+    color: "#6fa6eeff"
+  }
+} as const;
+
+export type EnclosureManufacturer = keyof typeof MANUFACTURERS;
+
 export const CORNER_RADIUS = 5;
 
 export interface EnclosureDimensions {
@@ -13,21 +55,197 @@ export interface EnclosureDimensions {
   frontDepth?: number;
   isTrapezoidal?: boolean;
   rotatesLabels?: boolean;
+  manufacturer: EnclosureManufacturer;
+  displayName?: string;
 }
 
+// Keep the original ENCLOSURE_TYPES structure for backward compatibility
 export const ENCLOSURE_TYPES = {
-  "1590A": { width: 39, height: 93, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590B": { width: 60, height: 113, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590LB": { width: 51, height: 51, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const },
-  "125B": { width: 66.98, height: 121, depth: 35.94, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590BB": { width: 119, height: 94, depth: 33, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590BB2": { width: 119, height: 94, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590BBS": { width: 120, height: 94, depth: 38.3, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590DD": { width: 188, height: 120, depth: 36, rotatesLabels: true, cornerStyle: "rounded" as const },
-  "1590XX": { width: 153, height: 122.5, depth: 38, rotatesLabels: true, cornerStyle: "rounded" as const },
+
+  // Amplified Parts enclosures
+  "AMP-1590A": { width: 38.6, height: 92.5, depth: 26.9, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "1590A" },
+  "AMP-1590B": { width: 61, height: 111.8, depth: 26, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "1590B" },
+  "AMP-1590BS": { width: 111.8, height: 60.5, depth: 40, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer:"Amplified Parts" as const, displayName:"1590BS"},
+  "AMP-1590C": { width: 94, height: 120, depth: 51, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "1590C" },
+  "AMP-1590LB": { width: 50.5, height: 50.5, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "1590LB" },
+  "AMP-125B": { width: 65.5, height: 121.2, depth: 35.8, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "125B" },
+  "AMP-1590XX": { width: 145.3, height: 121.2, depth: 39.4, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "1590XX" },
+
+  // Hammond enclosures
+  "HAM-1590A": { width: 39, height: 93, depth: 29, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590A" },
+  "HAM-1590B": { width: 60, height: 113, depth: 29, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590B" },
+  "HAM-1590LB": { width: 51, height: 51, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590LB" },
+  "HAM-1590N1": { width: 66, height: 121, depth: 38, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590N1" },
+  "HAM-1590BB": { width: 119, height: 94, depth: 32, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BB" },
+  "HAM-1590BB2": { width: 119, height: 94, depth: 36, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer:"Hammond" as const , displayName:"1590BB2"},
+  "HAM-1590BBS": { width: 120, height: 94, depth: 40, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BBS" },
+  "HAM-1590DD": { width: 188, height: 120, depth: 35, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590DD" },
+  "HAM-1590XX": { width: 145, height: 121, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590XX" },
+  
+  // Legacy names (backward compatibility - map to Hammond)
+  "1590A": { width: 39, height: 93, depth: 29, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590A" },
+  "1590B": { width: 60, height: 113, depth: 29, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590B" },
+  "1590LB": { width: 51, height: 51, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590LB" },
+  "125B": { width: 66.98, height: 121, depth: 35.94, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Legacy" as const, displayName: "125B" },
+  "1590BB": { width: 119, height: 94, depth: 32, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BB" },
+  "1590BB2": { width: 119, height: 94, depth: 36, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BB2" },
+  "1590BBS": { width: 120, height: 94, depth: 40, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590BBS" },
+  "1590DD": { width: 188, height: 120, depth: 35, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590DD" },
+  "1590XX": { width: 145, height: 121, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590XX" },
+  
+  // GØRVA design enclosures
+  "GOR-M45": { width: 45, height: 100, depth: 33, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "GØRVA design" as const, displayName: "M45" },
+  "GOR-C65": { width: 65, height: 120, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "GØRVA design" as const, displayName: "C65" },
+  "GOR-S90-mkII": { width: 90, height: 117.2, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "GØRVA design" as const, displayName: "S90 mkII" },
+
+  // Love My Switches enclosures
+  "LMS-1590A": { width: 38.5, height: 93.6, depth: 28, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Love My Switches" as const, displayName: "1590A" },
+  "LMS-1590B": { width: 60.9, height: 111.9, depth: 29.6, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Love My Switches" as const, displayName: "1590B" },
+  "LMS-1590LB": { width: 50, height: 50, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Love My Switches" as const, displayName: "1590LB" },
+  "LMS-125B": { width: 66.98, height: 122, depth: 35.94, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Love My Switches" as const, displayName: "125B" },
+  "LMS-1590BB": { width: 119.5, height: 94, depth: 30, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer:"Love My Switches" as const, displayName:"1590BB"},
+  "LMS-1590BBS": { width: 120, height: 94, depth: 38.3, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Love My Switches" as const, displayName: "1590BBS" },
+  "LMS-1590DD": { width: 188, height: 120, depth: 33, rotatesLabels: true, cornerStyle:"rounded" as const, manufacturer: "Love My Switches" as const, displayName: "1590DD" },
+  "LMS-1590J": { width: 145, height: 95, depth: 45.2, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Love My Switches" as const, displayName: "1590J" },
+  "LMS-1590XX": { width: 145, height: 120, depth: 35, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Love My Switches" as const, displayName: "1590XX" },
+
+    // Stomp Box Parts enclosures
+  "SBP-1590A": { width: 39, height: 93, depth: 29.5, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "1590A" },
+  "SBP-1590B-PRO": { width: 60.7, height: 112.2, depth: 29.1, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "1590B Pro" },
+  "SBP-1590LB": { width: 50.5, height: 50.5, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "1590LB" },
+  "SBP-125B": { width: 66, height: 122, depth: 38, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "125B" },
+  "SBP-125B-PRO": { width: 66, height: 121.3, depth: 37.2, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "125B Pro" },
+  "SBP-1590BB-PRO": { width: 119.1, height: 93.6, depth: 32, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer:"Stomp Box Parts" as const, displayName:"1590BB Pro"},
+  "SBP-1590BBS": { width: 119.6, height: 94, depth: 40.4, rotatesLabels: true, cornerStyle:"rounded" as const, manufacturer:"Stomp Box Parts" as const, displayName:"1590BBS"},
+  "SBP-1590XX": { width: 145, height: 120, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "1590XX" },
+  "SBP-1030L": { width: 69.8, height: 254, depth: 51.3, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "1030L" },
+
+  // Tayda enclosures
+  "TAY-1590A": { width: 38, height: 92, depth: 28, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Tayda" as const, displayName: "1590A" },
+  "TAY-1590B": { width: 60, height: 112, depth: 29, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Tayda" as const, displayName: "1590B" },
+  "TAY-1590LB": { width: 50.5, height: 50.5, depth: 29, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Tayda" as const, displayName: "1590LB" },
+  "TAY-125B": { width: 66, height: 122, depth: 37.5, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Tayda" as const, displayName: "125B" },
+  "TAY-1590BB": { width: 120, height: 94, depth: 31, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Tayda" as const, displayName: "1590BB" },
+  "TAY-1590BB2": { width: 120, height: 94, depth: 36, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer:"Tayda" as const, displayName:"1590BB2"},
+  "TAY-1590DD": { width: 188, height: 119, depth: 35.5, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Tayda" as const, displayName: "1590DD" },
+  "TAY-1590XX": { width: 145, height: 121, depth: 37.5, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Tayda" as const, displayName: "1590XX" },
 } as const;
 
-export type EnclosureType = keyof typeof ENCLOSURE_TYPES;
+export type EnclosureType = keyof typeof ENCLOSURE_TYPES | null;
+
+// Helper to get manufacturer icon/prefix
+export function getManufacturerPrefix(manufacturer: EnclosureManufacturer): string {
+  const manufacturerData = MANUFACTURERS[manufacturer];
+  return manufacturerData?.prefix || "";
+}
+
+// Helper to get display name for enclosure
+export function getEnclosureDisplayName(type: EnclosureType): string | null {
+  const enclosure = ENCLOSURE_TYPES[type];
+  return enclosure?.displayName || type;
+}
+
+// Helper to get manufacturer from enclosure type
+export function getEnclosureManufacturer(type: EnclosureType): EnclosureManufacturer | null {
+  if (!type) return null;
+  const enclosure = ENCLOSURE_TYPES[type];
+  return enclosure?.manufacturer || null;
+}
+
+// Check if a type is a legacy 125B that needs migration
+export function is125BMigrationCase(type: string): boolean {
+  return type === "125B" || type === "1590N1" || type === "Hammond-125B" || type === "Hammond-1590N1";
+}
+
+// Helper to get manufacturer badge/prefix with special handling for legacy
+export function getManufacturerBadge(type: EnclosureType): string {
+  if (!type) return "";
+  
+  // Special case: legacy 125B should show "LEG"
+  if (is125BMigrationCase(type)) {
+    return "LEG";
+  }
+  
+  const manufacturer = getEnclosureManufacturer(type);
+  if (!manufacturer) return "";
+  
+  return getManufacturerPrefix(manufacturer);
+}
+
+// Helper to get manufacturer color with special handling for legacy
+export function getManufacturerBadgeColor(type: EnclosureType): string {
+  if (!type) return "#6b7280"; // Default gray
+  
+  // Special case: legacy 125B gets amber color
+  if (is125BMigrationCase(type)) {
+    return "#f59e0b"; // Amber color for legacy
+  }
+  
+  const manufacturer = getEnclosureManufacturer(type);
+  if (!manufacturer) return "#6b7280";
+  
+  const manufacturerData = MANUFACTURERS[manufacturer];
+  return manufacturerData?.color || "#6b7280";
+}
+
+// Normalize enclosure type (migrate legacy 125B to LMS)
+export function normalizeEnclosureType(type: EnclosureType): EnclosureType {
+  if (!type) return null;
+  
+  // If it's already a valid key in ENCLOSURE_TYPES, return it
+  if (type in ENCLOSURE_TYPES) {
+    return type;
+  }
+  
+  // Special case: legacy 125B should be migrated to LMS-125B
+  if (is125BMigrationCase(type)) {
+    return "LMS-125B";
+  }
+  
+  // For other unknown types, return as-is (will be handled gracefully)
+  return type;
+}
+
+// Get all enclosures grouped by manufacturer
+export function getAllEnclosuresGrouped(): Record<EnclosureManufacturer, EnclosureType[]> {
+  // Initialize with all manufacturers from MANUFACTURERS
+  const grouped: Record<EnclosureManufacturer, EnclosureType[]> = {};
+  
+  // Initialize arrays for all manufacturers
+  Object.keys(MANUFACTURERS).forEach((key) => {
+    grouped[key as EnclosureManufacturer] = [];
+  });
+  
+  // Also include Legacy since it's used in some enclosure types
+  if (!grouped["Legacy"]) {
+    grouped["Legacy"] = [];
+  }
+  
+  // Filter out legacy entries (those without dashes)
+  Object.keys(ENCLOSURE_TYPES).forEach((key) => {
+    if (key.includes('-')) {
+      const enclosure = ENCLOSURE_TYPES[key];
+      if (enclosure?.manufacturer && grouped[enclosure.manufacturer]) {
+        grouped[enclosure.manufacturer].push(key as EnclosureType);
+      }
+    }
+  });
+  
+  return grouped;
+}
+
+// Convert from old format to new format when loading a project
+export function convertLegacyProjectState(projectState: any): any {
+  if (!projectState || !projectState.enclosureType) return projectState;
+  
+  const normalizedType = normalizeEnclosureType(projectState.enclosureType);
+  
+  return {
+    ...projectState,
+    enclosureType: normalizedType,
+    _legacyEnclosure: projectState.enclosureType !== normalizedType ? projectState.enclosureType : undefined
+  };
+}
 
 export interface ComponentTypeData {
   name: string;
@@ -183,7 +401,7 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     width: 10, 
     height: 5 
   },
-"dip-4": { 
+  "dip-4": { 
     name: "4-Pos DIP", 
     drillSize: 0, 
     imperialLabel: '29/64" x 13/64"', 
@@ -192,7 +410,7 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     width: 11.6, 
     height: 5 
   },
-"rotary-1": { 
+  "rotary-1": { 
     name: "1P4T Rotary", 
     drillSize: 10, 
     imperialLabel: '25/64"', 
@@ -327,7 +545,7 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     category: "Footprint Guides", 
     shape: "circle" 
   },
-    "jack-stereo-open": { 
+  "jack-stereo-open": { 
     name: '1/4" Stereo Jack (Open)', 
     drillSize: 19.05, 
     imperialLabel: '3/4"', 
@@ -471,8 +689,8 @@ export interface PlacedComponent {
   x: number;
   y: number;
   side: EnclosureSide;
-  rotation: number; // Added: 0, 90, 180, 270 degrees
-  excludeFromPrint?: boolean; // Added: Controls whether component prints/exports
+  rotation: number;
+  excludeFromPrint?: boolean;
 }
 
 export interface SideDimensions {

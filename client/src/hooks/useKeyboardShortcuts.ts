@@ -9,6 +9,8 @@ interface UseKeyboardShortcutsProps {
   handlePrint: () => void;
   handleExportPDF: () => void;
   handleQuit: () => void;
+  handleNew: () => void;
+  isEnclosureSelected: boolean;
 }
 
 export function useKeyboardShortcuts({
@@ -19,7 +21,9 @@ export function useKeyboardShortcuts({
   handleLoad,
   handlePrint,
   handleExportPDF,
-  handleQuit
+  handleQuit,
+  handleNew,
+  isEnclosureSelected
 }: UseKeyboardShortcutsProps) {
   // Store handlers in refs so they're always current
   const handlersRef = useRef({
@@ -31,6 +35,7 @@ export function useKeyboardShortcuts({
     handlePrint,
     handleExportPDF,
     handleQuit,
+    handleNew,
   });
 
   // Update refs when handlers change
@@ -44,8 +49,9 @@ export function useKeyboardShortcuts({
       handlePrint,
       handleExportPDF,
       handleQuit,
+      handleNew,
     };
-  }, [handleZoomIn, handleZoomOut, handleSave, handleSaveAs, handleLoad, handlePrint, handleExportPDF, handleQuit]);
+  }, [handleZoomIn, handleZoomOut, handleSave, handleSaveAs, handleLoad, handlePrint, handleExportPDF, handleQuit, handleNew]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -55,8 +61,32 @@ export function useKeyboardShortcuts({
 
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const modifier = isMac ? e.metaKey : e.ctrlKey;
+      
+      // Always allowed shortcuts (no enclosure needed)
+      if (modifier && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        handlersRef.current.handleNew();
+        return;
+      } else if (modifier && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        handlersRef.current.handleLoad();
+        return;
+      } else if (modifier && e.key.toLowerCase() === 'q') {
+        e.preventDefault();
+        handlersRef.current.handleQuit();
+        return;
+      } else if (!isMac && e.altKey && e.key === 'F4') {
+        e.preventDefault();
+        handlersRef.current.handleQuit();
+        return;
+      }
 
-      // Zoom shortcuts (no modifier needed)
+      // Enclosure-dependent shortcuts
+      if (!isEnclosureSelected) {
+        return; // Block all other shortcuts if no enclosure
+      }
+
+      // Zoom shortcuts (only when enclosure is selected)
       if (e.key === '-' || e.key === '_') {
         e.preventDefault();
         handlersRef.current.handleZoomOut();
@@ -73,35 +103,18 @@ export function useKeyboardShortcuts({
           handlersRef.current.handleSave();
         }
       } 
-      // Ctrl/Cmd + O - Open
-      else if (modifier && e.key.toLowerCase() === 'o') {
-        e.preventDefault();
-        // console.log('🎹 Keyboard shortcut: Ctrl+O triggered');
-        handlersRef.current.handleLoad();
-      } 
-      // Ctrl/Cmd + P - Print
       else if (modifier && e.key.toLowerCase() === 'p') {
-        e.preventDefault();
-        handlersRef.current.handlePrint();
-      } 
-      // Ctrl/Cmd + E - Export PDF
-      else if (modifier && e.key.toLowerCase() === 'e') {
         e.preventDefault();
         handlersRef.current.handleExportPDF();
       } 
-      // Ctrl/Cmd + Q - Quit (Mac only, Windows uses Alt+F4)
-      else if (modifier && e.key.toLowerCase() === 'q') {
+      // Ctrl/Cmd + E - Export PDF (still works)
+      else if (modifier && e.key.toLowerCase() === 'e') {
         e.preventDefault();
-        handlersRef.current.handleQuit();
-      }
-      // Alt+F4 - Quit (Windows/Linux)
-      else if (!isMac && e.altKey && e.key === 'F4') {
-        e.preventDefault();
-        handlersRef.current.handleQuit();
+        handlersRef.current.handleExportPDF();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []); // Empty dependency array - handlers accessed via ref
+  }, [isEnclosureSelected]);
 }

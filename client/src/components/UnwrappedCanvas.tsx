@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { PlacedComponent, ComponentType, COMPONENT_TYPES, EnclosureSide, MeasurementUnit, EnclosureType, getUnwrappedDimensions, CORNER_RADIUS, ENCLOSURE_TYPES } from "@/types/schema";
 import { mmToFraction } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
@@ -21,6 +21,7 @@ interface UnwrappedCanvasProps {
   onZoomChange?: (newZoom: number) => void;
   rotatesLabels?: boolean;
   onRightClick?: (e: React.MouseEvent, componentId: string | null) => void;
+  autoZoomToFit?: boolean; // New prop for auto-zoom
 }
 
 /**
@@ -203,6 +204,50 @@ const calculateLabelPosition = (
   }
 };
 
+/**
+ * Calculate zoom level to fit the enclosure within the viewport
+ * while accounting for UI bars at top and bottom
+ * Only scales DOWN if enclosure is too large, never scales UP
+ */
+const calculateZoomToFit = (
+  layoutWidth: number,    // in pixels
+  layoutHeight: number,   // in pixels  
+  viewportWidth: number,
+  viewportHeight: number,
+  topBarHeight: number = 0,  // Height of top UI bar
+  bottomBarHeight: number = 0, // Height of bottom UI bar
+  margin: number = 10     // Minimal margin (reduced from 40 to 10)
+): number => {
+  // Calculate available space (accounting for UI bars and minimal margins)
+  const availableWidth = viewportWidth - (margin * 2);
+  const availableHeight = viewportHeight - (margin * 2) - topBarHeight - bottomBarHeight;
+  
+  // Ensure we don't get negative or zero available height
+  const safeAvailableHeight = Math.max(10, availableHeight);
+  
+  // Check if the enclosure already fits at 100% zoom
+  const fitsAt100Width = layoutWidth <= availableWidth;
+  const fitsAt100Height = layoutHeight <= safeAvailableHeight;
+  const fitsAt100 = fitsAt100Width && fitsAt100Height;
+  
+  // If it already fits at 100%, don't scale at all
+  if (fitsAt100) {
+    return 1.0; // Stay at 100% zoom
+  }
+  
+  // Calculate required zoom to fit width and height
+  const zoomForWidth = availableWidth / layoutWidth;
+  const zoomForHeight = safeAvailableHeight / layoutHeight;
+  
+  // Use the smaller zoom to ensure entire enclosure fits
+  const minZoom = Math.min(zoomForWidth, zoomForHeight);
+  
+  // Apply reasonable bounds (don't zoom too far out, but don't zoom in beyond 100%)
+  const boundedZoom = Math.max(0.1, Math.min(1, minZoom)); // Max is 1.0 (100%)
+  
+  return boundedZoom;
+};
+
 export default function UnwrappedCanvas({
   enclosureType,
   components,
@@ -219,7 +264,9 @@ export default function UnwrappedCanvas({
   onZoomChange,
   rotatesLabels = false,
   onRightClick,
+  autoZoomToFit = false, // Default to false for backward compatibility
 }: UnwrappedCanvasProps) {
+  // All hooks must be called FIRST, unconditionally
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -229,11 +276,51 @@ export default function UnwrappedCanvas({
   const [isPanning, setIsPanning] = useState(false);
   const [justFinishedDrag, setJustFinishedDrag] = useState(false);
   const [resizeTrigger, setResizeTrigger] = useState(0);
+  const [hasAutoZoomed, setHasAutoZoomed] = useState(false);
   
   // Cursor state management
   const [cursorStyle, setCursorStyle] = useState<string>('default');
   const [isHoveringComponent, setIsHoveringComponent] = useState<string | null>(null);
 
+  // Zoom refs for wheel handler
+  const zoomRef = useRef(zoom);
+  const onZoomChangeRef = useRef(onZoomChange);
+  
+  // Update refs when props change
+  useEffect(() => {
+    zoomRef.current = zoom;
+    onZoomChangeRef.current = onZoomChange;
+  }, [zoom, onZoomChange]);
+
+  // Wheel event handler for zooming
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      
+      const currentZoom = zoomRef.current;
+      const increment = e.deltaY > 0 ? -0.1 : 0.1;
+      const newZoom = snapZoom(currentZoom + increment);
+      
+      if (onZoomChangeRef.current && newZoom !== currentZoom) {
+        onZoomChangeRef.current(newZoom);
+        
+        // Clear auto-zoom flag when user manually zooms
+        setHasAutoZoomed(true);
+      }
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: false });
+      return () => container.removeEventListener('wheel', handleWheel);
+    }
+  }, []); // Empty dependency array - refs update via the useEffect above
+
+  // Now we can check for invalid enclosureType and return early
+  if (!enclosureType || !ENCLOSURE_TYPES[enclosureType]) {
+    return null;
+  }
+  
   const mmToPixels = 3.7795275591;
   const dimensions = getUnwrappedDimensions(enclosureType);
 
@@ -331,6 +418,84 @@ export default function UnwrappedCanvas({
   };
 
   const layout = getLayout();
+
+  /**
+   * Handle zoom to fit the enclosure within the viewport
+   */
+  const handleZoomToFit = useCallback(() => {
+    if (!containerRef.current || !onZoomChange || !enclosureType) return;
+    
+    const container = containerRef.current;
+    const { width: viewportWidth, height: viewportHeight } = container.getBoundingClientRect();
+    
+    // Try to get actual bar heights from the DOM
+    let topBarHeight = 64; // Default fallback for TopControls
+    let bottomBarHeight = 52; // Default fallback for BottomInfo
+    
+    // Try to find top controls element by various selectors
+    const topControlsSelectors = [
+      '[data-testid*="top-controls"]',
+      '[data-testid*="topcontrols"]',
+      '.top-controls',
+      'header',
+      'nav'
+    ];
+    
+    for (const selector of topControlsSelectors) {
+      const element = document.querySelector(selector);
+      if (element) {
+        const rect = element.getBoundingClientRect();
+        if (rect.height > 0) {
+          topBarHeight = rect.height;
+          break;
+        }
+      }
+    }
+    
+    // Try to find bottom info element by various selectors
+    const bottomInfoSelectors = [
+      '[data-testid*="bottom-info"]',
+      '[data-testid*="bottominfo"]',
+      '.bottom-info',
+      'footer'
+    ];
+    
+    for (const selector of bottomInfoSelectors) {
+      const element = document.querySelector(selector);
+      if (element) {
+        const rect = element.getBoundingClientRect();
+        if (rect.height > 0) {
+          bottomBarHeight = rect.height;
+          break;
+        }
+      }
+    }
+    
+    // Minimal buffer (reduced from 8 to 4)
+    const uiBarBuffer = 4;
+    
+    // Calculate zoom to fit (only scales down if needed)
+    const newZoom = calculateZoomToFit(
+      layout.totalWidth,
+      layout.totalHeight,
+      viewportWidth,
+      viewportHeight,
+      topBarHeight + uiBarBuffer,
+      bottomBarHeight + uiBarBuffer,
+      10 // Minimal margin (reduced from 40 to 10)
+    );
+    
+    // Only apply if it's different from current zoom (and not equal to 1 if we're already at 1)
+    if (newZoom !== zoom) {
+      onZoomChange(snapZoom(newZoom));
+      
+      // Center the view
+      setPanOffset({ x: 0, y: 0 });
+      
+      // Mark that we've auto-zoomed
+      setHasAutoZoomed(true);
+    }
+  }, [enclosureType, onZoomChange, layout.totalWidth, layout.totalHeight, zoom]);
 
   /**
    * Detect if mouse is hovering over any component
@@ -895,40 +1060,38 @@ export default function UnwrappedCanvas({
   useEffect(() => {
     const handleResize = () => {
       setResizeTrigger(prev => prev + 1);
+      
+      // Auto-zoom on resize if enabled
+      if (autoZoomToFit && onZoomChange && enclosureType) {
+        // Debounce resize events
+        const timer = setTimeout(() => {
+          handleZoomToFit();
+        }, 250);
+        
+        return () => clearTimeout(timer);
+      }
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [autoZoomToFit, onZoomChange, enclosureType, handleZoomToFit]);
 
-  // Mouse wheel zoom handler
-  const zoomRef = useRef(zoom);
-  const onZoomChangeRef = useRef(onZoomChange);
-  
+  // Auto-zoom when enclosure changes
   useEffect(() => {
-    zoomRef.current = zoom;
-    onZoomChangeRef.current = onZoomChange;
-  }, [zoom, onZoomChange]);
-  
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
+    if (autoZoomToFit && onZoomChange && enclosureType && !hasAutoZoomed) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        handleZoomToFit();
+      }, 100);
       
-      const currentZoom = zoomRef.current;
-      const increment = e.deltaY > 0 ? -0.1 : 0.1;
-      const newZoom = snapZoom(currentZoom + increment);
-      
-      if (onZoomChangeRef.current && newZoom !== currentZoom) {
-        onZoomChangeRef.current(newZoom);
-      }
-    };
-
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('wheel', handleWheel, { passive: false });
-      return () => container.removeEventListener('wheel', handleWheel);
+      return () => clearTimeout(timer);
     }
-  }, []);
+  }, [enclosureType, autoZoomToFit, onZoomChange, hasAutoZoomed, handleZoomToFit]);
+
+  // Reset auto-zoom flag when enclosure changes
+  useEffect(() => {
+    setHasAutoZoomed(false);
+  }, [enclosureType]);
 
   // Mouse event handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1351,6 +1514,18 @@ export default function UnwrappedCanvas({
             <Trash2 className="w-5 h-5" />
           </button>
         </div>
+      )}
+      
+      {/* Zoom to Fit button - only shown when onZoomChange is provided */}
+      {onZoomChange && (
+        <button
+          onClick={handleZoomToFit}
+          className="absolute bottom-4 right-4 px-3 py-2 bg-primary text-primary-foreground rounded-md hover-elevate z-50 cursor-pointer"
+          title="Zoom to Fit Enclosure (only scales down if needed)"
+          data-testid="button-zoom-to-fit"
+        >
+          Fit
+        </button>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-// console.log('🔌 Preload script loading...');
+// console.log('📌 Preload script loading...');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   isElectron: true,
@@ -13,8 +13,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (options) => ipcRenderer.invoke('file:read', options),
   openExternalFile: (filePath) => ipcRenderer.invoke('file:open-external', filePath),
   
+  // Print operations
+  printPDF: (options) => ipcRenderer.invoke('print:pdf', options),
+  
   // Window operations
   closeWindow: () => ipcRenderer.invoke('window:close'),
+  
+  // Menu state updates
+  updateMenuState: (isEnclosureSelected) => {
+    ipcRenderer.invoke('app:update-menu-state', isEnclosureSelected);
+  },
+  
+  // Development mode check
+  isDevMode: () => ipcRenderer.invoke('app:is-dev-mode'),
   
   // Auto-updater functions
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
@@ -127,4 +138,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
 });
 
-// console.log('🔌 Preload script loaded, electronAPI exposed');
+// console.log('📌 Preload script loaded, electronAPI exposed');

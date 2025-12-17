@@ -56,6 +56,7 @@ export function ConfirmDialog({
           <AlertDialogCancel 
             onClick={handleCancel}
             data-testid={`${testId}-cancel`}
+            className="border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900 shadow-none active:scale-100"
           >
             {cancelText}
           </AlertDialogCancel>
@@ -63,7 +64,7 @@ export function ConfirmDialog({
             <AlertDialogAction
               onClick={onDestructive}
               data-testid={`${testId}-destructive`}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 shadow-none active:scale-100 border-0"
             >
               {destructiveText}
             </AlertDialogAction>
@@ -71,6 +72,7 @@ export function ConfirmDialog({
           <AlertDialogAction 
             onClick={onConfirm}
             data-testid={`${testId}-confirm`}
+            className="bg-[#ff8c42] hover:bg-[#e67e3b] text-white shadow-none active:scale-100 border-0"
           >
             {confirmText}
           </AlertDialogAction>
