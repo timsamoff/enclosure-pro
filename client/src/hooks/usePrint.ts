@@ -153,7 +153,7 @@ export function usePrint(props: UsePrintProps) {
               <script>
                 document.getElementById('downloadBtn').onclick = function() {
                   // Tell parent window to download
-                  window.opener.postMessage({ action: 'downloadPrintPDF' }, '*');
+                  window.opener.postMessage({ action: 'downloadPrintPDF' }, window.location.origin);
                   window.close();
                 };
               </script>
@@ -164,7 +164,7 @@ export function usePrint(props: UsePrintProps) {
         
         // Listen for message from instruction window
         const messageHandler = (event) => {
-          if (event.data && event.data.action === 'downloadPrintPDF') {
+          if (event.origin === window.location.origin && event.data?.action === 'downloadPrintPDF') {
             // Now download the PDF
             const link = document.createElement('a');
             link.href = pdfUrl;

@@ -1,4 +1,4 @@
-import { useCallback, type MutableRefObject } from "react";
+import { useCallback, useRef, type MutableRefObject } from "react";
 import { EnclosureType, getUnwrappedDimensions } from "@/types/schema";
 import jsPDF from "jspdf";
 import { useBaseExport } from "./useBaseExport";
@@ -279,8 +279,13 @@ export function usePDFExport({
     }
   }, [renderCanvas, projectName]);
 
+  const isExportingRef = useRef(false);
+
   const handleExportPDF = async () => {
     // Add a guard to prevent multiple simultaneous exports
+    if (isExportingRef.current) return;
+    isExportingRef.current = true;
+
     let instructionWindow: Window | null = null;
     let messageHandler: ((event: MessageEvent) => void) | null = null;
     
@@ -510,28 +515,24 @@ export function usePDFExport({
 `);
         instructionWindow.document.close();
         
-        // Set up cleanup for when window closes without clicking continue
-        const handleWindowClose = () => {
-          if (messageHandler) {
-            window.removeEventListener('message', messageHandler);
-            messageHandler = null;
-          }
-          // Resolve the promise to prevent hanging
-          resolvePromise();
-        };
-        
-        // Check if window closed periodically
-        const checkWindowClosed = setInterval(() => {
-          if (instructionWindow && instructionWindow.closed) {
-            clearInterval(checkWindowClosed);
-            handleWindowClose();
-          }
-        }, 500);
-        
         // Wait for user to click continue
         let resolvePromise: (value?: any) => void;
+        let checkWindowClosed: ReturnType<typeof setInterval>;
+        
         const waitForContinue = new Promise((resolve, reject) => {
           resolvePromise = resolve;
+          
+          // Now safe to start the interval (resolvePromise is now defined)
+          checkWindowClosed = setInterval(() => {
+            if (instructionWindow && instructionWindow.closed) {
+              clearInterval(checkWindowClosed);
+              if (messageHandler) {
+                window.removeEventListener('message', messageHandler);
+                messageHandler = null;
+              }
+              resolve(false);
+            }
+          }, 500);
           
           messageHandler = (event) => {
             if (event.data && event.data.action === 'continueExport') {
@@ -622,6 +623,7 @@ export function usePDFExport({
       if (messageHandler) {
         window.removeEventListener('message', messageHandler);
       }
+      isExportingRef.current = false;
     }
   };
 

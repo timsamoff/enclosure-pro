@@ -19,9 +19,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Window operations
   closeWindow: () => ipcRenderer.invoke('window:close'),
   
-  // Send messages to main process
-  send: (channel, data) => {
-    ipcRenderer.send(channel, data);
+  // Menu state updates
+  updateMenuState: (isEnclosureSelected) => {
+    ipcRenderer.invoke('app:update-menu-state', isEnclosureSelected);
   },
   
   // Development mode check

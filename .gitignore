@@ -6,6 +6,7 @@ release/
 server/public
 vite.config.ts.*
 *.tar.gz
+dev.config.js
 
 # Logs
 logs

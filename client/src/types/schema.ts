@@ -140,7 +140,7 @@ export function getManufacturerPrefix(manufacturer: EnclosureManufacturer): stri
 }
 
 // Helper to get display name for enclosure
-export function getEnclosureDisplayName(type: EnclosureType): string {
+export function getEnclosureDisplayName(type: EnclosureType): string | null {
   const enclosure = ENCLOSURE_TYPES[type];
   return enclosure?.displayName || type;
 }

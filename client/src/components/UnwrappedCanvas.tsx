@@ -266,10 +266,7 @@ export default function UnwrappedCanvas({
   onRightClick,
   autoZoomToFit = false, // Default to false for backward compatibility
 }: UnwrappedCanvasProps) {
-  if (!enclosureType || !ENCLOSURE_TYPES[enclosureType]) {
-    return null;
-  }
-  
+  // All hooks must be called FIRST, unconditionally
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -285,6 +282,45 @@ export default function UnwrappedCanvas({
   const [cursorStyle, setCursorStyle] = useState<string>('default');
   const [isHoveringComponent, setIsHoveringComponent] = useState<string | null>(null);
 
+  // Zoom refs for wheel handler
+  const zoomRef = useRef(zoom);
+  const onZoomChangeRef = useRef(onZoomChange);
+  
+  // Update refs when props change
+  useEffect(() => {
+    zoomRef.current = zoom;
+    onZoomChangeRef.current = onZoomChange;
+  }, [zoom, onZoomChange]);
+
+  // Wheel event handler for zooming
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      
+      const currentZoom = zoomRef.current;
+      const increment = e.deltaY > 0 ? -0.1 : 0.1;
+      const newZoom = snapZoom(currentZoom + increment);
+      
+      if (onZoomChangeRef.current && newZoom !== currentZoom) {
+        onZoomChangeRef.current(newZoom);
+        
+        // Clear auto-zoom flag when user manually zooms
+        setHasAutoZoomed(true);
+      }
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: false });
+      return () => container.removeEventListener('wheel', handleWheel);
+    }
+  }, []); // Empty dependency array - refs update via the useEffect above
+
+  // Now we can check for invalid enclosureType and return early
+  if (!enclosureType || !ENCLOSURE_TYPES[enclosureType]) {
+    return null;
+  }
+  
   const mmToPixels = 3.7795275591;
   const dimensions = getUnwrappedDimensions(enclosureType);
 
@@ -1056,38 +1092,6 @@ export default function UnwrappedCanvas({
   useEffect(() => {
     setHasAutoZoomed(false);
   }, [enclosureType]);
-
-  // Mouse wheel zoom handler
-  const zoomRef = useRef(zoom);
-  const onZoomChangeRef = useRef(onZoomChange);
-  
-  useEffect(() => {
-    zoomRef.current = zoom;
-    onZoomChangeRef.current = onZoomChange;
-  }, [zoom, onZoomChange]);
-  
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      
-      const currentZoom = zoomRef.current;
-      const increment = e.deltaY > 0 ? -0.1 : 0.1;
-      const newZoom = snapZoom(currentZoom + increment);
-      
-      if (onZoomChangeRef.current && newZoom !== currentZoom) {
-        onZoomChangeRef.current(newZoom);
-        
-        // Clear auto-zoom flag when user manually zooms
-        setHasAutoZoomed(true);
-      }
-    };
-
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('wheel', handleWheel, { passive: false });
-      return () => container.removeEventListener('wheel', handleWheel);
-    }
-  }, []);
 
   // Mouse event handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {

@@ -181,7 +181,7 @@ export function useFileOperations({
       }
     }
 
-    return new Promise((resolve) => {
+    return new Promise<{filePath: string; content: string} | null>((resolve) => {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.enc';
@@ -191,7 +191,12 @@ export function useFileOperations({
           resolve(null);
           return;
         }
-        resolve(file.name);
+        const reader = new FileReader();
+        reader.onload = () => {
+          resolve({ filePath: file.name, content: reader.result as string });
+        };
+       reader.onerror = () => resolve(null);
+        reader.readAsText(file);
       };
       input.oncancel = () => resolve(null);
       input.click();
