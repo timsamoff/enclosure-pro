@@ -5,29 +5,42 @@ export type MeasurementUnit = "metric" | "imperial";
 
 // Centralized manufacturer configuration
 export const MANUFACTURERS = {
+  "Amplified Parts": {
+    prefix: "AMP",
+    displayName: "Amplified Parts",
+    color: "rgba(219, 135, 57, 1)",
+    legacyNames: ["1590A", "1590B", "1590LB", "1590BB", "1590BB2", "1590BBS", "1590DD", "1590XX"]
+  },
+
   "Hammond": {
     prefix: "HAM",
     displayName: "Hammond",
-    color: "#ff8c42",
+    color: "#b42025",
     legacyNames: ["1590A", "1590B", "1590LB", "1590BB", "1590BB2", "1590BBS", "1590DD", "1590XX"]
   },
-  
+
     "GØRVA design": {
     prefix: "GOR",
     displayName: "GØRVA design",
-    color: "#9b59b6"
+    color: "#7e7868"
   },
   
   "Love My Switches": {
     prefix: "LMS",
     displayName: "Love My Switches",
-    color: "#3498db"
+    color: "#fb2868"
+  },
+
+  "Stomp Box Parts": {
+    prefix: "SBP",
+    displayName: "Stomp Box Parts",
+    color: "#1269b3"
   },
 
   "Tayda": {
     prefix: "TAY",
     displayName: "Tayda",
-    color: "#2ecc71"
+    color: "#6fa6eeff"
   }
 } as const;
 
@@ -49,7 +62,17 @@ export interface EnclosureDimensions {
 
 // Keep the original ENCLOSURE_TYPES structure for backward compatibility
 export const ENCLOSURE_TYPES = {
-  // Hammond enclosures (prefixed)
+
+  // Amplified Parts enclosures
+  "AMP-1590A": { width: 38.6, height: 92.5, depth: 26.9, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "1590A" },
+  "AMP-1590B": { width: 61, height: 111.8, depth: 26, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "1590B" },
+  "AMP-1590BS": { width: 111.8, height: 60.5, depth: 40, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer:"Amplified Parts" as const, displayName:"1590BS"},
+  "AMP-1590C": { width: 94, height: 120, depth: 51, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "1590C" },
+  "AMP-1590LB": { width: 50.5, height: 50.5, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "1590LB" },
+  "AMP-125B": { width: 65.5, height: 121.2, depth: 35.8, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "125B" },
+  "AMP-1590XX": { width: 145.3, height: 121.2, depth: 39.4, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "1590XX" },
+
+  // Hammond enclosures
   "Hammond-1590A": { width: 39, height: 93, depth: 29, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590A" },
   "Hammond-1590B": { width: 60, height: 113, depth: 29, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590B" },
   "Hammond-1590LB": { width: 51, height: 51, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590LB" },
@@ -71,7 +94,12 @@ export const ENCLOSURE_TYPES = {
   "1590DD": { width: 188, height: 120, depth: 35, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590DD" },
   "1590XX": { width: 145, height: 121, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Hammond" as const, displayName: "1590XX" },
   
-  // LMS enclosures
+  // GØRVA design enclosures
+  "GORVA-M45": { width: 45, height: 100, depth: 33, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "GØRVA design" as const, displayName: "M45" },
+  "GORVA-C65": { width: 65, height: 120, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "GØRVA design" as const, displayName: "C65" },
+  "GORVA-S90-mkII": { width: 90, height: 117.2, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "GØRVA design" as const, displayName: "S90 mkII" },
+
+  // Love My Switches enclosures
   "LMS-1590A": { width: 38.5, height: 93.6, depth: 28, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Love My Switches" as const, displayName: "1590A" },
   "LMS-1590B": { width: 60.9, height: 111.9, depth: 29.6, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Love My Switches" as const, displayName: "1590B" },
   "LMS-1590LB": { width: 50, height: 50, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Love My Switches" as const, displayName: "1590LB" },
@@ -82,10 +110,16 @@ export const ENCLOSURE_TYPES = {
   "LMS-1590J": { width: 145, height: 95, depth: 45.2, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Love My Switches" as const, displayName: "1590J" },
   "LMS-1590XX": { width: 145, height: 120, depth: 35, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Love My Switches" as const, displayName: "1590XX" },
 
-  // GØRVA design enclosures
-  "GORVA-M45": { width: 45, height: 100, depth: 33, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "GØRVA design" as const, displayName: "M45" },
-  "GORVA-C65": { width: 65, height: 120, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "GØRVA design" as const, displayName: "C65" },
-  "GORVA-S90-mkII": { width: 90, height: 117.2, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "GØRVA design" as const, displayName: "S90 mkII" },
+    // Stomp Box Parts enclosures
+  "SBP-1590A": { width: 39, height: 93, depth: 29.5, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "1590A" },
+  "SBP-1590B-PRO": { width: 60.7, height: 112.2, depth: 29.1, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "1590B Pro" },
+  "SBP-1590LB": { width: 50.5, height: 50.5, depth: 29, rotatesLabels: false, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "1590LB" },
+  "SBP-125B": { width: 66, height: 122, depth: 38, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "125B" },
+  "SBP-125B-PRO": { width: 66, height: 121.3, depth: 37.2, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "125B Pro" },
+  "SBP-1590BB-PRO": { width: 119.1, height: 93.6, depth: 32, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer:"Stomp Box Parts" as const, displayName:"1590BB Pro"},
+  "SBP-1590BBS": { width: 119.6, height: 94, depth: 40.4, rotatesLabels: true, cornerStyle:"rounded" as const, manufacturer:"Stomp Box Parts" as const, displayName:"1590BBS"},
+  "SBP-1590XX": { width: 145, height: 120, depth: 37, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "1590XX" },
+  "SBP-1030L": { width: 69.8, height: 254, depth: 51.3, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Stomp Box Parts" as const, displayName: "1030L" },
 
   // Tayda enclosures
   "Tayda-1590A": { width: 38, height: 92, depth: 28, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Tayda" as const, displayName: "1590A" },
@@ -181,12 +215,18 @@ export function normalizeEnclosureType(type: EnclosureType): EnclosureType {
 
 // Get all enclosures grouped by manufacturer
 export function getAllEnclosuresGrouped(): Record<EnclosureManufacturer, EnclosureType[]> {
-  const grouped: Record<EnclosureManufacturer, EnclosureType[]> = {
-    "Hammond": [],
-    "Love My Switches": [],
-    "GØRVA design": [],
-    "Tayda": []
-  };
+  // Initialize with all manufacturers from MANUFACTURERS
+  const grouped: Record<EnclosureManufacturer, EnclosureType[]> = {};
+  
+  // Initialize arrays for all manufacturers
+  Object.keys(MANUFACTURERS).forEach((key) => {
+    grouped[key as EnclosureManufacturer] = [];
+  });
+  
+  // Also include Legacy since it's used in some enclosure types
+  if (!grouped["Legacy"]) {
+    grouped["Legacy"] = [];
+  }
   
   // Filter out legacy entries (those without dashes)
   Object.keys(ENCLOSURE_TYPES).forEach((key) => {
