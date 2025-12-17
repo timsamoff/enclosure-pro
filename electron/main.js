@@ -575,7 +575,7 @@ ipcMain.handle('app:manual-check-updates', async () => {
   }
 });
 
-// FIXED: Direct file open handler with consistent return format
+// Direct file open handler with consistent return format
 ipcMain.handle('file:open', async () => {
   // console.log('📂 file:open called from renderer');
   
@@ -847,6 +847,34 @@ ipcMain.handle('test:simulate-update', () => {
   });
   
   return { success: true, message: 'Update simulation started' };
+});
+
+// Better print handler using printToPDF
+ipcMain.handle('print:pdf', async (event, options) => {
+  const { pdfData, printOptions, silent } = options;
+  
+  console.log('🖨️ Print PDF handler called');
+  
+  try {
+    // Just save to temp and open in system PDF viewer for printing
+    // This is more reliable than Electron's print API
+    const tmpDir = app.getPath('temp');
+    const tmpFile = path.join(tmpDir, `drill-template-${Date.now()}.pdf`);
+    
+    const pdfBuffer = Buffer.from(pdfData);
+    await fs.writeFile(tmpFile, pdfBuffer);
+    
+    console.log('PDF saved to:', tmpFile);
+    
+    // Open in system default PDF viewer
+    const { shell } = require('electron');
+    await shell.openPath(tmpFile);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Print PDF error:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 // Helper function to calculate next version for simulation
