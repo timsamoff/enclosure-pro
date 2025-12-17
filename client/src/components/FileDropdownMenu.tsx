@@ -101,7 +101,7 @@ export default function FileDropdownMenu({
           data-testid="menu-item-export-pdf"
           className={`${isEnclosureSelected ? "cursor-pointer" : "cursor-not-allowed !cursor-not-allowed"}`}
         >
-          <Printer className="w-4 h-4 mr-2" /> {/* Changed icon from Download to Printer */}
+          <Download className="w-4 h-4 mr-2" />
           <span className="flex-1">Print/Export to PDF</span>
           {/* Changed: Show Ctrl+P instead of Ctrl+E for consistency with menu label */}
           <span className="text-xs text-muted-foreground ml-4">{shortcuts.print}</span>

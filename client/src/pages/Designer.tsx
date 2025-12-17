@@ -701,7 +701,7 @@ export default function Designer() {
               >
                 <div className="flex items-center gap-2">
                   <Download className="w-4 h-4 mr-2 text-gray-600" />
-                  <span>Print/Export</span>
+                  <span>Print/Export to PDF</span>
                 </div>
                 <span className="ml-2">
                   {(() => {

@@ -11,16 +11,19 @@ export const MANUFACTURERS = {
     color: "#ff8c42",
     legacyNames: ["1590A", "1590B", "1590LB", "1590BB", "1590BB2", "1590BBS", "1590DD", "1590XX"]
   },
+  
+    "GØRVA design": {
+    prefix: "GOR",
+    displayName: "GØRVA design",
+    color: "#9b59b6"
+  },
+  
   "Love My Switches": {
     prefix: "LMS",
     displayName: "Love My Switches",
     color: "#3498db"
   },
-  "GØRVA design": {
-    prefix: "GOR",
-    displayName: "GØRVA design",
-    color: "#9b59b6"
-  },
+
   "Tayda": {
     prefix: "TAY",
     displayName: "Tayda",

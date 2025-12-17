@@ -67,7 +67,6 @@ export default function FileMenu({
           <Separator />
 
           <div className="space-y-3">
-            {/* Changed: Now says "Print/Export to PDF" but uses Ctrl+P shortcut hint */}
             <Button
               onClick={() => {
                 onExportPDF();
@@ -76,7 +75,7 @@ export default function FileMenu({
               className="w-full cursor-pointer"
               data-testid="button-export-pdf"
             >
-              <Printer className="w-4 h-4 mr-2" />
+              <Download className="w-4 h-4 mr-2" />
               Print/Export to PDF
               <span className="text-xs text-muted-foreground ml-2">
                 {/* Show Ctrl+P as the shortcut hint */}

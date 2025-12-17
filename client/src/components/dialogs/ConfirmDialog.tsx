@@ -64,7 +64,7 @@ export function ConfirmDialog({
             <AlertDialogAction
               onClick={onDestructive}
               data-testid={`${testId}-destructive`}
-              className="bg-gray-500 hover:bg-gray-600 text-white shadow-none active:scale-100 border-0"
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 shadow-none active:scale-100 border-0"
             >
               {destructiveText}
             </AlertDialogAction>
