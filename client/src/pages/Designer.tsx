@@ -220,84 +220,105 @@ export default function Designer() {
   const handleMenuOpen = useRef(() => {
     debugLog("Menu: Open triggered (via ref)");
     
-    if (window.electronAPI?.openProjectFile) {
-      debugLog("Using openProjectFile API");
-      window.electronAPI.openProjectFile().then((result: any) => {
-        debugLog("openProjectFile result:", result);
-        
-        if (result.success && result.filePath) {
-          debugLog("File selected:", result.filePath);
+    // Show file dialog first
+    const performFileSelection = async () => {
+      debugLog("Showing file dialog");
+      
+      if (window.electronAPI?.openProjectFile) {
+        debugLog("Using openProjectFile API");
+        try {
+          const result = await window.electronAPI.openProjectFile();
+          debugLog("openProjectFile result:", result);
           
-          if (fileOperationsRef.current) {
-            if (fileOperationsRef.current.isDirty) {
+          if (result.success && result.filePath) {
+            debugLog("File selected:", result.filePath);
+            
+            // Check if there are unsaved changes
+            if (fileOperationsRef.current?.isDirty) {
+              debugLog("Project is dirty, showing open confirm dialog");
+              
+              // Store the file path to open after confirmation
               fileOperationsRef.current.setPendingFilePath(result.filePath);
-              confirmDialogsRef.current?.setShowOpenConfirmDialog(true);
+              
+              // Show the confirmation dialog
+              if (confirmDialogsRef.current?.setShowOpenConfirmDialog) {
+                confirmDialogsRef.current.setShowOpenConfirmDialog(true);
+              }
             } else {
-              if (fileOperationsRef.current.openFileFromPath) {
+              // No unsaved changes, open the file directly
+              debugLog("Project is clean, opening file directly");
+              if (fileOperationsRef.current?.openFileFromPath) {
                 fileOperationsRef.current.openFileFromPath(result.filePath);
-              } else {
-                debugLog("openFileFromPath not available, trying handleLoad");
-                fileOperationsRef.current.handleLoad?.(result.filePath);
               }
             }
+          } else if (result.canceled) {
+            debugLog("User canceled file selection");
+          } else if (result.error) {
+            debugLog("Error opening file:", result.error);
+            toast({
+              title: "Open Error",
+              description: `Failed to open file: ${result.error}`,
+              variant: "destructive",
+            });
           }
-        } else if (result.canceled) {
-          debugLog("User canceled file selection");
-        } else if (result.error) {
-          debugLog("Error opening file:", result.error);
+        } catch (error: any) {
+          debugLog("Error with openProjectFile API:", error);
           toast({
             title: "Open Error",
-            description: `Failed to open file: ${result.error}`,
+            description: `Failed to open file: ${error.message || 'Unknown error'}`,
             variant: "destructive",
           });
         }
-      }).catch((error: any) => {
-        debugLog("Error with openProjectFile API:", error);
-        toast({
-          title: "Open Error",
-          description: `Failed to open file: ${error.message || 'Unknown error'}`,
-          variant: "destructive",
-        });
-      });
-    } else if (window.electronAPI?.openFile) {
-      debugLog("Using openFile API (fallback)");
-      window.electronAPI.openFile({
-        filters: [{ name: 'Enclosure Project Files', extensions: ['enc'] }]
-      }).then((result: any) => {
-        debugLog("openFile result:", result);
-        
-        if (!result.canceled && result.filePath) {
-          debugLog("File selected via fallback:", result.filePath);
+      } else if (window.electronAPI?.openFile) {
+        debugLog("Using openFile API (fallback)");
+        try {
+          const result = await window.electronAPI.openFile({
+            filters: [{ name: 'Enclosure Project Files', extensions: ['enc'] }]
+          });
+          debugLog("openFile result:", result);
           
-          if (fileOperationsRef.current) {
-            if (fileOperationsRef.current.isDirty) {
+          if (!result.canceled && result.filePath) {
+            debugLog("File selected via fallback:", result.filePath);
+            
+            // Check if there are unsaved changes
+            if (fileOperationsRef.current?.isDirty) {
+              debugLog("Project is dirty, showing open confirm dialog");
+              
+              // Store the file path to open after confirmation
               fileOperationsRef.current.setPendingFilePath(result.filePath);
-              confirmDialogsRef.current?.setShowOpenConfirmDialog(true);
+              
+              // Show the confirmation dialog
+              if (confirmDialogsRef.current?.setShowOpenConfirmDialog) {
+                confirmDialogsRef.current.setShowOpenConfirmDialog(true);
+              }
             } else {
-              if (fileOperationsRef.current.openFileFromPath) {
+              // No unsaved changes, open the file directly
+              debugLog("Project is clean, opening file directly");
+              if (fileOperationsRef.current?.openFileFromPath) {
                 fileOperationsRef.current.openFileFromPath(result.filePath);
-              } else {
-                debugLog("openFileFromPath not available");
               }
             }
+          } else {
+            debugLog("File selection canceled or no file selected");
           }
-        } else {
-          debugLog("File selection canceled or no file selected");
+        } catch (error: any) {
+          debugLog("Error with openFile API:", error);
         }
-      }).catch((error: any) => {
-        debugLog("Error with openFile API:", error);
-      });
-    } else if (fileOperationsRef.current?.handleLoad) {
-      debugLog("Using fileOperations.handleLoad (last resort)");
-      fileOperationsRef.current.handleLoad();
-    } else {
-      debugLog("No file open API available");
-      toast({
-        title: "Open Error",
-        description: "File open functionality is not available",
-        variant: "destructive",
-      });
-    }
+      } else if (fileOperationsRef.current?.handleLoad) {
+        debugLog("Using fileOperations.handleLoad (last resort)");
+        // For web version, let the hook handle the file dialog
+        fileOperationsRef.current.handleLoad();
+      } else {
+        debugLog("No file open API available");
+        toast({
+          title: "Open Error",
+          description: "File open functionality is not available",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    performFileSelection();
   }).current;
 
   const handleMenuSave = useRef(() => {
@@ -509,6 +530,7 @@ export default function Designer() {
       const handleFileOpenRequest = (event: any, filePath: string) => {
         debugLog("onFileOpenRequest triggered, filePath:", filePath, "isDirty:", fileOperations.isDirty);
         if (fileOperations.isDirty) {
+          // Store the file path to open after confirmation
           fileOperations.setPendingFilePath(filePath);
           confirmDialogs.setShowOpenConfirmDialog(true);
         } else {

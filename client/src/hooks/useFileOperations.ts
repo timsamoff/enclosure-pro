@@ -155,7 +155,7 @@ export function useFileOperations({
     }
   };
 
-  const performLoad = async () => {
+  const performLoad = async (): Promise<string | null> => {
     if (window.electronAPI?.isElectron) {
       try {
         const result = await window.electronAPI.openFile({
@@ -166,60 +166,75 @@ export function useFileOperations({
         });
 
         if (result.canceled || !result.filePath) {
-          return;
+          return null;
         }
 
-        const readResult = await window.electronAPI.readFile({
-          filePath: result.filePath
-        });
-
-        if (!readResult.success || !readResult.content) {
-          throw new Error(readResult.error || 'Failed to read file');
-        }
-
-        const filename = result.filePath.split(/[/\\]/).pop() || 'untitled.enc';
-        processLoadedFile(readResult.content, filename, result.filePath);
-        return;
+        return result.filePath;
       } catch (error) {
-        console.error('Electron load failed:', error);
+        console.error('Electron file selection failed:', error);
+        toast({
+          title: "File Selection Failed",
+          description: "Failed to select file",
+          variant: "destructive",
+        });
+        return null;
       }
     }
 
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.enc';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const json = event.target?.result as string;
-        processLoadedFile(json, file.name);
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.enc';
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) {
+          resolve(null);
+          return;
+        }
+        resolve(file.name);
       };
-      reader.readAsText(file);
-    };
-    input.click();
+      input.oncancel = () => resolve(null);
+      input.click();
+    });
   };
 
   const handleLoad = async () => {
     if (isDirty) {
-      setShowOpenConfirmDialog(true);
+      // Store the load action to be performed after confirmation
+      const filePath = await performLoad();
+      if (filePath) {
+        setPendingFilePath(filePath);
+        setShowOpenConfirmDialog(true);
+      }
     } else {
-      await performLoad();
+      const filePath = await performLoad();
+      if (filePath) {
+        await openFileFromPath(filePath);
+      }
     }
   };
 
   const openFileFromPath = async (filePath: string) => {
     try {
-      const result = await window.electronAPI.openExternalFile(filePath);
+      let fileContent: string;
       
-      if (result.success && result.content) {
-        const filename = filePath.split(/[/\\]/).pop() || 'untitled.enc';
-        processLoadedFile(result.content, filename, filePath);
+      if (window.electronAPI?.isElectron) {
+        const result = await window.electronAPI.readFile({
+          filePath: filePath
+        });
+
+        if (!result.success || !result.content) {
+          throw new Error(result.error || 'Failed to read file');
+        }
+        fileContent = result.content;
       } else {
-        throw new Error(result.error || 'Failed to read file');
+        // For web, we'd need to handle this differently
+        throw new Error('File reading not supported in web mode');
       }
+
+      const filename = filePath.split(/[/\\]/).pop() || 'untitled.enc';
+      processLoadedFile(fileContent, filename, filePath);
+      
     } catch (error) {
       console.error('Error opening file from path:', error);
       toast({
@@ -230,12 +245,45 @@ export function useFileOperations({
     }
   };
 
+  const handleSaveForOpen = async (): Promise<boolean> => {
+    try {
+      // If project has a file path, save directly
+      if (projectFilePathRef.current) {
+        await handleSave();
+        return true;
+      } else {
+        // If no file path, trigger Save As
+        await handleSaveAs();
+        return true;
+      }
+    } catch (error: any) {
+      if (error.message === 'User canceled save operation') {
+        console.log('Save was canceled by user');
+        return false;
+      }
+      console.error('Save for open failed:', error);
+      toast({
+        title: "Save Failed",
+        description: error.message || 'Failed to save file',
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const handleOpenConfirmSave = async () => {
     setShowOpenConfirmDialog(false);
     try {
-      await handleSave();
-      if (pendingFilePath) {
+      const saveSuccess = await handleSaveForOpen();
+      if (saveSuccess && pendingFilePath) {
         await openFileFromPath(pendingFilePath);
+        setPendingFilePath(null);
+      } else if (!saveSuccess) {
+        // Save was canceled or failed, cancel the open operation
+        toast({
+          title: "Open Canceled",
+          description: "File open was canceled because save failed or was canceled",
+        });
         setPendingFilePath(null);
       }
     } catch (error) {
@@ -405,6 +453,7 @@ export function useFileOperations({
           title: "Project Saved",
           description: `Saved ${projectFilePathRef.current.split(/[/\\]/).pop()}`,
         });
+        return true;
       } catch (err: any) {
         console.error('Save failed:', err);
         toast({
@@ -412,19 +461,32 @@ export function useFileOperations({
           description: err.message || 'Failed to save file',
           variant: "destructive",
         });
+        throw err;
       }
     } else {
-      await handleSaveAs();
+      try {
+        await handleSaveAs();
+        return true;
+      } catch (err: any) {
+        throw err;
+      }
     }
   }, [components, enclosureType, gridEnabled, gridSize, zoom, rotation, unit, appIcon]);
 
   const handleSaveAs = async () => {
     try {
       await handleSaveWithFilename(projectName || enclosureType || "untitled");
+      return true;
     } catch (err: any) {
       if (err.message !== 'User canceled save operation') {
         console.error('Save As failed:', err);
+        toast({
+          title: "Save As Failed",
+          description: err.message || 'Failed to save file',
+          variant: "destructive",
+        });
       }
+      throw err;
     }
   };
 

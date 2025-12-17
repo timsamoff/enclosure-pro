@@ -28,8 +28,14 @@ export function useConfirmDialogs({
     onOpenChange: setShowNewConfirmDialog,
     title: "Unsaved Changes",
     description: "You have unsaved changes. Would you like to save before starting a new project?",
-    onConfirm: onNewConfirmSave,
-    onDestructive: onNewConfirmDiscard,
+    onConfirm: () => {
+      setShowNewConfirmDialog(false);
+      onNewConfirmSave();
+    },
+    onDestructive: () => {
+      setShowNewConfirmDialog(false);
+      onNewConfirmDiscard();
+    },
     testId: "dialog-new-confirm"
   };
 
@@ -38,8 +44,14 @@ export function useConfirmDialogs({
     onOpenChange: setShowQuitConfirmDialog,
     title: "Unsaved Changes",
     description: "You have unsaved changes. Would you like to save before quitting?",
-    onConfirm: onQuitConfirmSave,
-    onDestructive: onQuitConfirmDiscard,
+    onConfirm: () => {
+      setShowQuitConfirmDialog(false);
+      onQuitConfirmSave();
+    },
+    onDestructive: () => {
+      setShowQuitConfirmDialog(false);
+      onQuitConfirmDiscard();
+    },
     testId: "dialog-quit-confirm"
   };
 
@@ -54,9 +66,18 @@ export function useConfirmDialogs({
     },
     title: "Unsaved Changes",
     description: "You have unsaved changes. What would you like to do before opening the new file?",
-    onConfirm: onOpenConfirmSave,
-    onDestructive: onOpenConfirmDiscard,
-    onCancel: onOpenConfirmCancel,
+    onConfirm: () => {
+      setShowOpenConfirmDialog(false);
+      onOpenConfirmSave();
+    },
+    onDestructive: () => {
+      setShowOpenConfirmDialog(false);
+      onOpenConfirmDiscard();
+    },
+    onCancel: () => {
+      setShowOpenConfirmDialog(false);
+      onOpenConfirmCancel();
+    },
     testId: "dialog-open-confirm"
   };
 

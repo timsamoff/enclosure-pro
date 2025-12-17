@@ -24,30 +24,39 @@ export default function SaveAsDialog({
   onSave,
 }: SaveAsDialogProps) {
   const [filename, setFilename] = useState(currentFilename);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
       setFilename(currentFilename);
+      setIsSaving(false);
     }
   }, [open, currentFilename]);
 
   const handleSave = async () => {
-    if (filename.trim()) {
+    if (filename.trim() && !isSaving) {
+      setIsSaving(true);
       try {
         await onSave(filename.trim());
-        // Only close on successful save
-        setTimeout(() => {
-          onOpenChange(false);
-        }, 1000);
+        // Close immediately on successful save
+        onOpenChange(false);
       } catch (error) {
         // Don't close on error, allow retry
         console.error('Save failed:', error);
+        // Reset saving state to allow retry
+        setIsSaving(false);
       }
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(open) => {
+      if (!open) {
+        // Reset state when closing
+        setIsSaving(false);
+      }
+      onOpenChange(open);
+    }}>
       <DialogContent className="sm:max-w-md [&>button]:hidden" data-testid="dialog-save-as">
         <DialogHeader>
           <DialogTitle>Save Project As</DialogTitle>
@@ -66,6 +75,7 @@ export default function SaveAsDialog({
                 }
               }}
               placeholder="Enter filename"
+              disabled={isSaving}
               data-testid="input-filename"
             />
             <p className="text-xs text-muted-foreground">
@@ -78,16 +88,17 @@ export default function SaveAsDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
+            disabled={isSaving}
             data-testid="button-cancel-save"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!filename.trim()}
+            disabled={!filename.trim() || isSaving}
             data-testid="button-confirm-save"
           >
-            Save
+            {isSaving ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>
