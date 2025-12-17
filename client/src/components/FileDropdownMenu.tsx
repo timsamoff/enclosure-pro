@@ -94,7 +94,19 @@ export default function FileDropdownMenu({
           <span className="flex-1">Save As</span>
           <span className="text-xs text-muted-foreground ml-4">{shortcuts.saveAs}</span>
         </DropdownMenuItem>
-        {/* Print - disabled when no enclosure */}
+        {/* Print/Export - disabled when no enclosure - CHANGED: Now shows Ctrl+P shortcut */}
+        <DropdownMenuItem 
+          onClick={onExportPDF}
+          disabled={!isEnclosureSelected}
+          data-testid="menu-item-export-pdf"
+          className={`${isEnclosureSelected ? "cursor-pointer" : "cursor-not-allowed !cursor-not-allowed"}`}
+        >
+          <Printer className="w-4 h-4 mr-2" /> {/* Changed icon from Download to Printer */}
+          <span className="flex-1">Print/Export to PDF</span>
+          {/* Changed: Show Ctrl+P instead of Ctrl+E for consistency with menu label */}
+          <span className="text-xs text-muted-foreground ml-4">{shortcuts.print}</span>
+        </DropdownMenuItem>
+        {/* Commented out separate Print item
         <DropdownMenuItem 
           onClick={onPrint}
           disabled={!isEnclosureSelected}
@@ -105,17 +117,7 @@ export default function FileDropdownMenu({
           <span className="flex-1">Print</span>
           <span className="text-xs text-muted-foreground ml-4">{shortcuts.print}</span>
         </DropdownMenuItem>
-        {/* Export PDF - disabled when no enclosure */}
-        <DropdownMenuItem 
-          onClick={onExportPDF}
-          disabled={!isEnclosureSelected}
-          data-testid="menu-item-export-pdf"
-          className={`${isEnclosureSelected ? "cursor-pointer" : "cursor-not-allowed !cursor-not-allowed"}`}
-        >
-          <Download className="w-4 h-4 mr-2" />
-          <span className="flex-1">Export PDF</span>
-          <span className="text-xs text-muted-foreground ml-4">{shortcuts.exportPDF}</span>
-        </DropdownMenuItem>
+        */}
         <DropdownMenuSeparator />
         {/* Quit is always enabled */}
         <DropdownMenuItem 

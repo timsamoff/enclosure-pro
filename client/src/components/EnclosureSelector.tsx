@@ -222,7 +222,7 @@ export default function EnclosureSelector({
                       }}
                     >
                       <div>
-                        <div className="font-semibold text-lg flex items-center gap-2">
+                        <div className="font-medium text-sm flex items-center gap-2">
                           {displayName}
                           {isRecommendedForLegacy && (
                             <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">

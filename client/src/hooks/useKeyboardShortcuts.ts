@@ -103,12 +103,12 @@ export function useKeyboardShortcuts({
           handlersRef.current.handleSave();
         }
       } 
-      // Ctrl/Cmd + P - Print
+      // Ctrl/Cmd + P - Print/Export PDF (CHANGED: Now calls handleExportPDF)
       else if (modifier && e.key.toLowerCase() === 'p') {
         e.preventDefault();
-        handlersRef.current.handlePrint();
+        handlersRef.current.handleExportPDF(); // Changed from handlePrint
       } 
-      // Ctrl/Cmd + E - Export PDF
+      // Ctrl/Cmd + E - Export PDF (still works)
       else if (modifier && e.key.toLowerCase() === 'e') {
         e.preventDefault();
         handlersRef.current.handleExportPDF();
