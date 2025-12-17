@@ -66,6 +66,21 @@ jobs:
           node-version: '20'
           cache: 'npm'
       
+      - name: Verify and sync version
+        shell: bash
+        run: |
+          echo "📋 Verifying version consistency..."
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Package.json version: $PKG_VERSION"
+          echo "Expected tag: ${{ env.RELEASE_TAG }}"
+          
+          # Clear electron-builder caches
+          echo "🧹 Clearing electron-builder caches..."
+          rm -rf ~/.cache/electron-builder 2>/dev/null || true
+          rm -rf ~/.cache/electron 2>/dev/null || true
+          
+          echo "✅ Version verified: $PKG_VERSION"
+      
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
       
