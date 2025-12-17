@@ -40,7 +40,7 @@ export const shortcuts = {
   saveAs: formatShortcut('S', true),
   print: formatShortcut('P'), // Shows as Ctrl+P in menus
   exportPDF: formatShortcut('E'), // Still functional but not shown in menus
-  quit: formatShortcut('Q'), // Changed: Now shows Ctrl+Q for Windows (Alt+F4 still works but isn't shown)
+  quit: formatShortcut('Q'),
   zoomIn: isMac ? '⌘+' : 'Ctrl++',
   zoomOut: isMac ? '⌘-' : 'Ctrl+-',
 };

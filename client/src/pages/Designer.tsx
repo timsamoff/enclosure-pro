@@ -639,6 +639,7 @@ export default function Designer() {
               contextMenu.closeContextMenu();
             }}
             onZoomChange={setZoom}
+            autoZoomToFit={true}
             rotatesLabels={ENCLOSURE_TYPES[enclosureType].rotatesLabels || false}
             onRightClick={contextMenu.handleCanvasRightClick}
           />

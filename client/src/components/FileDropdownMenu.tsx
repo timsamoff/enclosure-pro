@@ -94,7 +94,6 @@ export default function FileDropdownMenu({
           <span className="flex-1">Save As</span>
           <span className="text-xs text-muted-foreground ml-4">{shortcuts.saveAs}</span>
         </DropdownMenuItem>
-        {/* Print/Export - disabled when no enclosure - CHANGED: Now shows Ctrl+P shortcut */}
         <DropdownMenuItem 
           onClick={onExportPDF}
           disabled={!isEnclosureSelected}
@@ -103,7 +102,6 @@ export default function FileDropdownMenu({
         >
           <Download className="w-4 h-4 mr-2" />
           <span className="flex-1">Print/Export to PDF</span>
-          {/* Changed: Show Ctrl+P instead of Ctrl+E for consistency with menu label */}
           <span className="text-xs text-muted-foreground ml-4">{shortcuts.print}</span>
         </DropdownMenuItem>
         {/* Commented out separate Print item

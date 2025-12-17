@@ -470,7 +470,7 @@ export function useBaseExport({
 
               // Only draw labels for non-utility guides
               if (!isUtilityGuide) {
-                // FIXED: Use calculateLabelPosition to match on-screen behavior
+                // Use calculateLabelPosition to match on-screen behavior
                 const labelPos = calculateLabelPosition(
                   centerX,
                   centerY,
@@ -562,7 +562,7 @@ export function useBaseExport({
 
               // Only draw labels for non-utility guides
               if (!isUtilityGuide) {
-                // FIXED: Use calculateLabelPosition to match on-screen behavior
+                // Use calculateLabelPosition to match on-screen behavior
                 const labelPos = calculateLabelPosition(
                   centerX,
                   centerY,
