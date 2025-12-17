@@ -492,7 +492,9 @@ export function useFileOperations({
 
   const processLoadedFile = (json: string, filename: string, filePath?: string) => {
     try {
-      if (filePath && projectFilePathRef.current === filePath) {
+      // Only skip if it's the same file AND there are no unsaved changes
+      // If there are unsaved changes, let the confirmation dialog handle it
+      if (filePath && projectFilePathRef.current === filePath && !isDirtyRef.current) {
         toast({
           title: "File Already Open",
           description: `${filename} is already open`,
