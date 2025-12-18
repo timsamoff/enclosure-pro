@@ -8,8 +8,9 @@ interface UseBaseExportProps {
   rotationRef: React.MutableRefObject<number>;
 }
 
-// Central configuration for print/export styling
-const PRINT_CONFIG = {
+// Base configuration for print/export styling
+// Define base sizes that can be overridden by specific presets
+const BASE_CONFIG = {
   // Line widths
   lineWidths: {
     enclosureBorder: 0.5,           // Border around enclosure sides
@@ -20,13 +21,13 @@ const PRINT_CONFIG = {
   // Font settings
   fonts: {
     sideLabel: {
-      size: 9,                    // Size for side labels (Front, Top, etc.) - adjusted for 72 DPI
+      sizePt: 8,
       family: 'Arial',
-      style: 'normal',            // 'normal', 'bold', 'italic'
+      style: 'normal',
       color: '#000000'
     },
     componentLabel: {
-      size: 7,                    // Size for component dimension labels - adjusted for 72 DPI
+      sizePt: 6,
       family: 'Arial',
       style: 'normal',
       color: '#000000'
@@ -35,7 +36,7 @@ const PRINT_CONFIG = {
   
   // Component styling
   components: {
-    labelOffset: 10,              // Distance from component to its label
+    labelOffset: 7,              // Distance from component to its label (in mm)
     labelBackgroundPadding: 4,    // Padding around label text background
     crosshairSize: 10,            // Minimum crosshair size in pixels
   },
@@ -46,27 +47,59 @@ const PRINT_CONFIG = {
   }
 };
 
-// Quality presets for different export types
+// DPI configuration for different export types
+const DPI_CONFIG = {
+  print: 72,      // Standard print DPI (matches jsPDF default)
+  pdf: 300        // High quality for PDF export
+};
+
+// Quality presets for different export types - THEY SHOULD REFERENCE BASE_CONFIG
 const QUALITY_PRESETS = {
   print: {
-    ...PRINT_CONFIG,
-    // No changes needed for print - use base config
+    ...BASE_CONFIG,
+    dpi: DPI_CONFIG.print,
+    // Print-specific overrides go here
+    lineWidths: {
+      ...BASE_CONFIG.lineWidths,
+      // No changes for print
+    },
+    fonts: {
+      sideLabel: {
+        ...BASE_CONFIG.fonts.sideLabel,
+        // Use base font size for print
+      },
+      componentLabel: {
+        ...BASE_CONFIG.fonts.componentLabel,
+        // Use base font size for print
+      }
+    }
   },
   pdf: {
-    ...PRINT_CONFIG,
-    // PDF can have slightly enhanced settings if desired
+    ...BASE_CONFIG,
+    dpi: DPI_CONFIG.pdf,
+    // PDF-specific overrides
     lineWidths: {
-      ...PRINT_CONFIG.lineWidths,
+      ...BASE_CONFIG.lineWidths,
       enclosureBorder: 1.2,
     },
     fonts: {
-      ...PRINT_CONFIG.fonts,
       sideLabel: {
-        ...PRINT_CONFIG.fonts.sideLabel,
-        size: 15,
+        ...BASE_CONFIG.fonts.sideLabel,
+        // Use base font size for PDF - NO OVERRIDE!
+      },
+      componentLabel: {
+        ...BASE_CONFIG.fonts.componentLabel,
+        // Use base font size for PDF - NO OVERRIDE!
       }
     }
   }
+};
+
+// Helper function to convert point size to canvas pixels based on DPI
+const getCanvasFontSize = (pointSize: number, dpi: number): number => {
+  // Convert points to inches: points / 72 = inches
+  // Convert inches to pixels: inches * dpi = pixels
+  return (pointSize / 72) * dpi;
 };
 
 // Helper function for rotated side labels
@@ -131,7 +164,6 @@ const calculateLabelPosition = (
     }
     
     // Keep text horizontal (counter-rotate by canvas rotation only)
-    // Negative angle to counter-rotate back to horizontal
     const textAngle = canvasRotation === 0 ? 0 : -Math.PI / 2;
     
     return { x: labelX, y: labelY, textAngle };
@@ -184,17 +216,14 @@ export function useBaseExport({
 
   const getPrintableComponents = useCallback((components: any[]): any[] => {
     return components.filter(component => {
-      // If component is explicitly marked to exclude from print, exclude it
       if (component.excludeFromPrint) {
         return false;
       }
       
-      // If component is explicitly marked to include (excludeFromPrint === false), include it
       if (component.excludeFromPrint === false) {
         return true;
       }
       
-      // Default behavior: exclude Footprint Guides, include everything else
       const compData = COMPONENT_TYPES[component.type];
       const isUtilityGuide = compData.category === "Footprint Guides";
       return !isUtilityGuide;
@@ -208,6 +237,7 @@ export function useBaseExport({
     options: {
       forPDF?: boolean;
       forPrint?: boolean;
+      dpi?: number;
     } = {}
   ): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -219,6 +249,25 @@ export function useBaseExport({
 
         // Select quality preset based on export type
         const config = options.forPDF ? QUALITY_PRESETS.pdf : QUALITY_PRESETS.print;
+        
+        // Choose DPI: explicit DPI param > forPDF/forPrint > default
+        const targetDPI = options.dpi || (options.forPDF ? DPI_CONFIG.pdf : DPI_CONFIG.print);
+        const MM_PER_INCH = 25.4;
+        const pixelsPerMM = targetDPI / MM_PER_INCH; // DPI-aware pixels per mm
+        const dpiScaleFactor = targetDPI / DPI_CONFIG.print; // Scale relative to 72 DPI
+
+        // DEBUG: Log the font sizes being used
+        console.log('Font sizes being used:', {
+          sideLabelPt: config.fonts.sideLabel.sizePt,
+          componentLabelPt: config.fonts.componentLabel.sizePt,
+          targetDPI: targetDPI,
+          sideLabelPixels: getCanvasFontSize(config.fonts.sideLabel.sizePt, targetDPI),
+          componentLabelPixels: getCanvasFontSize(config.fonts.componentLabel.sizePt, targetDPI)
+        });
+
+        // Calculate actual canvas font sizes from point sizes
+        const sideLabelCanvasSize = getCanvasFontSize(config.fonts.sideLabel.sizePt, targetDPI);
+        const componentLabelCanvasSize = getCanvasFontSize(config.fonts.componentLabel.sizePt, targetDPI);
 
         const frontW = dimensions.front.width;
         const frontH = dimensions.front.height;
@@ -238,23 +287,17 @@ export function useBaseExport({
           [totalWidthMM, totalHeightMM] = [totalHeightMM, totalWidthMM];
         }
 
-        // Use EXACT 72 DPI calculation - jsPDF's default
-        // This ensures perfect 1:1 scale when jsPDF interprets the image
-        const PIXELS_PER_INCH = 72;
-        const MM_PER_INCH = 25.4;
-        const pixelsPerMM = PIXELS_PER_INCH / MM_PER_INCH; // 2.834645669291339
-
         // Canvas component positions use this conversion (from UnwrappedCanvas.tsx)
         const CANVAS_MM_TO_PIXELS = 3.7795275591;
 
-        // Round UP to nearest pixel to ensure full coverage
+        // Calculate canvas pixel dimensions using the target DPI
         const canvasWidth = Math.ceil(totalWidthMM * pixelsPerMM);
         const canvasHeight = Math.ceil(totalHeightMM * pixelsPerMM);
 
         const canvas = document.createElement('canvas');
         canvas.width = canvasWidth;
         canvas.height = canvasHeight;
-        // Set explicit physical dimensions
+        // CRITICAL: Keep the SAME physical dimensions in mm
         canvas.style.width = `${totalWidthMM}mm`;
         canvas.style.height = `${totalHeightMM}mm`;
         
@@ -266,7 +309,7 @@ export function useBaseExport({
         }
 
         // Set DPI metadata
-        canvas.setAttribute('data-dpi', '72');
+        canvas.setAttribute('data-dpi', targetDPI.toString());
         canvas.setAttribute('data-scale', '100%');
 
         ctx.fillStyle = 'white';
@@ -280,6 +323,7 @@ export function useBaseExport({
           [totalWidthMM, totalHeightMM] = [totalHeightMM, totalWidthMM];
         }
 
+        // Calculate offsets using pixelsPerMM
         const topOffsetX = (frontW - topW) / 2 * pixelsPerMM;
         const bottomOffsetX = (frontW - bottomW) / 2 * pixelsPerMM;
         const leftOffsetY = (frontH - leftH) / 2 * pixelsPerMM;
@@ -329,9 +373,9 @@ export function useBaseExport({
             ? getRotatedSideLabel(originalLabel, currentRotation, rotatesLabels)
             : originalLabel;
 
-          // Draw enclosure border using central config
+          // Draw enclosure border with DPI-scaled line width
           ctx.strokeStyle = config.fonts.sideLabel.color;
-          ctx.lineWidth = config.lineWidths.enclosureBorder;
+          ctx.lineWidth = config.lineWidths.enclosureBorder * dpiScaleFactor;
           
           if (sideKey === 'front') {
             const cornerRadius = config.enclosure.frontCornerRadius * pixelsPerMM;
@@ -339,44 +383,39 @@ export function useBaseExport({
             ctx.roundRect(x, y, w, h, cornerRadius);
             ctx.stroke();
           } else {
-            // Draw borders selectively to avoid overlapping lines
             ctx.beginPath();
             
             if (sideKey === 'top') {
-              // Top: draw top, left, right (bottom overlaps with front)
               ctx.moveTo(x, y);
-              ctx.lineTo(x + w, y); // top edge
-              ctx.lineTo(x + w, y + h); // right edge
+              ctx.lineTo(x + w, y);
+              ctx.lineTo(x + w, y + h);
               ctx.moveTo(x, y);
-              ctx.lineTo(x, y + h); // left edge
+              ctx.lineTo(x, y + h);
             } else if (sideKey === 'bottom') {
-              // Bottom: draw left, right, bottom (top overlaps with front)
               ctx.moveTo(x, y);
-              ctx.lineTo(x, y + h); // left edge
-              ctx.lineTo(x + w, y + h); // bottom edge
-              ctx.lineTo(x + w, y); // right edge
+              ctx.lineTo(x, y + h);
+              ctx.lineTo(x + w, y + h);
+              ctx.lineTo(x + w, y);
             } else if (sideKey === 'left') {
-              // Left: draw top, left, bottom (right overlaps with front)
               ctx.moveTo(x, y);
-              ctx.lineTo(x + w, y); // top edge
+              ctx.lineTo(x + w, y);
               ctx.moveTo(x, y);
-              ctx.lineTo(x, y + h); // left edge
-              ctx.lineTo(x + w, y + h); // bottom edge
+              ctx.lineTo(x, y + h);
+              ctx.lineTo(x + w, y + h);
             } else if (sideKey === 'right') {
-              // Right: draw top, right, bottom (left overlaps with front)
               ctx.moveTo(x, y);
-              ctx.lineTo(x + w, y); // top edge
-              ctx.lineTo(x + w, y + h); // right edge
-              ctx.lineTo(x, y + h); // bottom edge
+              ctx.lineTo(x + w, y);
+              ctx.lineTo(x + w, y + h);
+              ctx.lineTo(x, y + h);
             }
             
             ctx.stroke();
           }
 
-          // Draw side label using central config
+          // Draw side label - Use DPI-converted font size
           ctx.save();
           ctx.fillStyle = config.fonts.sideLabel.color;
-          ctx.font = `${config.fonts.sideLabel.style} ${config.fonts.sideLabel.size}px ${config.fonts.sideLabel.family}`;
+          ctx.font = `${config.fonts.sideLabel.style} ${sideLabelCanvasSize}px ${config.fonts.sideLabel.family}`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           
@@ -398,16 +437,12 @@ export function useBaseExport({
               return;
             }
             
-            // Component positions are stored in pixels in UnwrappedCanvas (using CANVAS_MM_TO_PIXELS)
-            // But for export, we need to convert them using our export pixelsPerMM
-            // Convert component position from canvas pixels back to mm, then to export pixels
             const componentXmm = component.x / CANVAS_MM_TO_PIXELS;
             const componentYmm = component.y / CANVAS_MM_TO_PIXELS;
             
             const centerX = x + (w / 2) + (componentXmm * pixelsPerMM);
             const centerY = y + (h / 2) + (componentYmm * pixelsPerMM);
 
-            // Check if this is a utility guide (Footprint Guide)
             const isUtilityGuide = compData.category === "Footprint Guides";
 
             if (compData.shape === 'rectangle' || compData.shape === 'square') {
@@ -423,7 +458,6 @@ export function useBaseExport({
               const drawX = component.rotation ? -baseWidth / 2 : centerX - baseWidth / 2;
               const drawY = component.rotation ? -baseHeight / 2 : centerY - baseHeight / 2;
               
-              // Fill: transparent for utility guides, white for regular components
               if (isUtilityGuide) {
                 ctx.fillStyle = 'transparent';
               } else {
@@ -432,9 +466,8 @@ export function useBaseExport({
               ctx.fillRect(drawX, drawY, baseWidth, baseHeight);
               
               ctx.strokeStyle = config.fonts.sideLabel.color;
-              ctx.lineWidth = config.lineWidths.componentBorder;
+              ctx.lineWidth = config.lineWidths.componentBorder * dpiScaleFactor;
               
-              // Use dashed line for utility guides
               if (isUtilityGuide) {
                 ctx.setLineDash([5, 5]);
               }
@@ -445,12 +478,11 @@ export function useBaseExport({
                 ctx.setLineDash([]);
               }
               
-              // Draw crosshair only for non-utility guides
               if (!isUtilityGuide) {
-                const crosshairSizeH = Math.max(baseWidth / 2, config.components.crosshairSize);
-                const crosshairSizeV = Math.max(baseHeight / 2, config.components.crosshairSize);
+                const crosshairSizeH = Math.max(baseWidth / 2, config.components.crosshairSize * dpiScaleFactor);
+                const crosshairSizeV = Math.max(baseHeight / 2, config.components.crosshairSize * dpiScaleFactor);
                 
-                ctx.lineWidth = config.lineWidths.componentCrosshair;
+                ctx.lineWidth = config.lineWidths.componentCrosshair * dpiScaleFactor;
                 ctx.beginPath();
                 if (component.rotation) {
                   ctx.moveTo(-crosshairSizeH, 0);
@@ -468,22 +500,19 @@ export function useBaseExport({
 
               ctx.restore();
 
-              // Only draw labels for non-utility guides
               if (!isUtilityGuide) {
-                // Use calculateLabelPosition to match on-screen behavior
                 const labelPos = calculateLabelPosition(
                   centerX,
                   centerY,
-                  component.rotation || 0,  // Component's own rotation
-                  currentRotation,           // User's canvas rotation setting
-                  true,                      // Is rectangular
+                  component.rotation || 0,
+                  currentRotation,
+                  true,
                   baseWidth,
                   baseHeight,
                   undefined,
-                  config.components.labelOffset
+                  config.components.labelOffset * dpiScaleFactor
                 );
 
-                // Generate label text (swap dimensions for 90° component rotation)
                 const labelText = component.rotation === 90 
                   ? currentUnit === "metric"
                     ? `${compData.height}mm×${compData.width}mm`
@@ -496,18 +525,19 @@ export function useBaseExport({
                 ctx.translate(labelPos.x, labelPos.y);
                 ctx.rotate(labelPos.textAngle);
 
-                ctx.font = `${config.fonts.componentLabel.style} ${config.fonts.componentLabel.size}px ${config.fonts.componentLabel.family}`;
+                // Use DPI-converted font size
+                ctx.font = `${config.fonts.componentLabel.style} ${componentLabelCanvasSize}px ${config.fonts.componentLabel.family}`;
                 const textMetrics = ctx.measureText(labelText);
                 const textWidth = textMetrics.width;
-                const padding = config.components.labelBackgroundPadding;
+                // Scale padding by DPI for visual consistency
+                const padding = config.components.labelBackgroundPadding * dpiScaleFactor;
 
-                // Draw label background
                 ctx.fillStyle = 'white';
                 ctx.fillRect(
                   -textWidth / 2 - padding,
-                  -config.fonts.componentLabel.size / 2 - padding,
+                  -componentLabelCanvasSize / 2 - padding,
                   textWidth + padding * 2,
-                  config.fonts.componentLabel.size + padding * 2
+                  componentLabelCanvasSize + padding * 2
                 );
                 
                 ctx.fillStyle = config.fonts.componentLabel.color;
@@ -522,7 +552,6 @@ export function useBaseExport({
               // CIRCLE COMPONENTS
               const radius = (compData.drillSize / 2) * pixelsPerMM;
 
-              // Fill: transparent for utility guides, white for regular components
               if (isUtilityGuide) {
                 ctx.fillStyle = 'transparent';
               } else {
@@ -533,9 +562,8 @@ export function useBaseExport({
               ctx.fill();
 
               ctx.strokeStyle = config.fonts.sideLabel.color;
-              ctx.lineWidth = config.lineWidths.componentBorder;
+              ctx.lineWidth = config.lineWidths.componentBorder * dpiScaleFactor;
               
-              // Use dashed line for utility guides
               if (isUtilityGuide) {
                 ctx.setLineDash([5, 5]);
               }
@@ -548,10 +576,9 @@ export function useBaseExport({
                 ctx.setLineDash([]);
               }
 
-              // Draw crosshair only for non-utility guides
               if (!isUtilityGuide) {
-                const crosshairSize = Math.max(radius, config.components.crosshairSize);
-                ctx.lineWidth = config.lineWidths.componentCrosshair;
+                const crosshairSize = Math.max(radius, config.components.crosshairSize * dpiScaleFactor);
+                ctx.lineWidth = config.lineWidths.componentCrosshair * dpiScaleFactor;
                 ctx.beginPath();
                 ctx.moveTo(centerX - crosshairSize, centerY);
                 ctx.lineTo(centerX + crosshairSize, centerY);
@@ -560,19 +587,17 @@ export function useBaseExport({
                 ctx.stroke();
               }
 
-              // Only draw labels for non-utility guides
               if (!isUtilityGuide) {
-                // Use calculateLabelPosition to match on-screen behavior
                 const labelPos = calculateLabelPosition(
                   centerX,
                   centerY,
-                  component.rotation || 0,  // Component's own rotation (not used for circles)
-                  currentRotation,           // User's canvas rotation setting
-                  false,                     // Is circular
+                  component.rotation || 0,
+                  currentRotation,
+                  false,
                   undefined,
                   undefined,
                   radius,
-                  config.components.labelOffset
+                  config.components.labelOffset * dpiScaleFactor
                 );
 
                 const drillText = currentUnit === "metric"
@@ -583,18 +608,19 @@ export function useBaseExport({
                 ctx.translate(labelPos.x, labelPos.y);
                 ctx.rotate(labelPos.textAngle);
 
-                ctx.font = `${config.fonts.componentLabel.style} ${config.fonts.componentLabel.size}px ${config.fonts.componentLabel.family}`;
+                // Use DPI-converted font size
+                ctx.font = `${config.fonts.componentLabel.style} ${componentLabelCanvasSize}px ${config.fonts.componentLabel.family}`;
                 const textMetrics = ctx.measureText(drillText);
                 const textWidth = textMetrics.width;
-                const padding = config.components.labelBackgroundPadding;
+                // Scale padding by DPI for visual consistency
+                const padding = config.components.labelBackgroundPadding * dpiScaleFactor;
 
-                // Draw label background
                 ctx.fillStyle = 'white';
                 ctx.fillRect(
                   -textWidth / 2 - padding,
-                  -config.fonts.componentLabel.size / 2 - padding,
+                  -componentLabelCanvasSize / 2 - padding,
                   textWidth + padding * 2,
-                  config.fonts.componentLabel.size + padding * 2
+                  componentLabelCanvasSize + padding * 2
                 );
                 
                 ctx.fillStyle = config.fonts.componentLabel.color;
@@ -630,8 +656,6 @@ export function useBaseExport({
     const enclosureType = enclosureTypeRef.current;
     const currentRotation = rotationRef.current;
     
-    // CRITICAL: For print mode, NEVER rotate the canvas
-    // Use disableRotation flag if provided, otherwise use optimal rotation
     const shouldRotate = options.disableRotation ? false : getOptimalRotation(enclosureType);
     
     const pageDimensions = getPageDimensions(enclosureType, shouldRotate);
