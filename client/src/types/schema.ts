@@ -676,12 +676,12 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
     category: "Footprint Guides", 
     shape: "circle" 
   },
-  "slideguide-15": { name: "15mm Slider", drillSize: 0, imperialLabel: '23/64" × 1 3/16"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 30 },
-  "slideguide-20": { name: "20mm Slider", drillSize: 0, imperialLabel: '23/64" × 1 3/8"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 35 },
-  "slideguide-30": { name: "30mm Slider", drillSize: 0, imperialLabel: '23/64" × 1 49/64"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 45 },
-  "slideguide-45": { name: "45mm Slider", drillSize: 0, imperialLabel: '23/64" × 2 23/64"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 60 },
-  "slideguide-60": { name: "60mm Slider", drillSize: 0, imperialLabel: '23/64" × 2 61/64"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 75 },
-  "slideguide-100": { name: "100mm Slider", drillSize: 0, imperialLabel: '23/64" × 4 17/32"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 115 }
+  "slide-guide-15": { name: "15mm Slider", drillSize: 0, imperialLabel: '23/64" × 1 3/16"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 30 },
+  "slide-guide-20": { name: "20mm Slider", drillSize: 0, imperialLabel: '23/64" × 1 3/8"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 35 },
+  "slide-guide-30": { name: "30mm Slider", drillSize: 0, imperialLabel: '23/64" × 1 49/64"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 45 },
+  "slide-guide-45": { name: "45mm Slider", drillSize: 0, imperialLabel: '23/64" × 2 23/64"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 60 },
+  "slide-guide-60": { name: "60mm Slider", drillSize: 0, imperialLabel: '23/64" × 2 61/64"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 75 },
+  "slide-guide-100": { name: "100mm Slider", drillSize: 0, imperialLabel: '23/64" × 4 17/32"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 115 }
 } as const;
 
 export type ComponentType = keyof typeof COMPONENT_TYPES;
