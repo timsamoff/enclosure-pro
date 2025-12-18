@@ -30,3 +30,30 @@ asarUnpack:
 publish:
   provider: github
   url: https://github.com/${user}/${project}/releases/download/${version}
+
+# CRITICAL: NSIS configuration for proper install/uninstall
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: true
+  runAfterFinish: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  # Include custom uninstall script
+  include: scripts/uninstaller.nsh
+  # Additional cleanup script
+  script: scripts/installer.nsi
+
+# Windows specific settings
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  requestedExecutionLevel: asInvoker
+
+# Additional cleanup for portable-like behavior
+extraResources:
+  - from: "./scripts/"
+    to: "./"
