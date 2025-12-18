@@ -49,11 +49,16 @@ export function usePDFExport({
       const originalFitsOnA4 = trueWidth <= 210 && trueHeight <= 297;
       
       // Generate canvas WITHOUT any rotation - we'll rotate in PDF if needed
+      // Use 300 DPI for high-quality PDF export
       const imageData = await renderCanvas(
         currentEnclosureType,
         false, // NEVER rotate at canvas level
         currentRotation,
-        options
+        {
+          ...options,
+          forPDF: true,
+          dpi: 300 // High DPI for crisp PDF output
+        }
       );
       
       // If we need to rotate, rotate the image data itself
@@ -72,14 +77,13 @@ export function usePDFExport({
         
         // Create canvas with swapped dimensions for 90° rotation
         const rotateCanvas = document.createElement('canvas');
-        rotateCanvas.width = img.height;  // Swap width/height
+        rotateCanvas.width = img.height;
         rotateCanvas.height = img.width;
         
-        // Set explicit physical dimensions to preserve DPI
-        const PIXELS_PER_INCH = 72;
-        const MM_PER_INCH = 25.4;
-        rotateCanvas.style.width = `${(img.height / PIXELS_PER_INCH) * MM_PER_INCH}mm`;
-        rotateCanvas.style.height = `${(img.width / PIXELS_PER_INCH) * MM_PER_INCH}mm`;
+        // Set explicit physical dimensions to preserve scale
+        // For rotated image, use the original dimensions
+        rotateCanvas.style.width = `${trueHeight}mm`;
+        rotateCanvas.style.height = `${trueWidth}mm`;
         
         const rotateCtx = rotateCanvas.getContext('2d');
         
@@ -87,15 +91,14 @@ export function usePDFExport({
           throw new Error('Could not get rotation canvas context');
         }
         
-        // Rotate 90° clockwise: translate, rotate, draw
+        // Rotate 90° clockwise
         rotateCtx.translate(rotateCanvas.width / 2, rotateCanvas.height / 2);
-        rotateCtx.rotate(Math.PI / 2);  // 90° clockwise
+        rotateCtx.rotate(Math.PI / 2);
         rotateCtx.drawImage(img, -img.width / 2, -img.height / 2);
         
-        // Get rotated image data at maximum quality
         finalImageData = rotateCanvas.toDataURL('image/png', 1.0);
-        finalWidth = trueHeight;   // After rotation
-        finalHeight = trueWidth;   // After rotation
+        finalWidth = trueHeight;
+        finalHeight = trueWidth;
       }
       
       // Page setup - Use A4 if template fits, otherwise use custom size with margins
@@ -169,12 +172,12 @@ export function usePDFExport({
       pdf.setFont("helvetica", "normal");
       
       const dimensionsInfo = currentUnit === "metric" 
-        ? `Template: ${trueWidth.toFixed(1)}mm × ${trueHeight.toFixed(1)}mm`
-        : `Template: ${(trueWidth / INCH_TO_MM).toFixed(2)}" × ${(trueHeight / INCH_TO_MM).toFixed(2)}"`;
+      ? `Template: ${trueWidth.toFixed(1)}mm × ${trueHeight.toFixed(1)}mm`
+      : `Template: ${(trueWidth / INCH_TO_MM).toFixed(2)}" × ${(trueHeight / INCH_TO_MM).toFixed(2)}"`;
       
-      const enclosureInfo = `${currentEnclosureType} Enclosure - 100% scale`;
-      pdf.text(enclosureInfo, pdfPageWidth / 2, enclosureInfoY, { align: "center" });
-      pdf.text(dimensionsInfo, pdfPageWidth / 2, dimensionsInfoY, { align: "center" });
+    const enclosureInfo = `${currentEnclosureType} Enclosure - 100% scale`;
+    pdf.text(enclosureInfo, pdfPageWidth / 2, enclosureInfoY, { align: "center" });
+    pdf.text(dimensionsInfo, pdfPageWidth / 2, dimensionsInfoY, { align: "center" });
       
       pdf.setTextColor(255, 0, 0);
       pdf.setFontSize(9);
@@ -237,16 +240,16 @@ export function usePDFExport({
         paperSizeText = `Designed for custom size (${pdfPageWidth.toFixed(0)}mm × ${pdfPageHeight.toFixed(0)}mm) - Printing at 100% scale`;
       }
       
-      pdf.text(paperSizeText, pdfPageWidth / 2, pdfPageHeight - 20, { align: "center" });
+      pdf.text(paperSizeText, pdfPageWidth / 2, pdfPageHeight - 25, { align: "center" });
       pdf.setTextColor(0, 0, 0);
 
       // Footer
       pdf.setFontSize(8);
       pdf.setFont("helvetica", "italic");
       const dateStr = new Date().toLocaleDateString();
-      pdf.text(`Generated: ${dateStr}`, 10, pdfPageHeight - 10);
-      pdf.text(`Scale: 100% | Units: ${currentUnit}`, pdfPageWidth / 2, pdfPageHeight - 10, { align: "center" });
-      pdf.text("Enclosure Pro", pdfPageWidth - 10, pdfPageHeight - 10, { align: "right" });
+      pdf.text(`Generated: ${dateStr}`, 10, pdfPageHeight - 15);
+      pdf.text(`Scale: 100% | Units: ${currentUnit}`, pdfPageWidth / 2, pdfPageHeight - 15, { align: "center" });
+      pdf.text("Enclosure Pro", pdfPageWidth - 10, pdfPageHeight - 15, { align: "right" });
 
       // Set PDF metadata
       pdf.setProperties({
@@ -282,7 +285,6 @@ export function usePDFExport({
   const isExportingRef = useRef(false);
 
   const handleExportPDF = async () => {
-    // Add a guard to prevent multiple simultaneous exports
     if (isExportingRef.current) return;
     isExportingRef.current = true;
 
@@ -295,7 +297,7 @@ export function usePDFExport({
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       
-      // Determine paper size for messaging - separate variables for different contexts
+      // Determine paper size for messaging
       let paperDisplay = '';
       let paperSizeForStep = '';
       let toastPaperDescription = '';
@@ -313,7 +315,6 @@ export function usePDFExport({
         paperSizeForStep = 'Tabloid (11"×17")';
         toastPaperDescription = 'Tabloid';
       } else {
-        // Custom size - different messages for different contexts
         paperDisplay = 'Custom<br />Consider printing on A3 (297mmx420mm)<br />or tabloid (11"x17") sized paper.';
         paperSizeForStep = 'custom';
         toastPaperDescription = 'Custom';
@@ -341,7 +342,7 @@ export function usePDFExport({
           color: var(--text-color);
           background-color: var(--bg-color);
           margin: 0;
-          padding: 40px 20px 20px 20px; /* Reduced bottom page padding */
+          padding: 40px 20px 20px 20px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -354,7 +355,7 @@ export function usePDFExport({
           background: white;
           box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
           border-radius: 12px;
-          margin-bottom: 25px; /* Spacing before the grey box */
+          margin-bottom: 25px;
         }
 
         h1 {
@@ -420,7 +421,6 @@ export function usePDFExport({
           margin: 12px 0;
         }
 
-        /* Outside Elements Styling */
         .verification-wrapper {
           width: 100%;
           max-width: 550px;
@@ -428,7 +428,7 @@ export function usePDFExport({
         }
 
         .calibration {
-          background-color: #f0f0f0; /* Back to Grey */
+          background-color: #f0f0f0;
           color: var(--text-color); 
           padding: 18px;
           border: 1px solid #ddd;
@@ -443,7 +443,7 @@ export function usePDFExport({
         .button-wrapper {
           width: 100%;
           max-width: 550px;
-          padding-bottom: 20px; /* Reduced from 40px to 20px */
+          padding-bottom: 20px;
         }
 
         button {
@@ -522,7 +522,6 @@ export function usePDFExport({
         const waitForContinue = new Promise((resolve, reject) => {
           resolvePromise = resolve;
           
-          // Now safe to start the interval (resolvePromise is now defined)
           checkWindowClosed = setInterval(() => {
             if (instructionWindow && instructionWindow.closed) {
               clearInterval(checkWindowClosed);
@@ -547,21 +546,20 @@ export function usePDFExport({
           
           window.addEventListener('message', messageHandler);
           
-          // Set timeout to prevent hanging
           setTimeout(() => {
             clearInterval(checkWindowClosed);
             if (messageHandler) {
               window.removeEventListener('message', messageHandler);
               messageHandler = null;
             }
-            resolve(false); // Timeout - don't export
-          }, 300000); // 5 minute timeout
+            resolve(false);
+          }, 300000);
         });
         
         const shouldExport = await waitForContinue;
         
         if (!shouldExport) {
-          return; // User didn't click continue or window was closed
+          return;
         }
         
         // Now proceed with the export
@@ -619,7 +617,6 @@ export function usePDFExport({
         variant: "destructive",
       });
     } finally {
-      // Cleanup event listeners
       if (messageHandler) {
         window.removeEventListener('message', messageHandler);
       }
