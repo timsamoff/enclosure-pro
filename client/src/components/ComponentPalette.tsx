@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, ChevronRight } from "lucide-react";
 import { mmToFraction } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useFocusManagement } from "@/hooks/useFocusManagement";
 
 interface ComponentPaletteProps {
@@ -12,8 +12,40 @@ interface ComponentPaletteProps {
   unit: "metric" | "imperial";
 }
 
-type Category = keyof typeof categories;
-type FootprintSubcategory = "potentiometers" | "jacks" | "switches" | "knobs";
+const categorizeFootprintGuides = (compType: ComponentType): string => {
+  const comp = COMPONENT_TYPES[compType];
+  
+  // Check for slide potentiometers first (they have "slide" in type)
+  if (compType.includes("slide")) {
+    return "Slide Potentiometers";
+  }
+  
+  if (comp.name.toLowerCase().includes("potentiometer") || compType.includes("pot-")) {
+    return "Potentiometers";
+  } else if (comp.name.toLowerCase().includes("jack") || compType.includes("jack-")) {
+    return "Jacks";
+  } else if (
+    comp.name.toLowerCase().includes("switch") || 
+    comp.name.toLowerCase().includes("toggle") ||
+    comp.name.toLowerCase().includes("dip") ||
+    comp.name.toLowerCase().includes("pushbutton") ||
+    comp.name.toLowerCase().includes("washer") ||
+    comp.name.toLowerCase().includes("nut") ||
+    comp.name.toLowerCase().includes("dress") ||
+    comp.name.toLowerCase().includes("rotary") ||
+    compType.includes("spst") ||
+    compType.includes("dpdt") ||
+    compType.includes("3pdt") ||
+    compType.includes("4pdt") ||
+    compType.includes("5pdt") ||
+    compType.includes("rotary")
+  ) {
+    return "Switches";
+  } else if (comp.name.toLowerCase().includes("knob") || compType.includes("knob-")) {
+    return "Knobs";
+  }
+  return "Other";
+};
 
 export default function ComponentPalette({
   onComponentSelect,
@@ -21,75 +53,94 @@ export default function ComponentPalette({
   unit,
 }: ComponentPaletteProps) {
   const { releaseFocus } = useFocusManagement();
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [selectedFootprintSubcategory, setSelectedFootprintSubcategory] = useState<FootprintSubcategory | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedFootprintSubcategory, setSelectedFootprintSubcategory] = useState<string | null>(null);
 
-  const categories = {
-    Potentiometers: [] as ComponentType[],
-    Jacks: [] as ComponentType[],
-    Switches: [] as ComponentType[],
-    LEDs: [] as ComponentType[],
-    Fixtures: [] as ComponentType[],
-    Screws: [] as ComponentType[],
-    "Footprint Guides": [] as ComponentType[],
-  };
-
-  Object.entries(COMPONENT_TYPES).forEach(([key, value]) => {
-    const category = value.category as keyof typeof categories;
-    categories[category].push(key as ComponentType);
-  });
-
-  const categorizeFootprintGuides = (compType: ComponentType): "potentiometers" | "jacks" | "switches" | "knobs" | "other" => {
-    const comp = COMPONENT_TYPES[compType];
+  // Dynamically generate categories from COMPONENT_TYPES
+  const { categories, categoryKeys } = useMemo(() => {
+    const categoriesMap: Record<string, ComponentType[]> = {};
     
-    if (comp.name.toLowerCase().includes("potentiometer") || compType.includes("pot-")) {
-      return "potentiometers";
-    } else if (comp.name.toLowerCase().includes("jack") || compType.includes("jack-")) {
-      return "jacks";
-    } else if (
-      comp.name.toLowerCase().includes("switch") || 
-      comp.name.toLowerCase().includes("toggle") ||
-      comp.name.toLowerCase().includes("dip") ||
-      comp.name.toLowerCase().includes("pushbutton") ||
-      comp.name.toLowerCase().includes("washer") ||
-      comp.name.toLowerCase().includes("nut") ||
-      comp.name.toLowerCase().includes("dress") ||
-      compType.includes("spst") ||
-      compType.includes("dpdt") ||
-      compType.includes("3pdt") ||
-      compType.includes("4pdt") ||
-      compType.includes("5pdt")
-    ) {
-      return "switches";
-    } else if (comp.name.toLowerCase().includes("knob") || compType.includes("knob-")) {
-      return "knobs";
-    }
-    return "other";
-  };
+    Object.entries(COMPONENT_TYPES).forEach(([key, value]) => {
+      const category = value.category;
+      if (!categoriesMap[category]) {
+        categoriesMap[category] = [];
+      }
+      categoriesMap[category].push(key as ComponentType);
+    });
+    
+    // Sort categories alphabetically but keep "Footprint Guides" at the end
+    const sortedCategories = Object.keys(categoriesMap).sort((a, b) => {
+      // If either is "Footprint Guides", handle specially
+      if (a === "Footprint Guides" && b === "Footprint Guides") return 0;
+      if (a === "Footprint Guides") return 1; // "Footprint Guides" comes after
+      if (b === "Footprint Guides") return -1; // Other comes before "Footprint Guides"
+      
+      // Otherwise, sort alphabetically
+      return a.localeCompare(b);
+    });
+    
+    return {
+      categories: categoriesMap,
+      categoryKeys: sortedCategories
+    };
+  }, []);
+
+  // Dynamically generate footprint subcategories
+  const footprintSubcategories = useMemo(() => {
+    const allFootprints = categories["Footprint Guides"] || [];
+    const subcategoriesMap: Record<string, ComponentType[]> = {};
+    
+    allFootprints.forEach((compType) => {
+      const subcategory = categorizeFootprintGuides(compType);
+      if (!subcategoriesMap[subcategory]) {
+        subcategoriesMap[subcategory] = [];
+      }
+      subcategoriesMap[subcategory].push(compType);
+    });
+    
+    // Sort subcategories alphabetically
+    const sortedSubcategories = Object.keys(subcategoriesMap).sort((a, b) => {
+      return a.localeCompare(b);
+    });
+    
+    return {
+      subcategoriesMap,
+      subcategoryKeys: sortedSubcategories
+    };
+  }, [categories]);
 
   const formatDrillSize = (type: ComponentType) => {
     const compData = COMPONENT_TYPES[type];
     
-    if (compData.category === "Footprint Guides") {
-      if (compData.shape === 'rectangle' || compData.shape === 'square') {
-        if (unit === "metric") {
-          return `${compData.width}mm×${compData.height}mm`;
-        } else {
-          return compData.imperialLabel;
-        }
+    // Handle rectangular components (Footprint Guides, Slide Potentiometers, etc.)
+    if (compData.shape === 'rectangle' || compData.shape === 'square') {
+      if (unit === "metric") {
+        // Metric mode for rectangular components
+        return `${compData.width || 0}mm×${compData.height || 0}mm`;
       } else {
-        if (unit === "metric") {
-          return `${compData.drillSize}mm`;
-        } else {
+        // Imperial mode for rectangular components - use imperialLabel if available
+        if (compData.imperialLabel && compData.imperialLabel !== "") {
           return compData.imperialLabel;
         }
+        // Fallback: convert mm to inches
+        const widthInches = (compData.width || 0) / 25.4;
+        const heightInches = (compData.height || 0) / 25.4;
+        return `${widthInches.toFixed(3)}"×${heightInches.toFixed(3)}"`;
       }
     }
     
+    // Handle circular components with drill size
     if (unit === "metric") {
-      return `${compData.drillSize.toFixed(1)}mm`;
+      // Metric mode for circular components
+      return `${(compData.drillSize || 0).toFixed(1)}mm`;
     } else {
-      return compData.imperialLabel;
+      // Imperial mode for circular components - use imperialLabel if available
+      if (compData.imperialLabel && compData.imperialLabel !== "") {
+        return compData.imperialLabel;
+      }
+      // Fallback: convert mm to inches
+      const inches = (compData.drillSize || 0) / 25.4;
+      return `${inches.toFixed(3)}"`;
     }
   };
 
@@ -104,13 +155,13 @@ export default function ComponentPalette({
     releaseFocus();
   };
 
-  const handleCategorySelect = (category: Category) => {
+  const handleCategorySelect = (category: string) => {
     setSelectedCategory(category);
     setSelectedFootprintSubcategory(null);
     releaseFocus();
   };
 
-  const handleFootprintSubcategorySelect = (subcategory: FootprintSubcategory) => {
+  const handleFootprintSubcategorySelect = (subcategory: string) => {
     setSelectedFootprintSubcategory(subcategory);
     releaseFocus();
   };
@@ -133,30 +184,12 @@ export default function ComponentPalette({
   }, [releaseFocus]);
 
   const getFilteredFootprintGuides = () => {
-    const allFootprints = categories["Footprint Guides"];
-    
     if (!selectedFootprintSubcategory) {
-      return allFootprints;
+      return categories["Footprint Guides"] || [];
     }
     
-    return allFootprints.filter(compType => {
-      const category = categorizeFootprintGuides(compType);
-      return category === selectedFootprintSubcategory;
-    });
+    return footprintSubcategories.subcategoriesMap[selectedFootprintSubcategory] || [];
   };
-
-  const getFootprintSubcategoryCounts = () => {
-    const allFootprints = categories["Footprint Guides"];
-    
-    return {
-      potentiometers: allFootprints.filter(compType => categorizeFootprintGuides(compType) === "potentiometers").length,
-      jacks: allFootprints.filter(compType => categorizeFootprintGuides(compType) === "jacks").length,
-      switches: allFootprints.filter(compType => categorizeFootprintGuides(compType) === "switches").length,
-      knobs: allFootprints.filter(compType => categorizeFootprintGuides(compType) === "knobs").length,
-    };
-  };
-
-  const subcategoryCounts = getFootprintSubcategoryCounts();
 
   return (
     <div className="absolute right-4 top-20 w-80 bg-background/95 backdrop-blur-md border border-border rounded-lg shadow-lg z-50 flex flex-col">
@@ -175,13 +208,7 @@ export default function ComponentPalette({
           )}
           <h3 className="font-semibold">
             {selectedFootprintSubcategory 
-              ? selectedFootprintSubcategory === "potentiometers" 
-                ? "Potentiometers"
-                : selectedFootprintSubcategory === "jacks" 
-                ? "Jacks" 
-                : selectedFootprintSubcategory === "switches" 
-                ? "Switches" 
-                : "Knobs"
+              ? selectedFootprintSubcategory
               : selectedCategory 
                 ? selectedCategory 
                 : "Components"
@@ -202,12 +229,12 @@ export default function ComponentPalette({
       <ScrollArea className="h-[calc(100vh-200px)]">
         <div className="p-4 space-y-4">
           {!selectedCategory ? (
-            Object.entries(categories).map(([category, components]) => (
+            categoryKeys.map((category) => (
               <button
                 key={category}
-                onClick={() => handleCategorySelect(category as Category)}
+                onClick={() => handleCategorySelect(category)}
                 onMouseUp={releaseFocus}
-                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
+                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover:bg-accent hover:text-accent-foreground transition-all text-left cursor-pointer"
                 data-testid={`button-category-${category}`}
               >
                 <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
@@ -215,7 +242,7 @@ export default function ComponentPalette({
                 </span>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {components.length} items
+                    {categories[category]?.length || 0} items
                   </span>
                   <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 </div>
@@ -223,63 +250,27 @@ export default function ComponentPalette({
             ))
           ) : selectedCategory === "Footprint Guides" && !selectedFootprintSubcategory ? (
             <div className="space-y-3">
-              <button
-                onClick={() => handleFootprintSubcategorySelect("potentiometers")}
-                onMouseUp={releaseFocus}
-                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
-              >
-                <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
-                  Potentiometers
-                </span>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {subcategoryCounts.potentiometers} items
-                </span>
-              </button>
-              
-              <button
-                onClick={() => handleFootprintSubcategorySelect("jacks")}
-                onMouseUp={releaseFocus}
-                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
-              >
-                <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
-                  Jacks
-                </span>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {subcategoryCounts.jacks} items
-                </span>
-              </button>
-              
-              <button
-                onClick={() => handleFootprintSubcategorySelect("switches")}
-                onMouseUp={releaseFocus}
-                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
-              >
-                <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
-                  Switches
-                </span>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {subcategoryCounts.switches} items
-                </span>
-              </button>
-              
-              <button
-                onClick={() => handleFootprintSubcategorySelect("knobs")}
-                onMouseUp={releaseFocus}
-                className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
-              >
-                <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
-                  Knobs
-                </span>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {subcategoryCounts.knobs} items
-                </span>
-              </button>
+              {footprintSubcategories.subcategoryKeys.map((subcategory) => (
+                <button
+                  key={subcategory}
+                  onClick={() => handleFootprintSubcategorySelect(subcategory)}
+                  onMouseUp={releaseFocus}
+                  className="w-full flex items-center justify-between gap-2 p-3 border border-border rounded-md hover:bg-accent hover:text-accent-foreground transition-all text-left cursor-pointer"
+                >
+                  <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">
+                    {subcategory}
+                  </span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {footprintSubcategories.subcategoriesMap[subcategory]?.length || 0} items
+                  </span>
+                </button>
+              ))}
             </div>
           ) : (
             <div className="space-y-1">
               {(selectedCategory === "Footprint Guides" 
                 ? getFilteredFootprintGuides() 
-                : categories[selectedCategory]
+                : categories[selectedCategory] || []
               ).map((compType) => {
                 const comp = COMPONENT_TYPES[compType];
                 return (
@@ -287,7 +278,7 @@ export default function ComponentPalette({
                     key={compType}
                     onClick={() => handleComponentSelect(compType)}
                     onMouseUp={releaseFocus}
-                    className="w-full flex items-center justify-between gap-2 p-2 border border-border rounded-md hover-elevate active-elevate-2 transition-all text-left cursor-pointer"
+                    className="w-full flex items-center justify-between gap-2 p-2 border border-border rounded-md hover:bg-accent hover:text-accent-foreground transition-all text-left cursor-pointer"
                     data-testid={`button-component-${compType}`}
                   >
                     <span className="text-sm font-medium flex-1 min-w-0 truncate pr-2">

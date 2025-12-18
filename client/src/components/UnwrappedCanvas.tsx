@@ -102,31 +102,32 @@ const getComponentZOrder = (component: PlacedComponent) => {
 
 /**
  * Generate label text showing component dimensions.
- * For rectangular components rotated 90°, swap width/height in the label
- * since what was width is now height visually.
+ * For rectangular components rotated 90° (either component rotation OR canvas rotation),
+ * swap width/height in the label since what was width is now height visually.
  */
-const getRotatedLabelText = (compData: any, componentRotation: number, unit: MeasurementUnit) => {
-  // Drill holes just show diameter
-  if (compData.category !== "Footprint Guides") {
-    return unit === "metric" 
-      ? `${compData.drillSize.toFixed(1)}mm`
-      : compData.imperialLabel;
-  }
-
-  // Rectangular footprint guides
+const getRotatedLabelText = (
+  compData: any, 
+  componentRotation: number, 
+  canvasRotation: number,
+  unit: MeasurementUnit
+) => {
+  // Rectangular components (both drill holes and footprint guides)
   if (compData.shape === 'rectangle' || compData.shape === 'square') {
-    // For 90° component rotation, swap width and height
-    if (componentRotation === 90) {
+    // Calculate total visual rotation (component + canvas)
+    const totalVisualRotation = (componentRotation + canvasRotation) % 360;
+    
+    // For 90° or 270° visual rotation, swap width and height
+    if (totalVisualRotation === 90 || totalVisualRotation === 270) {
       return unit === "metric" 
         ? `${compData.height}mm×${compData.width}mm`
         : mmToFraction(compData.height) + "×" + mmToFraction(compData.width);
-    } else { // 0° component rotation
+    } else { // 0° or 180° visual rotation
       return unit === "metric" 
         ? `${compData.width}mm×${compData.height}mm`
         : mmToFraction(compData.width) + "×" + mmToFraction(compData.height);
     }
   } else {
-    // Circular footprint guides
+    // Circular components (both drill holes and footprint guides)
     return unit === "metric" 
       ? `${compData.drillSize}mm`
       : mmToFraction(compData.drillSize);
@@ -880,16 +881,17 @@ export default function UnwrappedCanvas({
           
           // Draw crosshair (only for non-utility guides)
           if (!isUtilityGuide) {
-            const crosshairSize = Math.max(rectWidthPx / 2, rectHeightPx / 2);
+            const crosshairSizeHorizontal = rectWidthPx / 2;
+            const crosshairSizeVertical = rectHeightPx / 2;
             // ALWAYS set crosshair stroke style explicitly
             const crosshairStrokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--muted-foreground))";
             ctx.strokeStyle = crosshairStrokeStyle;
             ctx.lineWidth = 1 / zoom;
             ctx.beginPath();
-            ctx.moveTo(-crosshairSize, 0);
-            ctx.lineTo(crosshairSize, 0);
-            ctx.moveTo(0, -crosshairSize);
-            ctx.lineTo(0, crosshairSize);
+            ctx.moveTo(-crosshairSizeHorizontal, 0);
+            ctx.lineTo(crosshairSizeHorizontal, 0);
+            ctx.moveTo(0, -crosshairSizeVertical);
+            ctx.lineTo(0, crosshairSizeVertical);
             ctx.stroke();
           }
           
@@ -911,7 +913,7 @@ export default function UnwrappedCanvas({
           ctx.translate(labelPos.x, labelPos.y);
           ctx.rotate(labelPos.textAngle);
           
-          const labelText = getRotatedLabelText(compData, component.rotation || 0, unit);
+          const labelText = getRotatedLabelText(compData, component.rotation || 0, rotation, unit);
           ctx.font = `${10 / zoom}px monospace`;
           const textMetrics = ctx.measureText(labelText);
           const textWidth = textMetrics.width;
@@ -938,7 +940,7 @@ export default function UnwrappedCanvas({
 
           ctx.restore();
           
-        } else {
+        } else if (compData.shape === 'circle') {
           // CIRCLE RENDERING (for both regular components and utility guides)
           const radiusPx = (compData.drillSize / 2) * mmToPixels;
           
@@ -1012,7 +1014,7 @@ export default function UnwrappedCanvas({
           ctx.translate(labelPos.x, labelPos.y);
           ctx.rotate(labelPos.textAngle);
           
-          const labelText = getRotatedLabelText(compData, component.rotation || 0, unit);
+          const labelText = getRotatedLabelText(compData, component.rotation || 0, rotation, unit);
           ctx.font = `${10 / zoom}px monospace`;
           const textMetrics = ctx.measureText(labelText);
           const textWidth = textMetrics.width;
@@ -1038,6 +1040,93 @@ export default function UnwrappedCanvas({
           ctx.fillText(labelText, 0, 0);
           
           ctx.restore();
+        } else {
+          // Fallback: For components without explicit shape, assume circle if they have drillSize > 0
+          if (compData.drillSize > 0) {
+            // CIRCLE RENDERING fallback
+            const radiusPx = (compData.drillSize / 2) * mmToPixels;
+            
+            if (isUtilityGuide) {
+              ctx.fillStyle = "transparent";
+            } else {
+              ctx.fillStyle = "white";
+            }
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radiusPx, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            const componentStrokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--foreground))";
+            ctx.strokeStyle = componentStrokeStyle;
+            ctx.lineWidth = (selectedComponent === component.id ? 2.5 : 2) / zoom;
+            
+            if (isUtilityGuide) {
+              ctx.setLineDash([5 / zoom, 5 / zoom]);
+            }
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radiusPx, 0, 2 * Math.PI);
+            ctx.stroke();
+            
+            if (isUtilityGuide) {
+              ctx.setLineDash([]);
+            }
+
+            // Draw crosshair (only for non-utility guides)
+            if (!isUtilityGuide) {
+              const crosshairStrokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--muted-foreground))";
+              ctx.strokeStyle = crosshairStrokeStyle;
+              ctx.lineWidth = 1 / zoom;
+              ctx.beginPath();
+              ctx.moveTo(centerX - radiusPx, centerY);
+              ctx.lineTo(centerX + radiusPx, centerY);
+              ctx.moveTo(centerX, centerY - radiusPx);
+              ctx.lineTo(centerX, centerY + radiusPx);
+              ctx.stroke();
+            }
+          } else {
+            // If no shape and no drillSize, draw a small rectangle as fallback
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate((component.rotation || 0) * Math.PI / 180);
+            
+            const rectWidthPx = 10 * mmToPixels;
+            const rectHeightPx = 10 * mmToPixels;
+            
+            if (isUtilityGuide) {
+              ctx.fillStyle = "transparent";
+            } else {
+              ctx.fillStyle = "white";
+            }
+            ctx.fillRect(-rectWidthPx/2, -rectHeightPx/2, rectWidthPx, rectHeightPx);
+            
+            const componentStrokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--foreground))";
+            ctx.strokeStyle = componentStrokeStyle;
+            ctx.lineWidth = (selectedComponent === component.id ? 2.5 : 2) / zoom;
+            
+            if (isUtilityGuide) {
+              ctx.setLineDash([5 / zoom, 5 / zoom]);
+            }
+            
+            ctx.strokeRect(-rectWidthPx/2, -rectHeightPx/2, rectWidthPx, rectHeightPx);
+            
+            if (isUtilityGuide) {
+              ctx.setLineDash([]);
+            }
+            
+            if (!isUtilityGuide) {
+              const crosshairStrokeStyle = selectedComponent === component.id ? "#ff8c42" : "hsl(var(--muted-foreground))";
+              ctx.strokeStyle = crosshairStrokeStyle;
+              ctx.lineWidth = 1 / zoom;
+              ctx.beginPath();
+              ctx.moveTo(-rectWidthPx/2, 0);
+              ctx.lineTo(rectWidthPx/2, 0);
+              ctx.moveTo(0, -rectHeightPx/2);
+              ctx.lineTo(0, rectHeightPx/2);
+              ctx.stroke();
+            }
+            
+            ctx.restore();
+          }
         }
 
         // Restore the drawing context for this component
