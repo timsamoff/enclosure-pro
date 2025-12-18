@@ -9,8 +9,13 @@ interface BlankCanvasProps {
 export default function BlankCanvas({ 
   onSelectEnclosure, 
   appIcon, 
-  appVersion = "1.1.0-beta.1" 
+  // Use the injected version, with fallbacks
+  appVersion = import.meta.env.APP_VERSION || "1.1.0"
 }: BlankCanvasProps) {
+  // For debugging - check what value we're getting
+  console.log('App version:', import.meta.env.APP_VERSION);
+  console.log('Using version:', appVersion);
+  
   return (
     <div className="relative w-full h-full flex items-center justify-center bg-background">
       <div className="text-center max-w-md p-8">
@@ -28,11 +33,10 @@ export default function BlankCanvas({
         
         <h2 className="text-2xl font-semibold mb-2">Welcome to Enclosure Pro</h2>
         
-        {appVersion && (
-          <p className="text-sm text-muted-foreground mb-3">
-            Version {appVersion}
-          </p>
-        )}
+        {/* Show version from import.meta.env */}
+        <p className="text-sm text-muted-foreground mb-3">
+          v{import.meta.env.APP_VERSION || appVersion}
+        </p>
         
         <p className="text-muted-foreground mb-6">
           Get started by selecting an enclosure<br />to begin your design
