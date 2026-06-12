@@ -236,7 +236,7 @@ export default function AppIconMenu() {
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <a
-              href="https://ko-fi.com/enclosurepro"
+              href="https://ko-fi.com/circuitousfx"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 cursor-pointer bg-amber-50 hover:bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100"
