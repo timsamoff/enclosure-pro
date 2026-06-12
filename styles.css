@@ -1,6 +1,5 @@
 /*
  * Enclosure Pro Styles
- * Used by index.html and documentation.html
  * Color Scheme: Tan (#e8dcc8), Dark Orange (#cc5500), Black (#212121)
  */
 
@@ -149,6 +148,7 @@ figure img {
     border-radius: 30px;
     background-color: #fff; /* White to pop against Tan body background */
     transition: all 0.3s;
+    gap: 8px; /* Space between icon and text */
 }
 .coffee-link:hover {
     background-color: var(--primary-color);
@@ -158,12 +158,22 @@ figure img {
 }
 .coffee-link i {
     color: var(--primary-color);
-    margin-right: 8px;
+    margin-right: 0; /* Remove margin-right, using gap instead */
+    font-size: 1.1em;
 }
 .coffee-link:hover i {
     color: #fff; /* White icon on orange hover */
 }
 
+.circuit-scout-icon {
+    width: 1.2em;
+    height: 1.2em;
+    transition: color 0.3s;
+    flex-shrink: 0;
+}
+.coffee-link:hover .circuit-scout-icon {
+    color: #fff; /* White icon on orange hover */
+}
 
 .features-list {
     list-style: none;
