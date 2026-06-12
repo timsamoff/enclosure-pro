@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,27 +9,57 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
+
 <body>
     <div class="container">
-        <header class="feedback-header"> 
-            <img src="https://github.com/timsamoff/enclosure-pro/blob/main/images/EnclosureProIcon.png?raw=true" width="128px" alt="Enclosure Pro Icon">
+        <header class="feedback-header"><img src="https://github.com/timsamoff/enclosure-pro/blob/main/images/EnclosureProIcon.png?raw=true" width="128px" alt="Enclosure Pro Icon">
             <h1>Enclosure Pro</h1>
-            <h2>Release Notes</h2> 
-            <p><a href="index.html"><i class="fas fa-home icon-text"></i>Back to Home</a></p>
+            <h2>Release Notes</h2>
+            <p><a href="index.html">Back to Home</a></p>
         </header>
-
         <section>
-            <h2><i class="fas fa-history icon-text"></i>Version History</h2>
-
-            <details open>
-                <summary>v1.0.1 (November 26, 2025) <i class="fas fa-star primary-color-text"></i></summary>
+            <h2>Version History</h2>
+            <details open="">
+                <summary>v1.1.0 (December 18, 2025)&nbsp;</summary>
                 <ul>
-                <li>Fixed critical rotation bug</li>
-                <li>Fixed auto-update functionality</li>
-                <li>Added Feedback option to App Menu</li>
+                    <li>New Start screen for selecting a starting enclosure</li>
+                    <li>Legacy enclosure updates for old version saves</li>
+                    <li>Refined app auto-update</li>
+                    <li>Enclosures now auto-fit to the screen space</li>
+                    <li>Removed direct print in place of exporting to PDF (PDF exports print more precisely)<ul>
+                            <li>Includes a new &ldquo;print instructions&rdquo; screen</li>
+                        </ul>
+                    </li>
+                    <li>Increased export to PDF resolution</li>
+                    <li>Export to PDF now auto-selects proper paper sizes for enclosures</li>
+                    <li>Refined header and footer info in PDFs</li>
+                    <li>Added calibration mark in PDFs for printing accuracy</li>
+                    <li>Panning is now accomplished via middle-click</li>
+                    <li>Right-clicking a selected component will display a context menu with <strong>Duplicate</strong>, <strong>Rotate 90&deg;</strong>, and <strong>Print/Export to PDF</strong> (on/off)</li>
+                    <li>Added enclosure manufacturer categories with specific enclosure sizes<ul>
+                            <li>Manufacturers listed in alphabetical order</li>
+                            <li>Enclosure manufacturers also have brand-specific color coding and badges</li>
+                        </ul>
+                    </li>
+                    <li>Added component categories</li>
+                    <li>Changed component menu icon</li>
+                    <li>Added &ldquo;Footprint Guides&rdquo; for determining drill hole placement (internal and external footprints available)</li>
+                    <li>Added slider potentiometer components</li>
+                    <li>Refined UX for file saving/opening and confirmation dialogs</li>
+                    <li>Updated all cursor iconography app-wide</li>
+                    <li>Added specific file icon for saved files</li>
+                    <li>Updated documentation</li>
+                    <li>Switched from PayPal to Ko-fi for donations</li>
                 </ul>
-                </details>
-
+            </details>
+            <details>
+                <summary>v1.0.1 (November 26, 2025)&nbsp;</summary>
+                <ul>
+                    <li>Fixed critical rotation bug</li>
+                    <li>Fixed auto-update functionality</li>
+                    <li>Added Feedback option to App Menu</li>
+                </ul>
+            </details>
             <details>
                 <summary>v1.0.0 (November 24, 2025)</summary>
                 <ul>
@@ -46,8 +77,8 @@
                     <li>Integrated print</li>
                 </ul>
             </details>
-            
         </section>
     </div>
 </body>
+
 </html>
