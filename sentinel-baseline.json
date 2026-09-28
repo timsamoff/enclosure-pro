@@ -1,23 +1,16 @@
 {
   "generated": "2026-09-28",
-  "tscErrors": 41,
+  "tscErrors": 29,
   "violations": [
     "COLOR|client/src/components/BlankCanvas.tsx|className=\"px-6 py-3 bg-[#ff8c42] text-white rounded-lg hover-elevate active-elevate-2 font-medium cursor-pointer\"",
     "COLOR|client/src/components/BottomInfo.tsx|className=\"px-4 h-9 text-xs rounded-l-full data-[state=on]:bg-[#ff8c42] data-[state=on]:text-white flex-1\"",
     "COLOR|client/src/components/BottomInfo.tsx|className=\"px-4 h-9 text-xs rounded-r-full data-[state=on]:bg-[#ff8c42] data-[state=on]:text-white flex-1\"",
-    "COLOR|client/src/components/EnclosureCanvas.tsx|className=\"absolute bottom-4 right-4 z-[200] bg-[#ff8c42] hover:bg-[#ff8c42] border-[#ff8c42]\"",
-    "COLOR|client/src/components/EnclosureCanvas.tsx|ctx.fillStyle = \"rgba(255, 255, 255, 0.85)\";",
-    "COLOR|client/src/components/EnclosureCanvas.tsx|ctx.strokeStyle = \"rgba(128, 128, 128, 0.5)\";  // 50% gray with transparency",
-    "COLOR|client/src/components/EnclosureCanvas.tsx|ctx.strokeStyle = \"rgba(128, 128, 128, 0.8)\";  // Slightly darker for center lines",
-    "COLOR|client/src/components/EnclosureCanvas.tsx|ctx.strokeStyle = isSelected ? \"#ff8c42\" : \"black\";",
-    "COLOR|client/src/components/EnclosureCanvas.tsx|ctx.strokeStyle = isSelected ? \"#ff8c42\" : \"black\";",
     "COLOR|client/src/components/EnclosureSelector.tsx|const manufacturerColor = manufacturer ? MANUFACTURERS[manufacturer]?.color : \"#ff8c42\";",
     "COLOR|client/src/components/EnclosureSelector.tsx|isSelected ? \"border-[#ff8c42] bg-[#ff8c42]/5\" : \"border-border\"",
     "COLOR|client/src/components/FileDropdownMenu.tsx|{isDirty && <span style={{ color: '#ff8c42' }}>*</span>}",
     "COLOR|client/src/components/GridSelector.tsx|<div className=\"w-2 h-2 rounded-full bg-[#ff8c42] ml-2 flex-shrink-0\" />",
     "COLOR|client/src/components/GridSelector.tsx|className=\"data-[state=checked]:bg-[#ff8c42]\" // Added orange color for checked state",
     "COLOR|client/src/components/GridSelector.tsx|isSelected ? \"border-[#ff8c42] bg-[#ff8c42]/5\" : \"border-border\"",
-    "COLOR|client/src/components/SaveAsDialog.tsx|className=\"bg-[#ff8c42] hover:bg-[#e67e3b] text-white disabled:bg-[#ffb38a] disabled:cursor-not-allowed\"",
     "COLOR|client/src/components/UnwrappedCanvas.tsx|className=\"w-9 h-9 rounded-md bg-[#ff8c42] text-white flex items-center justify-center hover-elevate active-elevate-2 cursor-pointer\"",
     "COLOR|client/src/components/UnwrappedCanvas.tsx|const componentStrokeStyle = selectedComponent === component.id ? \"#ff8c42\" : \"hsl(var(--foreground))\";",
     "COLOR|client/src/components/UnwrappedCanvas.tsx|const componentStrokeStyle = selectedComponent === component.id ? \"#ff8c42\" : \"hsl(var(--foreground))\";",
@@ -71,7 +64,6 @@
     "COLOR|client/src/types/schema.ts|if (!manufacturer) return \"#6b7280\";",
     "COLOR|client/src/types/schema.ts|if (!type) return \"#6b7280\"; // Default gray",
     "COLOR|client/src/types/schema.ts|return \"#f59e0b\"; // Amber color for legacy",
-    "COLOR|client/src/types/schema.ts|return manufacturerData?.color || \"#6b7280\";",
-    "DEBUG|client/src/components/examples/EnclosureCanvas.tsx|console.log(\"Add component\", type, x, y);"
+    "COLOR|client/src/types/schema.ts|return manufacturerData?.color || \"#6b7280\";"
   ]
 }
