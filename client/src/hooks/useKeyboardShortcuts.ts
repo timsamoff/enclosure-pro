@@ -59,11 +59,7 @@ export function useKeyboardShortcuts({
       const modifier = isMac ? e.metaKey : e.ctrlKey;
       
       // Always allowed shortcuts (no enclosure needed)
-      if (modifier && e.key.toLowerCase() === 'n') {
-        e.preventDefault();
-        handlersRef.current.handleNew();
-        return;
-      } else if (modifier && e.key.toLowerCase() === 'o') {
+      if (modifier && e.key.toLowerCase() === 'o') {
         e.preventDefault();
         handlersRef.current.handleLoad();
         return;
@@ -89,6 +85,11 @@ export function useKeyboardShortcuts({
       } else if (e.key === '=' || e.key === '+' || (e.code === 'Equal' && e.shiftKey)) {
         e.preventDefault();
         handlersRef.current.handleZoomIn();
+      }
+      // Ctrl/Cmd + N - New (disabled on the splash screen, like the Project Menu item)
+      else if (modifier && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        handlersRef.current.handleNew();
       }
       // Ctrl/Cmd + S - Save / Save As
       else if (modifier && e.key.toLowerCase() === 's') {

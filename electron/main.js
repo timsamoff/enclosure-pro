@@ -35,6 +35,7 @@ function updateMenuState(isEnclosureSelected) {
   
   // Update enabled state for specific menu items
   const itemsToUpdate = [
+    { label: 'New Project', accelerator: process.platform === 'darwin' ? 'Cmd+N' : 'Ctrl+N' },
     { label: 'Save', accelerator: process.platform === 'darwin' ? 'Cmd+S' : 'Ctrl+S' },
     { label: 'Save As...', accelerator: process.platform === 'darwin' ? 'Cmd+Shift+S' : 'Ctrl+Shift+S' },
     { label: 'Print/Export to PDF...', accelerator: process.platform === 'darwin' ? 'Cmd+P' : 'Ctrl+P' },
@@ -66,6 +67,7 @@ function createApplicationMenu() {
         {
           label: 'New Project',
           accelerator: isMac ? 'Cmd+N' : 'Ctrl+N',
+          enabled: false, // Initially disabled
           click: () => {
             // console.log('🆕 New via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
