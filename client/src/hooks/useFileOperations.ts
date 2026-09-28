@@ -20,7 +20,6 @@ interface UseFileOperationsProps {
   zoom: number;
   rotation: number;
   unit: MeasurementUnit;
-  appIcon: string | null;
   setEnclosureType: (type: EnclosureType | null) => void;
   setComponents: (components: PlacedComponent[]) => void;
   setGridEnabled: (enabled: boolean) => void;
@@ -41,7 +40,6 @@ export function useFileOperations({
   zoom,
   rotation,
   unit,
-  appIcon,
   setEnclosureType,
   setComponents,
   setGridEnabled,
@@ -326,7 +324,6 @@ export function useFileOperations({
       zoom,
       rotation,
       unit,
-      appIcon: appIcon || undefined,
     };
 
     const json = JSON.stringify(projectState, null, 2);
@@ -436,7 +433,6 @@ export function useFileOperations({
         zoom,
         rotation,
         unit,
-        appIcon: appIcon || undefined,
       };
 
       const json = JSON.stringify(projectState, null, 2);
@@ -475,7 +471,7 @@ export function useFileOperations({
         throw err;
       }
     }
-  }, [components, enclosureType, gridEnabled, gridSize, zoom, rotation, unit, appIcon]);
+  }, [components, enclosureType, gridEnabled, gridSize, zoom, rotation, unit]);
 
   const handleSaveAs = async () => {
     try {
@@ -527,7 +523,7 @@ export function useFileOperations({
         zoom: z.any().optional(),
         rotation: z.number().optional(),
         unit: z.enum(["metric", "imperial"]).optional(),
-        appIcon: z.string().optional(),
+        appIcon: z.string().optional(), // older saves embedded the app icon; accepted and ignored
       });
 
       const result = projectFileSchema.safeParse(parsed);
@@ -583,10 +579,6 @@ export function useFileOperations({
       setZoom(snapZoom(normalizedZoom));
       setRotation(loadedRotation);
       setUnit(rawData.unit ?? "metric");
-      
-      if (rawData.appIcon) {
-        // appIcon is handled by parent
-      }
       
       updateProjectName(filename.replace('.enc', ''));
       updateProjectFilePath(filePath || null);

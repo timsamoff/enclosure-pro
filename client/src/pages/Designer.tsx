@@ -132,7 +132,6 @@ export default function Designer() {
     zoom,
     rotation,
     unit,
-    appIcon,
     setEnclosureType,
     setComponents,
     setGridEnabled,

@@ -694,7 +694,6 @@ export interface ProjectState {
   zoom: number;
   rotation: number;
   unit: MeasurementUnit;
-  appIcon?: string;
 }
 
 export interface PlacedComponent {
