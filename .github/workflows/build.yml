@@ -34,10 +34,12 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
-            artifact_pattern: 'release/*.exe'
+            artifact_pattern: 'release/*Setup*.exe'
           - os: macos-latest  
             platform: macos
-            artifact_pattern: 'release/*.dmg'
+            artifact_pattern: |
+              release/*.dmg
+              release/*.zip
           - os: ubuntu-latest
             platform: linux
             artifact_pattern: 'release/*.AppImage'
