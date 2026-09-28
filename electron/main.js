@@ -37,7 +37,7 @@ function updateMenuState(isEnclosureSelected) {
   const itemsToUpdate = [
     { label: 'Save', accelerator: process.platform === 'darwin' ? 'Cmd+S' : 'Ctrl+S' },
     { label: 'Save As...', accelerator: process.platform === 'darwin' ? 'Cmd+Shift+S' : 'Ctrl+Shift+S' },
-    { label: 'Print...', accelerator: process.platform === 'darwin' ? 'Cmd+P' : 'Ctrl+P' },
+    { label: 'Print/Export to PDF...', accelerator: process.platform === 'darwin' ? 'Cmd+P' : 'Ctrl+P' },
     { label: 'Export as PDF...', accelerator: process.platform === 'darwin' ? 'Cmd+E' : 'Ctrl+E' },
   ];
   
@@ -108,19 +108,20 @@ function createApplicationMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Print...',
+          label: 'Print/Export to PDF...',
           accelerator: isMac ? 'Cmd+P' : 'Ctrl+P',
           enabled: false, // Initially disabled
           click: () => {
             // console.log('🖨️ Print via accelerator');
             if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('menu-action', 'print');
+              mainWindow.webContents.send('menu-action', 'export-pdf');
             }
           }
         },
         {
           label: 'Export as PDF...',
           accelerator: isMac ? 'Cmd+E' : 'Ctrl+E',
+          visible: false, // Hidden; Ctrl/Cmd+E kept for legacy users
           enabled: false, // Initially disabled
           click: () => {
             // console.log('📄 Export PDF via accelerator');
