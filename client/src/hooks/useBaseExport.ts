@@ -38,7 +38,6 @@ const BASE_CONFIG = {
   components: {
     labelOffset: 7,              // Distance from component to its label (in mm)
     labelBackgroundPadding: 4,    // Padding around label text background
-    crosshairSize: 10,            // Minimum crosshair size in pixels
   },
   
   // Enclosure styling
@@ -470,8 +469,10 @@ export function useBaseExport({
               }
               
               if (!isUtilityGuide) {
-                const crosshairSizeH = Math.max(baseWidth / 2, config.components.crosshairSize * dpiScaleFactor);
-                const crosshairSizeV = Math.max(baseHeight / 2, config.components.crosshairSize * dpiScaleFactor);
+                // Rectangles already have an outline, so the crosshair spans it exactly (as on screen);
+                // a minimum length made lines overshoot narrow slots like slide pots.
+                const crosshairSizeH = baseWidth / 2;
+                const crosshairSizeV = baseHeight / 2;
                 
                 ctx.lineWidth = config.lineWidths.componentCrosshair * dpiScaleFactor;
                 ctx.beginPath();
@@ -568,7 +569,7 @@ export function useBaseExport({
               }
 
               if (!isUtilityGuide) {
-                const crosshairSize = Math.max(radius, config.components.crosshairSize * dpiScaleFactor);
+                const crosshairSize = radius; // span the hole exactly, as on screen
                 ctx.lineWidth = config.lineWidths.componentCrosshair * dpiScaleFactor;
                 ctx.beginPath();
                 ctx.moveTo(centerX - crosshairSize, centerY);
