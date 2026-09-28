@@ -72,9 +72,6 @@
     "COLOR|client/src/types/schema.ts|if (!type) return \"#6b7280\"; // Default gray",
     "COLOR|client/src/types/schema.ts|return \"#f59e0b\"; // Amber color for legacy",
     "COLOR|client/src/types/schema.ts|return manufacturerData?.color || \"#6b7280\";",
-    "DEBUG|client/src/components/examples/EnclosureCanvas.tsx|console.log(\"Add component\", type, x, y);",
-    "DOWNLOAD-URL|index.html|releases/download/v1.0.1/",
-    "DOWNLOAD-URL|index.html|releases/download/v1.0.1/",
-    "DOWNLOAD-URL|index.html|releases/download/v1.0.1/"
+    "DEBUG|client/src/components/examples/EnclosureCanvas.tsx|console.log(\"Add component\", type, x, y);"
   ]
 }
