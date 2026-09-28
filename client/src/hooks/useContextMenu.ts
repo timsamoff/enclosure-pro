@@ -176,6 +176,33 @@ export function useContextMenu({
     justDuplicatedRef.current = null; // Clear the ref when closing menu
   };
 
+  // Close on any other interaction while the menu is open (pointerdown, because Radix menu
+  // triggers cancel it and so suppress mousedown). Canvas clicks are left to Designer,
+  // which already closes the menu without changing the selection.
+  useEffect(() => {
+    if (!contextMenu) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (menuRef.current?.contains(target) || target instanceof HTMLCanvasElement) return;
+      closeContextMenu();
+    };
+    const onKeyDown = () => closeContextMenu();
+    const onBlur = () => closeContextMenu(); // native Open/Save dialogs and switching windows
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [contextMenu]);
+
+  // New/Open replaced the project: the component the menu belonged to is gone.
+  useEffect(() => {
+    if (contextMenu && !components.some((c) => c.id === contextMenu.componentId)) closeContextMenu();
+  }, [components, contextMenu]);
+
   // Check if we should prevent canvas clicks
   const shouldPreventCanvasClick = () => {
     return preventCanvasClick || contextMenu !== null;

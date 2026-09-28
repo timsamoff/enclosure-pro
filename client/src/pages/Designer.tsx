@@ -631,7 +631,8 @@ export default function Designer() {
           />
 
           {contextMenu.contextMenu && (
-            <div 
+            <div
+              ref={contextMenu.menuRef}
               className="fixed bg-white border border-gray-300 rounded-lg shadow-lg py-2 z-50 min-w-48"
               style={{
                 left: contextMenu.contextMenu.x,
