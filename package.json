@@ -27,7 +27,10 @@
     "electron:build:full": "npm run clean && npm run electron:build",
     "electron:build:installer": "npm run build && npm run copy-icons && electron-builder --win nsis --publish=never",
     "electron:build:portable": "npm run build && npm run copy-icons && electron-builder --win portable --publish=never",
-    "check": "tsc"
+    "check": "tsc",
+    "sentinel:install": "git config core.hooksPath .githooks",
+    "sentinel:check": "node sentinel/check.js && node sentinel/check.js --local",
+    "sentinel:full": "node sentinel/check.js --full"
   },
   "build": {
     "appId": "com.enclosurepro.app",

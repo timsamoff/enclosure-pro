@@ -1,0 +1,3 @@
+#!/bin/sh
+# Sentinel commit-msg: message convention, attribution stripping, overrides. Source: sentinel/commit-msg.js
+exec node "$(git rev-parse --show-toplevel)/sentinel/commit-msg.js" "$1"

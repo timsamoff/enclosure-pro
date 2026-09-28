@@ -1,0 +1,3 @@
+#!/bin/sh
+# Sentinel pre-commit: staged-content checks. Source: sentinel/check.js
+exec node "$(git rev-parse --show-toplevel)/sentinel/check.js"

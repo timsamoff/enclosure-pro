@@ -120,6 +120,10 @@ The app checks GitHub Releases five seconds after launch, and again whenever the
   - AppImage on Linux
 - Pushing a `v*` tag triggers `.github/workflows/build.yml`, which builds on all three platforms and publishes the installers to GitHub Releases. The website and the auto-updater both pick those releases up.
 
+## Repository tooling
+
+Git hooks in `.githooks/` run the checks in `sentinel/`. These consist of a staged-content check before each commit, a commit-message check, and a full-repository scan before each push that compares against `sentinel-baseline.json`. They enforce the integration rules that grew out of this project's history: registry and category consistency, menu and IPC wiring between the main process, preload and renderer, parity between the screen and export renderers, and documentation co-changes. They are enabled per clone with `npm run sentinel:install`, which sets `core.hooksPath`. None of this code ships in the app.
+
 ## Website
 
 The website is hand-written static HTML with a single stylesheet, a tan, orange and near-black palette defined in `styles.css`, and Font Awesome icons. It's served as `samoff.com/enclosure-pro`. `stats.js` fetches `api.github.com/repos/timsamoff/enclosure-pro/releases` on load, adds the total download count, and replaces the three installer links with the latest release's assets. The links hardcoded in the HTML are only a fallback if that request fails. The feedback page embeds a Google Form.

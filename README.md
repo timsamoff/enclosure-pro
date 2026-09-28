@@ -26,6 +26,10 @@ Created by Tim Samoff ([@circuitous.fx](https://www.instagram.com/circuitous.fx/
 
  - [Official Website](http://samoff.com/enclosure-pro)
 
+## Development
+
+After cloning, run `npm install`, then `npm run sentinel:install` to enable the repo's git hooks (commit checks live in `sentinel/`). `npm run electron:dev` starts the app.
+
 ## License
 
 - [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
