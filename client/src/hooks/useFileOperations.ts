@@ -555,7 +555,7 @@ export function useFileOperations({
           }
           
           const compData = COMPONENT_TYPES[c.type as ComponentType];
-          const isFootprintGuide = compData.category === "Footprint Guides (not printed)";
+          const isFootprintGuide = compData.category === "Footprint Guides";
           
           return {
             id: c.id || `component-${Date.now()}-${index}`,
