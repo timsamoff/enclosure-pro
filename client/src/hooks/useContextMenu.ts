@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from "react";
 import { PlacedComponent } from "@/types/schema";
 
 interface UseContextMenuProps {
   components: PlacedComponent[];
   selectedComponent: string | null;
-  setComponents: (components: PlacedComponent[]) => void;
+  setComponents: Dispatch<SetStateAction<PlacedComponent[]>>;
   setSelectedComponent: (id: string | null) => void;
   markDirty: () => void;
   toast: any;

@@ -244,7 +244,7 @@ export function useBaseExport({
       try {
         const dimensions = getUnwrappedDimensions(currentEnclosureType);
         const currentUnit = unitRef.current;
-        const rotatesLabels = ENCLOSURE_TYPES[currentEnclosureType].rotatesLabels || false;
+        const rotatesLabels = currentEnclosureType ? ENCLOSURE_TYPES[currentEnclosureType].rotatesLabels || false : false;
         const printableComponents = getPrintableComponents(componentsRef.current);
 
         // Select quality preset based on export type

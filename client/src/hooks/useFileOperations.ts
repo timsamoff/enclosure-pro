@@ -179,26 +179,9 @@ export function useFileOperations({
       }
     }
 
-    return new Promise<{filePath: string; content: string} | null>((resolve) => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.enc';
-      input.onchange = (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (!file) {
-          resolve(null);
-          return;
-        }
-        const reader = new FileReader();
-        reader.onload = () => {
-          resolve({ filePath: file.name, content: reader.result as string });
-        };
-       reader.onerror = () => resolve(null);
-        reader.readAsText(file);
-      };
-      input.oncancel = () => resolve(null);
-      input.click();
-    });
+    // Opening by file path needs the Electron bridge; the old browser fallback returned file
+    // contents instead of a path, so it could never have opened a project.
+    return null;
   };
 
   const handleLoad = async () => {

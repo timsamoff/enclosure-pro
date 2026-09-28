@@ -1,4 +1,4 @@
-import { EnclosureType, ENCLOSURE_TYPES, MeasurementUnit, getManufacturerPrefix, getEnclosureDisplayName, getManufacturerBadgeColor } from "@/types/schema";
+import { EnclosureKey, ENCLOSURE_TYPES, MeasurementUnit, getManufacturerPrefix, getEnclosureDisplayName, getManufacturerBadgeColor } from "@/types/schema";
 import { Box, Grid3x3, Package, CircleDot } from "lucide-react";
 import { mmToFraction } from "@/lib/utils";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -7,7 +7,7 @@ import { useFocusManagement } from "@/hooks/useFocusManagement";
 interface BottomInfoProps {
   gridEnabled: boolean;
   gridSize: number;
-  enclosureType: EnclosureType;
+  enclosureType: EnclosureKey;
   unit: MeasurementUnit;
   onEnclosureClick: () => void;
   onGridClick: () => void;

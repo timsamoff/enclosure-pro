@@ -45,6 +45,10 @@ export const MANUFACTURERS = {
 
 export type EnclosureManufacturer = keyof typeof MANUFACTURERS;
 
+// Legacy (pre-manufacturer) enclosures use "Legacy", which has no MANUFACTURERS entry.
+export type ManufacturerName = EnclosureManufacturer | "Legacy";
+export const MANUFACTURER_LOOKUP: Partial<Record<ManufacturerName, (typeof MANUFACTURERS)[EnclosureManufacturer]>> = MANUFACTURERS;
+
 export const CORNER_RADIUS = 5;
 
 export interface EnclosureDimensions {
@@ -55,12 +59,12 @@ export interface EnclosureDimensions {
   frontDepth?: number;
   isTrapezoidal?: boolean;
   rotatesLabels?: boolean;
-  manufacturer: EnclosureManufacturer;
+  manufacturer: ManufacturerName;
   displayName?: string;
 }
 
 // Keep the original ENCLOSURE_TYPES structure for backward compatibility
-export const ENCLOSURE_TYPES = {
+const ENCLOSURE_DATA = {
 
   // Amplified Parts enclosures
   "AMP-1590A": { width: 38.6, height: 92.5, depth: 26.9, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Amplified Parts" as const, displayName: "1590A" },
@@ -131,22 +135,27 @@ export const ENCLOSURE_TYPES = {
   "TAY-1590XX": { width: 145, height: 121, depth: 37.5, rotatesLabels: true, cornerStyle: "rounded" as const, manufacturer: "Tayda" as const, displayName: "1590XX" },
 } as const;
 
-export type EnclosureType = keyof typeof ENCLOSURE_TYPES | null;
+export type EnclosureKey = keyof typeof ENCLOSURE_DATA;
+// Typed as EnclosureDimensions so optional wedge fields (isTrapezoidal, frontDepth) and
+// cornerStyle "sharp" stay available for future enclosures.
+export const ENCLOSURE_TYPES: Record<EnclosureKey, EnclosureDimensions> = ENCLOSURE_DATA;
+export type EnclosureType = EnclosureKey | null;
 
 // Helper to get manufacturer icon/prefix
-export function getManufacturerPrefix(manufacturer: EnclosureManufacturer): string {
-  const manufacturerData = MANUFACTURERS[manufacturer];
+export function getManufacturerPrefix(manufacturer: ManufacturerName): string {
+  const manufacturerData = MANUFACTURER_LOOKUP[manufacturer];
   return manufacturerData?.prefix || "";
 }
 
 // Helper to get display name for enclosure
 export function getEnclosureDisplayName(type: EnclosureType): string | null {
+  if (!type) return null;
   const enclosure = ENCLOSURE_TYPES[type];
   return enclosure?.displayName || type;
 }
 
 // Helper to get manufacturer from enclosure type
-export function getEnclosureManufacturer(type: EnclosureType): EnclosureManufacturer | null {
+export function getEnclosureManufacturer(type: EnclosureType): ManufacturerName | null {
   if (!type) return null;
   const enclosure = ENCLOSURE_TYPES[type];
   return enclosure?.manufacturer || null;
@@ -184,7 +193,7 @@ export function getManufacturerBadgeColor(type: EnclosureType): string {
   const manufacturer = getEnclosureManufacturer(type);
   if (!manufacturer) return "#6b7280";
   
-  const manufacturerData = MANUFACTURERS[manufacturer];
+  const manufacturerData = MANUFACTURER_LOOKUP[manufacturer];
   return manufacturerData?.color || "#6b7280";
 }
 
@@ -207,9 +216,9 @@ export function normalizeEnclosureType(type: EnclosureType): EnclosureType {
 }
 
 // Get all enclosures grouped by manufacturer
-export function getAllEnclosuresGrouped(): Record<EnclosureManufacturer, EnclosureType[]> {
+export function getAllEnclosuresGrouped(): Record<ManufacturerName, EnclosureKey[]> {
   // Initialize with all manufacturers from MANUFACTURERS
-  const grouped: Record<EnclosureManufacturer, EnclosureType[]> = {};
+  const grouped = {} as Record<ManufacturerName, EnclosureKey[]>;
   
   // Initialize arrays for all manufacturers
   Object.keys(MANUFACTURERS).forEach((key) => {
@@ -224,9 +233,9 @@ export function getAllEnclosuresGrouped(): Record<EnclosureManufacturer, Enclosu
   // Filter out legacy entries (those without dashes)
   Object.keys(ENCLOSURE_TYPES).forEach((key) => {
     if (key.includes('-')) {
-      const enclosure = ENCLOSURE_TYPES[key];
+      const enclosure = ENCLOSURE_TYPES[key as EnclosureKey];
       if (enclosure?.manufacturer && grouped[enclosure.manufacturer]) {
-        grouped[enclosure.manufacturer].push(key as EnclosureType);
+        grouped[enclosure.manufacturer].push(key as EnclosureKey);
       }
     }
   });
@@ -687,7 +696,7 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
 export type ComponentType = keyof typeof COMPONENT_TYPES;
 
 export interface ProjectState {
-  enclosureType: EnclosureType;
+  enclosureType?: EnclosureType;
   components: PlacedComponent[];
   gridEnabled: boolean;
   gridSize: number;
@@ -721,6 +730,7 @@ export function getUnwrappedDimensions(enclosureType: EnclosureType): {
   left: SideDimensions;
   right: SideDimensions;
 } {
+  if (!enclosureType) throw new Error("getUnwrappedDimensions called with no enclosure selected");
   const enc = ENCLOSURE_TYPES[enclosureType];
   const isTrapezoidal = enc.isTrapezoidal || false;
   

@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "rule": "COLOR",
+    "files": ["client/src/components/EnclosureSelector.tsx"],
+    "match": "MANUFACTURER_LOOKUP[manufacturer]?.color : \"#ff8c42\"",
+    "reason": "Pre-existing brand orange on a line touched by the Q-02 type fix; pending the Q-12 brand color token",
+    "owner": "Tim",
+    "reviewBy": "2027-03-31"
+  }
+]

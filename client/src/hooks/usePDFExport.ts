@@ -256,7 +256,6 @@ export function usePDFExport({
         title: `${pdfTitle} - DO NOT SCALE - PRINT AT 100%`,
         subject: `Enclosure Drill Template - PRINT AT 100% SCALE ONLY`,
         creator: 'Enclosure Pro',
-        producer: 'Enclosure Pro',
         keywords: `DO NOT SCALE, PRINT AT 100%, exact size, ${trueWidth.toFixed(1)}mm x ${trueHeight.toFixed(1)}mm, ${currentUnit}`
       });
 

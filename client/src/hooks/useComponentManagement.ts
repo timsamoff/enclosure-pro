@@ -35,7 +35,7 @@ export function useComponentManagement({
   const handleComponentMove = (id: string, x: number, y: number, side?: EnclosureSide) => {
     // console.log("handleComponentMove called:", { id, x, y, side, componentsCount: components.length });
     
-    const rotatesLabels = ENCLOSURE_TYPES[enclosureType].rotatesLabels || false;
+    const rotatesLabels = enclosureType ? ENCLOSURE_TYPES[enclosureType].rotatesLabels || false : false;
     
     setComponents(
       components.map(c => {
@@ -43,7 +43,7 @@ export function useComponentManagement({
           // console.log("Moving component:", c);
           let targetSide = side || c.side;
           if (side && rotatesLabels && rotation !== 0) {
-            const reverseMap = {
+            const reverseMap: Record<EnclosureSide, EnclosureSide> = {
               'Front': 'Front',
               'Top': 'Left',
               'Right': 'Top',

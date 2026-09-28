@@ -34,8 +34,8 @@ export default function Designer() {
   const { toast } = useToast();
   
   // Debug logging
-  const debugLog = (message: string, data?: any) => {
-    // console.log(`[Designer] ${message}`, data || '');
+  const debugLog = (..._args: unknown[]) => {
+    // console.log('[Designer]', ..._args);
   };
 
   debugLog("Component rendering");

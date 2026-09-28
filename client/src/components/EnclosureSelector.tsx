@@ -6,7 +6,10 @@ import {
   EnclosureType, 
   ENCLOSURE_TYPES,
   EnclosureManufacturer, 
+  EnclosureKey,
+  ManufacturerName,
   MANUFACTURERS,
+  MANUFACTURER_LOOKUP,
   getEnclosureDisplayName,
   getEnclosureManufacturer,
   getAllEnclosuresGrouped,
@@ -36,8 +39,8 @@ export default function EnclosureSelector({
 }: EnclosureSelectorProps) {
   const { releaseFocus } = useFocusManagement();
   const [selectedManufacturer, setSelectedManufacturer] = useState<EnclosureManufacturer | null>(null);
-  const [enclosuresByManufacturer, setEnclosuresByManufacturer] = useState<Record<EnclosureManufacturer, EnclosureType[]>>(
-    {} as Record<EnclosureManufacturer, EnclosureType[]>
+  const [enclosuresByManufacturer, setEnclosuresByManufacturer] = useState<Record<ManufacturerName, EnclosureKey[]>>(
+    {} as Record<ManufacturerName, EnclosureKey[]>
   );
 
   // Normalize current type for display
@@ -203,7 +206,7 @@ export default function EnclosureSelector({
                   const isSelected = type === normalizedCurrentType;
                   const displayName = getEnclosureDisplayName(type);
                   const manufacturer = getEnclosureManufacturer(type);
-                  const manufacturerColor = manufacturer ? MANUFACTURERS[manufacturer]?.color : "#ff8c42";
+                  const manufacturerColor = manufacturer ? MANUFACTURER_LOOKUP[manufacturer]?.color : "#ff8c42";
                   const is125BOption = type.includes("125B");
                   const isRecommendedForLegacy = isLegacy125B && is125BOption;
                   
