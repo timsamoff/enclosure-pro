@@ -1,6 +1,6 @@
 {
   "generated": "2026-09-28",
-  "tscErrors": 28,
+  "tscErrors": 0,
   "violations": [
     "COLOR|client/src/components/BlankCanvas.tsx|className=\"px-6 py-3 bg-[#ff8c42] text-white rounded-lg hover-elevate active-elevate-2 font-medium cursor-pointer\"",
     "COLOR|client/src/components/BottomInfo.tsx|className=\"px-4 h-9 text-xs rounded-l-full data-[state=on]:bg-[#ff8c42] data-[state=on]:text-white flex-1\"",
