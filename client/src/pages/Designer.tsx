@@ -10,7 +10,7 @@ import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 
 import { usePrintScaleTest } from "@/hooks/usePrintScaleTest";
 
-import { Copy, RotateCw, RotateCcw, Printer, Download, Check, Square } from "lucide-react";
+import { Copy, RotateCw, RotateCcw, Download, Check, Square } from "lucide-react";
 
 import {
   EnclosureSide,
@@ -27,7 +27,6 @@ import { useFileOperations } from "@/hooks/useFileOperations";
 import { useContextMenu } from "@/hooks/useContextMenu";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { usePDFExport } from "@/hooks/usePDFExport";
-import { usePrint } from "@/hooks/usePrint";
 import { useComponentManagement } from "@/hooks/useComponentManagement";
 import { useConfirmDialogs } from "@/hooks/useConfirmDialogs";
 
@@ -69,7 +68,6 @@ export default function Designer() {
 
   // Refs for stability
   const fileOperationsRef = useRef<any>(null);
-  const printRef = useRef<any>(null);
   const pdfExportRef = useRef<any>(null);
   const confirmDialogsRef = useRef<any>(null);
 
@@ -178,16 +176,6 @@ export default function Designer() {
     toast
   });
 
-  const print = usePrint({
-    enclosureTypeRef,
-    componentsRef,
-    unitRef,
-    rotationRef,
-    projectName: fileOperations.projectName,
-    enclosureType,
-    toast
-  });
-
   const confirmDialogs = useConfirmDialogs({
     onNewConfirmSave: fileOperations.handleNewConfirmSave,
     onNewConfirmDiscard: fileOperations.handleNewConfirmDiscard,
@@ -201,11 +189,10 @@ export default function Designer() {
   // Update refs when hooks are ready
   useEffect(() => {
     fileOperationsRef.current = fileOperations;
-    printRef.current = print;
     pdfExportRef.current = pdfExport;
     confirmDialogsRef.current = confirmDialogs;
     debugLog("Hook refs updated");
-  }, [fileOperations, print, pdfExport, confirmDialogs]);
+  }, [fileOperations, pdfExport, confirmDialogs]);
 
   // BULLETPROOF SOLUTION: Create stable handler functions that use refs
   const handleMenuNew = useRef(() => {
@@ -333,13 +320,6 @@ export default function Designer() {
     }
   }).current;
 
-  const handleMenuPrint = useRef(() => {
-    debugLog("Menu: Print triggered (via ref)");
-    if (printRef.current?.handlePrint) {
-      printRef.current.handlePrint();
-    }
-  }).current;
-
   const handleMenuExportPDF = useRef(() => {
     debugLog("Menu: Export PDF triggered (via ref)");
     if (pdfExportRef.current?.handleExportPDF) {
@@ -377,7 +357,6 @@ export default function Designer() {
     handleSave: handleMenuSave,
     handleSaveAs: handleMenuSaveAs,
     handleLoad: handleMenuOpen,
-    handlePrint: handleMenuPrint,
     handleExportPDF: handleMenuExportPDF,
     handleQuit: handleMenuQuit,
     handleNew: handleMenuNew,
@@ -447,14 +426,6 @@ export default function Designer() {
       cleanupFunctions.push(cleanup);
     }
     
-    if (window.electronAPI.onMenuPrint) {
-      const cleanup = window.electronAPI.onMenuPrint(() => {
-        debugLog("Menu: Print triggered");
-        handleMenuPrint();
-      });
-      cleanupFunctions.push(cleanup);
-    }
-    
     if (window.electronAPI.onMenuExportPDF) {
       const cleanup = window.electronAPI.onMenuExportPDF(() => {
         debugLog("Menu: Export PDF triggered");
@@ -482,7 +453,6 @@ export default function Designer() {
     handleMenuOpen, 
     handleMenuSave, 
     handleMenuSaveAs, 
-    handleMenuPrint, 
     handleMenuExportPDF, 
     handleMenuQuit
   ]);
@@ -564,7 +534,6 @@ export default function Designer() {
             onSaveAs={handleMenuSaveAs}
             onOpen={handleMenuOpen}
             onExportPDF={handleMenuExportPDF}
-            onPrint={handleMenuPrint}
             onQuit={handleMenuQuit}
             isEnclosureSelected={isEnclosureSelected}
           />
@@ -721,7 +690,6 @@ export default function Designer() {
             onSaveAs={handleMenuSaveAs}
             onOpen={handleMenuOpen}
             onExportPDF={handleMenuExportPDF}
-            onPrint={handleMenuPrint}
             onQuit={handleMenuQuit}
             isEnclosureSelected={isEnclosureSelected}
           />

@@ -6,7 +6,6 @@ interface UseKeyboardShortcutsProps {
   handleSave: () => void;
   handleSaveAs: () => void;
   handleLoad: () => void;
-  handlePrint: () => void;
   handleExportPDF: () => void;
   handleQuit: () => void;
   handleNew: () => void;
@@ -19,7 +18,6 @@ export function useKeyboardShortcuts({
   handleSave,
   handleSaveAs,
   handleLoad,
-  handlePrint,
   handleExportPDF,
   handleQuit,
   handleNew,
@@ -32,7 +30,6 @@ export function useKeyboardShortcuts({
     handleSave,
     handleSaveAs,
     handleLoad,
-    handlePrint,
     handleExportPDF,
     handleQuit,
     handleNew,
@@ -46,12 +43,11 @@ export function useKeyboardShortcuts({
       handleSave,
       handleSaveAs,
       handleLoad,
-      handlePrint,
       handleExportPDF,
       handleQuit,
       handleNew,
     };
-  }, [handleZoomIn, handleZoomOut, handleSave, handleSaveAs, handleLoad, handlePrint, handleExportPDF, handleQuit, handleNew]);
+  }, [handleZoomIn, handleZoomOut, handleSave, handleSaveAs, handleLoad, handleExportPDF, handleQuit, handleNew]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

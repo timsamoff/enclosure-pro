@@ -21,7 +21,6 @@ interface TopControlsProps {
   onSaveAs: () => void;
   onOpen: () => void;
   onExportPDF: () => void;
-  onPrint: () => void;
   onQuit: () => void;
 }
 
@@ -42,7 +41,6 @@ export default function TopControls({
   onSaveAs,
   onOpen,
   onExportPDF,
-  onPrint,
   onQuit,
 }: TopControlsProps) {
   return (
@@ -137,7 +135,6 @@ export default function TopControls({
         onOpen={onOpen}
         onSave={onSave}
         onSaveAs={onSaveAs}
-        onPrint={onPrint}
         onExportPDF={onExportPDF}
         onQuit={onQuit}
       />

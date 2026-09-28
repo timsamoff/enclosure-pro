@@ -617,56 +617,6 @@ ipcMain.handle('file:open', async () => {
   }
 });
 
-// Direct menu action triggers
-ipcMain.handle('menu:new-project', () => {
-  // console.log('🆕 Menu: New Project requested via IPC');
-  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('menu-action', 'new');
-  }
-});
-
-ipcMain.handle('menu:open-project', () => {
-  // console.log('📂 Menu: Open Project requested via IPC');
-  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('menu-action', 'open');
-  }
-});
-
-ipcMain.handle('menu:save-project', () => {
-  // console.log('💾 Menu: Save Project requested via IPC');
-  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('menu-action', 'save');
-  }
-});
-
-ipcMain.handle('menu:save-as-project', () => {
-  // console.log('💾 Menu: Save As Project requested via IPC');
-  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('menu-action', 'save-as');
-  }
-});
-
-ipcMain.handle('menu:print-project', () => {
-  // console.log('🖨️ Menu: Print Project requested via IPC');
-  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('menu-action', 'print');
-  }
-});
-
-ipcMain.handle('menu:export-pdf-project', () => {
-  // console.log('📄 Menu: Export PDF requested via IPC');
-  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('menu-action', 'export-pdf');
-  }
-});
-
-ipcMain.handle('menu:quit-project', () => {
-  // console.log('🚪 Menu: Quit requested via IPC');
-  if (mainWindow && isWindowReady && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('menu-action', 'quit');
-  }
-});
-
 // IPC Handlers for file operations
 ipcMain.handle('dialog:saveFile', async (event, { defaultPath, filters }) => {
   if (!mainWindow || mainWindow.isDestroyed()) {
@@ -848,34 +798,6 @@ ipcMain.handle('test:simulate-update', () => {
   });
   
   return { success: true, message: 'Update simulation started' };
-});
-
-// Better print handler using printToPDF
-ipcMain.handle('print:pdf', async (event, options) => {
-  const { pdfData, printOptions, silent } = options;
-  
-  console.log('🖨️ Print PDF handler called');
-  
-  try {
-    // Just save to temp and open in system PDF viewer for printing
-    // This is more reliable than Electron's print API
-    const tmpDir = app.getPath('temp');
-    const tmpFile = path.join(tmpDir, `drill-template-${Date.now()}.pdf`);
-    
-    const pdfBuffer = Buffer.from(pdfData);
-    await fs.writeFile(tmpFile, pdfBuffer);
-    
-    console.log('PDF saved to:', tmpFile);
-    
-    // Open in system default PDF viewer
-    const { shell } = require('electron');
-    await shell.openPath(tmpFile);
-    
-    return { success: true };
-  } catch (error) {
-    console.error('❌ Print PDF error:', error);
-    return { success: false, error: error.message };
-  }
 });
 
 // Helper function to calculate next version for simulation

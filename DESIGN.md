@@ -92,7 +92,7 @@ Export draws the layout onto an off-screen, high-DPI canvas (`useBaseExport.rend
 
 The on-screen canvas and the export renderer are separate implementations that share `schema.ts` but not their drawing geometry.
 
-Direct printing was removed in v1.1.0 in favor of PDF export, which prints at a more reliable scale. "Print" in the UI now means Print/Export to PDF (Ctrl/Cmd+P). Ctrl/Cmd+E remains a legacy alias.
+Direct printing was removed in v1.1.0 in favor of PDF export, which prints at a more reliable scale. "Print" in the UI now means Print/Export to PDF (Ctrl/Cmd+P). Ctrl/Cmd+E remains a legacy alias. The dormant direct-print code was deleted after the 1.1.0 release. It lived in `usePrint.ts`, the `print:pdf` IPC handler and the `onMenuPrint` bridge, and its last state is preserved at the git tag `direct-print-archive`, for reference if direct printing is revisited.
 
 ### Menus and shortcuts
 

@@ -13,9 +13,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (options) => ipcRenderer.invoke('file:read', options),
   openExternalFile: (filePath) => ipcRenderer.invoke('file:open-external', filePath),
   
-  // Print operations
-  printPDF: (options) => ipcRenderer.invoke('print:pdf', options),
-  
   // Window operations
   closeWindow: () => ipcRenderer.invoke('window:close'),
   
@@ -105,14 +102,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMenuSaveAs: (callback) => {
     const handler = (event, action) => {
       if (action === 'save-as') callback();
-    };
-    ipcRenderer.on('menu-action', handler);
-    return () => ipcRenderer.removeListener('menu-action', handler);
-  },
-  
-  onMenuPrint: (callback) => {
-    const handler = (event, action) => {
-      if (action === 'print') callback();
     };
     ipcRenderer.on('menu-action', handler);
     return () => ipcRenderer.removeListener('menu-action', handler);

@@ -74,8 +74,6 @@ export interface ElectronAPI {
   
   onMenuSaveAs: (callback: () => void) => () => void;
   
-  onMenuPrint: (callback: () => void) => () => void;
-  
   onMenuExportPDF: (callback: () => void) => () => void;
   
   onMenuQuit: (callback: () => void) => () => void;

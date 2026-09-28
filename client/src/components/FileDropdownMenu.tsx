@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, FileText, Save, FilePlus, FolderOpen, Printer, Download, X } from "lucide-react";
+import { ChevronDown, FileText, Save, FilePlus, FolderOpen, Download, X } from "lucide-react";
 import { shortcuts } from "@/lib/hotkeys";
 
 interface FileDropdownMenuProps {
@@ -17,7 +17,6 @@ interface FileDropdownMenuProps {
   onSave: () => void;
   onSaveAs: () => void;
   onOpen: () => void;
-  onPrint: () => void;
   onExportPDF: () => void;
   onQuit: () => void;
 }
@@ -30,7 +29,6 @@ export default function FileDropdownMenu({
   onSave,
   onSaveAs,
   onOpen,
-  onPrint,
   onExportPDF,
   onQuit,
 }: FileDropdownMenuProps) {
@@ -104,18 +102,6 @@ export default function FileDropdownMenu({
           <span className="flex-1">Print/Export to PDF</span>
           <span className="text-xs text-muted-foreground ml-4">{shortcuts.print}</span>
         </DropdownMenuItem>
-        {/* Commented out separate Print item
-        <DropdownMenuItem 
-          onClick={onPrint}
-          disabled={!isEnclosureSelected}
-          data-testid="menu-item-print"
-          className={`${isEnclosureSelected ? "cursor-pointer" : "cursor-not-allowed !cursor-not-allowed"}`}
-        >
-          <Printer className="w-4 h-4 mr-2" />
-          <span className="flex-1">Print</span>
-          <span className="text-xs text-muted-foreground ml-4">{shortcuts.print}</span>
-        </DropdownMenuItem>
-        */}
         <DropdownMenuSeparator />
         {/* Quit is always enabled */}
         <DropdownMenuItem 
