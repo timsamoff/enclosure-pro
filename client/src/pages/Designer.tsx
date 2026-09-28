@@ -413,13 +413,7 @@ export default function Designer() {
     }
     
     const cleanupFunctions: (() => void)[] = [];
-    
-    // Set initial menu state when listeners are set up
-    if (window.electronAPI.send) {
-      const isSelected = enclosureType !== null;
-      window.electronAPI.send('app:update-menu-state', isSelected);
-    }
-    
+
     debugLog("Registering menu listeners");
     
     if (window.electronAPI.onMenuNew) {
@@ -491,18 +485,13 @@ export default function Designer() {
     handleMenuSaveAs, 
     handleMenuPrint, 
     handleMenuExportPDF, 
-    handleMenuQuit,
-    enclosureType
+    handleMenuQuit
   ]);
 
-  // Update menu state when enclosure changes
+  // Keep the native menu's Save/Save As/Export items in step with enclosure selection
   useEffect(() => {
-    if (window.electronAPI?.isElectron && window.electronAPI.send) {
-      const isSelected = enclosureType !== null;
-      debugLog("Updating menu state:", isSelected);
-      
-      // Send menu state update to main process
-      window.electronAPI.send('app:update-menu-state', isSelected);
+    if (window.electronAPI?.isElectron && window.electronAPI.updateMenuState) {
+      window.electronAPI.updateMenuState(enclosureType !== null);
     }
   }, [enclosureType]);
 

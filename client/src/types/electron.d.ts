@@ -36,6 +36,9 @@ export interface ElectronAPI {
   
   // Window operations
   closeWindow: () => Promise<void>;
+
+  // Native menu enabled state
+  updateMenuState: (isEnclosureSelected: boolean) => void;
   
   // Auto-updater functions
   getAppVersion: () => Promise<string>;
