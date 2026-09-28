@@ -15,7 +15,7 @@ import { useFocusManagement } from "@/hooks/useFocusManagement";
 
 export default function AppIconMenu() {
   const { releaseFocus } = useFocusManagement();
-  const [appVersion, setAppVersion] = useState('1.0.0');
+  const [appVersion, setAppVersion] = useState<string>(import.meta.env.APP_VERSION);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);

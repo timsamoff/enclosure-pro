@@ -548,7 +548,6 @@ export default function Designer() {
           <BlankCanvas 
             onSelectEnclosure={() => setShowEnclosureSelector(true)}
             appIcon={appIcon}
-            appVersion="1.1.0-beta.1"
           />
           
           <TopControls

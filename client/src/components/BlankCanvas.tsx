@@ -3,14 +3,11 @@ import { Box } from "lucide-react";
 interface BlankCanvasProps {
   onSelectEnclosure: () => void;
   appIcon?: string | null;
-  appVersion?: string;
 }
 
-export default function BlankCanvas({ 
-  onSelectEnclosure, 
-  appIcon, 
-  // Use the injected version, with fallbacks
-  appVersion = import.meta.env.APP_VERSION || "1.1.0"
+export default function BlankCanvas({
+  onSelectEnclosure,
+  appIcon,
 }: BlankCanvasProps) {
   return (
     <div className="relative w-full h-full flex items-center justify-center bg-background">
@@ -29,9 +26,9 @@ export default function BlankCanvas({
         
         <h2 className="text-2xl font-semibold mb-2">Welcome to Enclosure Pro</h2>
         
-        {/* Show version from import.meta.env */}
+        {/* Version comes from package.json via Vite's APP_VERSION define */}
         <p className="text-sm text-muted-foreground mb-3">
-          v{import.meta.env.APP_VERSION || appVersion}
+          v{import.meta.env.APP_VERSION}
         </p>
         
         <p className="text-muted-foreground mb-6">
