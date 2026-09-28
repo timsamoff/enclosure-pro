@@ -61,9 +61,10 @@ function stagedFiles() {
   return files;
 }
 
-// Added and removed lines of the staged diff for one file, with new-file line numbers for additions.
-function stagedDiff(file) {
-  const out = git(["diff", "--cached", "-U0", "--no-color", "--no-ext-diff", "--", file]);
+// Added and removed lines of the staged diff (or the working-tree diff against HEAD) for one file,
+// with new-file line numbers for additions.
+function stagedDiff(file, cached = true) {
+  const out = git(["diff", ...(cached ? ["--cached"] : ["HEAD"]), "-U0", "--no-color", "--no-ext-diff", "--", file]);
   const added = [];
   const removed = [];
   let newLine = 0;
@@ -101,6 +102,48 @@ function blockRange(content, name) {
 }
 
 const inRange = (r, n) => r && n >= r[0] && n <= r[1];
+
+// Text of the brace-delimited declaration starting on the first line matching `re` ("" if absent).
+function declBlock(content, re) {
+  if (!content) return "";
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const start = lines.findIndex((l) => re.test(l));
+  if (start < 0) return "";
+  let depth = 0;
+  let opened = false;
+  for (let i = start; i < lines.length; i++) {
+    for (const ch of lines[i]) {
+      if (ch === "{") {
+        depth++;
+        opened = true;
+      } else if (ch === "}") depth--;
+    }
+    if (opened && depth === 0) return lines.slice(start, i + 1).join("\n");
+  }
+  return lines.slice(start).join("\n");
+}
+
+// Did the saved-project format change? Compares the declarations themselves, not just their header lines.
+const FORMAT_DECLS = [
+  ["client/src/types/schema.ts", /^export interface ProjectState\b/],
+  ["client/src/types/schema.ts", /^export interface PlacedComponent\b/],
+  ["client/src/hooks/useFileOperations.ts", /const projectFileSchema\s*=/],
+  ["client/src/hooks/useFileOperations.ts", /const legacyComponentSchema\s*=/],
+];
+function fileFormatChanged(oldContent, newContent) {
+  return FORMAT_DECLS.some(([f, re]) => declBlock(oldContent(f), re) !== declBlock(newContent(f), re));
+}
+
+// What in this change does CLAUDE.md describe? Content-based, so trivial edits to these files don't trigger it.
+function claudeReasons(addedText, changedText, formatChanged) {
+  const r = [];
+  if (addedText("client/src/types/schema.ts").some((t) => /^\s*["']?[A-Za-z0-9][\w-]*["']?\s*:\s*\{/.test(t))) r.push("new component type or enclosure");
+  if (addedText("electron/main.js").some((t) => /^\s*label:\s*'/.test(t))) r.push("native menu item");
+  if (changedText("electron/preload.js").some((t) => /^\s{2}\w+\s*:/.test(t))) r.push("preload bridge function");
+  if (addedText("client/src/hooks/useKeyboardShortcuts.ts").some((t) => /e\.key|e\.code/.test(t)) || changedText("client/src/lib/hotkeys.ts").some((t) => /^\s*\w+\s*:/.test(t))) r.push("keyboard shortcut");
+  if (formatChanged) r.push("save-file format");
+  return r;
+}
 
 const COLOR_RE = /#[0-9a-fA-F]{3,8}\b|\brgba?\s*\(|\bhsla?\s*\((?!\s*var\()/;
 const DEBUG_RE = /console\.trace\s*\(|^\s*console\.log\s*\(/;
@@ -333,7 +376,8 @@ function stagedMode() {
   const designTriggers = [];
   if (changedText("electron/main.js").some((t) => /webPreferences|new BrowserWindow|requestSingleInstanceLock|second-instance|open-file|loadFile|contextIsolation|sandbox/.test(t))) designTriggers.push("main process window/process setup");
   if (changedText("electron/preload.js").some((t) => /^\s{2}\w+\s*:/.test(t))) designTriggers.push("preload bridge shape");
-  if (changedText("client/src/types/schema.ts").some((t) => /interface (ProjectState|PlacedComponent)/.test(t)) || changedText("client/src/hooks/useFileOperations.ts").some((t) => /projectFileSchema|z\.object/.test(t))) designTriggers.push("project file format");
+  const formatChanged = fileFormatChanged(headContent, (f) => (has(f) ? stagedContent(f) : headContent(f)));
+  if (formatChanged) designTriggers.push("project file format");
   if (files.some((f) => (f.status === "A" || f.status === "D") && /^client\/src\/hooks\/\w*Export\w*\.ts$/.test(f.file))) designTriggers.push("export pipeline structure");
   if (newTop.length) designTriggers.push("new top-level folder");
   if (designTriggers.length && !has("DESIGN.md")) {
@@ -342,7 +386,7 @@ function stagedMode() {
 
   // Reminders (non-blocking).
   if (changedText("package.json").some((t) => /"version"\s*:/.test(t))) reminders.push("Version bump detected: review DESIGN.md for anything this release made inaccurate.");
-  reminders.push(...localReminders(files.map((f) => f.file)));
+  reminders.push(...localReminders(claudeReasons(addedText, changedText, formatChanged)));
 
   // Apply standing exceptions.
   const { active, expired } = loadExceptions();
@@ -390,14 +434,13 @@ function mtime(f) {
   }
 }
 
-function localReminders(touched) {
+function localReminders(reasons) {
   const out = [];
   const lastCommit = parseInt(git(["log", "-1", "--format=%ct"]).trim() || "0", 10) * 1000;
-  const claudeTriggers = /^(client\/src\/types\/schema\.ts|electron\/main\.js|electron\/preload\.js|client\/src\/hooks\/(useKeyboardShortcuts|useFileOperations)\.ts|client\/src\/lib\/hotkeys\.ts)$/;
-  if (touched.some((f) => claudeTriggers.test(f))) {
+  if (reasons.length) {
     const m = mtime("CLAUDE.md");
     if (m === null) out.push("CLAUDE.md is missing; it's the project's context file.");
-    else if (m < lastCommit) out.push("This commit touches registries/menus/IPC/shortcuts/file format, but CLAUDE.md hasn't changed since the last commit. Does it still describe these correctly? (CLAUDE.md is gitignored, so this can't block.)");
+    else if (m < lastCommit) out.push(`This change adds or alters something CLAUDE.md describes (${reasons.join(", ")}), but CLAUDE.md hasn't changed since the last commit. Does it need a line? (CLAUDE.md is gitignored, so this can't block.)`);
   }
   const todo = mtime("sentinel-notes/TODO.md");
   if (todo !== null) {
@@ -418,7 +461,14 @@ function localMode() {
       if (mtime(path.join("sentinel-notes", b)) > todo) v.push({ rule: "TODO-SYNC", file: `sentinel-notes/${b}`, fix: "Brief changed after TODO.md; update the matching TODO line's status." });
     }
   }
-  const soft = localReminders(git(["diff", "--name-only", "HEAD"]).split("\n").filter(Boolean)).filter((r) => r.startsWith("This commit") || r.startsWith("CLAUDE.md"));
+  // Uncommitted working-tree changes against HEAD, judged the same way as a commit.
+  const changed = new Set(git(["diff", "--name-only", "HEAD"]).split("\n").filter(Boolean));
+  const wt = {};
+  const diffOf = (f) => (changed.has(f) ? (wt[f] = wt[f] || stagedDiff(f, false)) : { added: [], removed: [] });
+  const addedWT = (f) => diffOf(f).added.map((a) => a.text);
+  const changedWT = (f) => [...diffOf(f).added, ...diffOf(f).removed].map((a) => a.text);
+  const readWT = (f) => (fs.existsSync(f) ? fs.readFileSync(f, "utf8") : null);
+  const soft = localReminders(claudeReasons(addedWT, changedWT, fileFormatChanged(headContent, readWT))).filter((r) => r.startsWith("This change") || r.startsWith("CLAUDE.md"));
   for (const r of soft) console.error(`• Sentinel reminder: ${r}`);
   console.error("• Sentinel reminder: plain one-line TODO items can't be checked mechanically; if you finished one, move it to Done.");
   if (v.length) {
