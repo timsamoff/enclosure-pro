@@ -197,7 +197,10 @@ export default function Designer() {
   // BULLETPROOF SOLUTION: Create stable handler functions that use refs
   const handleMenuNew = useRef(() => {
     debugLog("Menu: New triggered (via ref)");
-    if (fileOperationsRef.current?.handleNew) {
+    // Like Quit/Open, ask via confirmDialogs: useFileOperations' own New-confirm state is never rendered.
+    if (fileOperationsRef.current?.isDirty) {
+      confirmDialogsRef.current?.setShowNewConfirmDialog(true);
+    } else if (fileOperationsRef.current?.handleNew) {
       fileOperationsRef.current.handleNew();
     }
   }).current;
