@@ -39,6 +39,9 @@ export interface ElectronAPI {
 
   // Native menu enabled state
   updateMenuState: (isEnclosureSelected: boolean) => void;
+
+  // Development mode check
+  isDevMode: () => Promise<boolean>;
   
   // Auto-updater functions
   getAppVersion: () => Promise<string>;
