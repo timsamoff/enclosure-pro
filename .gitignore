@@ -138,3 +138,10 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Local-only project notes and Sentinel audit scaffolding
+CLAUDE.md
+sentinel-notes/
+scratch/
+PROJECT_PROFILE.md
+Sentinel-Prompts/
