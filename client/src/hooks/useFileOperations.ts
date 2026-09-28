@@ -263,7 +263,6 @@ export function useFileOperations({
       }
     } catch (error: any) {
       if (error.message === 'User canceled save operation') {
-        console.log('Save was canceled by user');
         return false;
       }
       console.error('Save for open failed:', error);

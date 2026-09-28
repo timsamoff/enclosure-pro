@@ -52,7 +52,6 @@ export default function Designer() {
   // Wrap setSelectedComponent to track who's calling it
   const wrappedSetSelectedComponent = (id: string | null) => {
     debugLog("SET SELECTED COMPONENT CALLED:", id);
-    console.trace();
     setSelectedComponent(id);
   };
   

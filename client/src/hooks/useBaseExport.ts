@@ -256,15 +256,6 @@ export function useBaseExport({
         const pixelsPerMM = targetDPI / MM_PER_INCH; // DPI-aware pixels per mm
         const dpiScaleFactor = targetDPI / DPI_CONFIG.print; // Scale relative to 72 DPI
 
-        // DEBUG: Log the font sizes being used
-        console.log('Font sizes being used:', {
-          sideLabelPt: config.fonts.sideLabel.sizePt,
-          componentLabelPt: config.fonts.componentLabel.sizePt,
-          targetDPI: targetDPI,
-          sideLabelPixels: getCanvasFontSize(config.fonts.sideLabel.sizePt, targetDPI),
-          componentLabelPixels: getCanvasFontSize(config.fonts.componentLabel.sizePt, targetDPI)
-        });
-
         // Calculate actual canvas font sizes from point sizes
         const sideLabelCanvasSize = getCanvasFontSize(config.fonts.sideLabel.sizePt, targetDPI);
         const componentLabelCanvasSize = getCanvasFontSize(config.fonts.componentLabel.sizePt, targetDPI);
