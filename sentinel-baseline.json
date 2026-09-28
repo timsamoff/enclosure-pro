@@ -75,9 +75,6 @@
     "DEBUG|client/src/components/examples/EnclosureCanvas.tsx|console.log(\"Add component\", type, x, y);",
     "DOWNLOAD-URL|index.html|releases/download/v1.0.1/",
     "DOWNLOAD-URL|index.html|releases/download/v1.0.1/",
-    "DOWNLOAD-URL|index.html|releases/download/v1.0.1/",
-    "VERSION|client/src/components/AppIconMenu.tsx|const [appVersion, setAppVersion] = useState('1.0.0');",
-    "VERSION|client/src/components/BlankCanvas.tsx|appVersion = import.meta.env.APP_VERSION || \"1.1.0\"",
-    "VERSION|client/src/pages/Designer.tsx|appVersion=\"1.1.0-beta.1\""
+    "DOWNLOAD-URL|index.html|releases/download/v1.0.1/"
   ]
 }
