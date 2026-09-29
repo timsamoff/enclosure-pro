@@ -101,7 +101,7 @@ The same commands can be reached three ways:
 - **In-app project menu** (`FileDropdownMenu`).
 - **In-page keyboard handler** (`useKeyboardShortcuts`).
 
-Commands that need an open enclosure (save, save-as, export and zoom) are gated in the in-app menu and the keyboard handler by whether an enclosure is selected. The native menu is meant to follow the same state through the `app:update-menu-state` IPC call.
+Commands that need an open enclosure (new, save, save-as, export and zoom) are gated by whether an enclosure is selected in all three places: the in-app menu, the keyboard handler, and the native menu, which the renderer updates through `updateMenuState` (the `app:update-menu-state` IPC call). Open and Quit stay available on the start screen.
 
 ### Updates
 
