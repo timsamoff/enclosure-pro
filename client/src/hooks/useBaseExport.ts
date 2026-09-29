@@ -418,12 +418,15 @@ export function useBaseExport({
                   config.components.labelOffset * dpiScaleFactor
                 );
 
-                const labelText = component.rotation === 90 
-                  ? currentUnit === "metric"
+                // Same rule as the screen: width and height swap when the component and canvas
+                // rotations together turn the part 90°. imperialLabel is written "width × height".
+                const swapped = ((component.rotation || 0) + currentRotation) % 180 === 90;
+                const labelText = currentUnit === "metric"
+                  ? swapped
                     ? `${compData.height}mm×${compData.width}mm`
-                    : compData.imperialLabel
-                  : currentUnit === "metric"
-                    ? `${compData.width}mm×${compData.height}mm`
+                    : `${compData.width}mm×${compData.height}mm`
+                  : swapped
+                    ? compData.imperialLabel.split(" × ").reverse().join(" × ")
                     : compData.imperialLabel;
 
                 ctx.save();
