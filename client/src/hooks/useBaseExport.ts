@@ -1,5 +1,6 @@
 import { useCallback, type MutableRefObject } from "react";
-import { EnclosureType, ENCLOSURE_TYPES, COMPONENT_TYPES, getUnwrappedDimensions } from "@/types/schema";
+import { EnclosureType, EnclosureSide, ENCLOSURE_TYPES, COMPONENT_TYPES, getUnwrappedDimensions } from "@/types/schema";
+import { getRotatedSideLabel, calculateLabelPosition } from "@/lib/enclosureGeometry";
 
 interface UseBaseExportProps {
   enclosureTypeRef: React.MutableRefObject<EnclosureType>;
@@ -99,94 +100,6 @@ const getCanvasFontSize = (pointSize: number, dpi: number): number => {
   // Convert points to inches: points / 72 = inches
   // Convert inches to pixels: inches * dpi = pixels
   return (pointSize / 72) * dpi;
-};
-
-// Helper function for rotated side labels
-const getRotatedSideLabel = (side: string, rotation: number, rotatesLabels: boolean): string => {
-  if (!rotatesLabels || rotation === 0) {
-    return side;
-  }
-  
-  const rotationMap: Record<string, string> = {
-    'Front': 'Front',
-    'Left': 'Top',
-    'Top': 'Right', 
-    'Right': 'Bottom',
-    'Bottom': 'Left'
-  };
-  
-  return rotationMap[side] || side;
-};
-
-/**
- * Calculate label position for print/PDF export.
- * Mirrors the logic from UnwrappedCanvas.tsx's calculateLabelPosition.
- * 
- * @param centerX - Component center X in pixels
- * @param centerY - Component center Y in pixels
- * @param componentRotation - Component's own rotation (0° or 90°)
- * @param canvasRotation - User's canvas rotation (0° or 90°)
- * @param isRectangular - Whether component is rectangular
- * @param rectWidthPx - Rectangle width in pixels (for rectangular components)
- * @param rectHeightPx - Rectangle height in pixels (for rectangular components)
- * @param radiusPx - Circle radius in pixels (for circular components)
- * @param labelOffset - Offset distance from component edge
- */
-const calculateLabelPosition = (
-  centerX: number,
-  centerY: number,
-  componentRotation: number,
-  canvasRotation: number,
-  isRectangular: boolean,
-  rectWidthPx?: number,
-  rectHeightPx?: number,
-  radiusPx?: number,
-  labelOffset: number = 15
-): { x: number; y: number; textAngle: number } => {
-  
-  if (isRectangular && rectWidthPx !== undefined && rectHeightPx !== undefined) {
-    // Determine visual orientation based on component rotation
-    const visualWidthPx = componentRotation === 0 ? rectWidthPx : rectHeightPx;
-    const visualHeightPx = componentRotation === 0 ? rectHeightPx : rectWidthPx;
-    
-    let labelX = centerX;
-    let labelY = centerY;
-    
-    if (canvasRotation === 0) {
-      // Canvas not rotated: label below rectangle
-      labelX = centerX;
-      labelY = centerY + visualHeightPx / 2 + labelOffset;
-    } else { // canvasRotation === 90
-      // Canvas rotated 90°: label to the right of rectangle (which is visual bottom)
-      labelX = centerX + visualWidthPx / 2 + labelOffset;
-      labelY = centerY;
-    }
-    
-    // Keep text horizontal (counter-rotate by canvas rotation only)
-    const textAngle = canvasRotation === 0 ? 0 : -Math.PI / 2;
-    
-    return { x: labelX, y: labelY, textAngle };
-    
-  } else {
-    // Circles: label position depends only on canvas rotation
-    const circleRadius = radiusPx || 0;
-    
-    if (canvasRotation === 0) {
-      // Canvas not rotated: label below circle
-      return {
-        x: centerX,
-        y: centerY + circleRadius + labelOffset,
-        textAngle: 0
-      };
-    } else { // canvasRotation === 90
-      // Canvas rotated 90°: label to the right of circle
-      return {
-        x: centerX + circleRadius + labelOffset,
-        y: centerY,
-        textAngle: -Math.PI / 2
-      };
-    }
-  }
 };
 
 export function useBaseExport({
@@ -360,7 +273,7 @@ export function useBaseExport({
           const h = side.height;
 
           const displayLabel = rotatesLabels 
-            ? getRotatedSideLabel(originalLabel, currentRotation, rotatesLabels)
+            ? getRotatedSideLabel(originalLabel as EnclosureSide, currentRotation, rotatesLabels)
             : originalLabel;
 
           // Draw enclosure border with DPI-scaled line width

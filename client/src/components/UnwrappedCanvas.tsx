@@ -4,6 +4,7 @@ import { mmToFraction } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { snapZoom } from "@/lib/zoom";
+import { getRotatedSideLabel, getActualSideForDrag, calculateLabelPosition } from "@/lib/enclosureGeometry";
 
 interface UnwrappedCanvasProps {
   enclosureType: EnclosureType;
@@ -33,48 +34,6 @@ interface UnwrappedCanvasProps {
  * - Bottom side appears at Left
  * - Front stays as Front
  */
-const getRotatedSideLabel = (side: EnclosureSide, rotation: number, rotatesLabels: boolean): EnclosureSide => {
-  if (!rotatesLabels || rotation === 0) {
-    return side;
-  }
-  
-  const rotationMap: Record<EnclosureSide, EnclosureSide> = {
-    'Front': 'Front',
-    'Left': 'Top',
-    'Top': 'Right', 
-    'Right': 'Bottom',
-    'Bottom': 'Left'
-  };
-  
-  return rotationMap[side];
-};
-
-/**
- * Converts visual canvas position back to actual enclosure side when dragging.
- * This is the inverse of getRotatedSideLabel.
- * When canvas is rotated 90° clockwise and user drags to what looks like "Top",
- * they're actually placing on the "Right" side of the physical enclosure.
- */
-const getActualSideForDrag = (
-  canvasSide: EnclosureSide, 
-  currentRotation: number, 
-  rotatesLabels: boolean
-): EnclosureSide => {
-  if (!rotatesLabels || currentRotation === 0) {
-    return canvasSide;
-  }
-  
-  const reverseMap: Record<EnclosureSide, EnclosureSide> = {
-    'Front': 'Front',
-    'Top': 'Right',     // Visual Top = Actual Right
-    'Right': 'Bottom',  // Visual Right = Actual Bottom  
-    'Bottom': 'Left',   // Visual Bottom = Actual Left
-    'Left': 'Top'       // Visual Left = Actual Top
-  };
-  
-  return reverseMap[canvasSide];
-};
-
 /**
  * Calculate component z-order for rendering.
  * Components are sorted by:
@@ -131,77 +90,6 @@ const getRotatedLabelText = (
     return unit === "metric" 
       ? `${compData.drillSize}mm`
       : mmToFraction(compData.drillSize);
-  }
-};
-
-/**
- * Calculate label position to always appear at the visual bottom of a component.
- * 
- * For rectangles:
- * - At component 0° + canvas 0°: label below bottom edge (original bottom)
- * - At component 90° + canvas 0°: label below right edge (rotated to bottom)
- * - At component 0° + canvas 90°: label below right edge (canvas rotated)
- * - At component 90° + canvas 90°: label below top edge (both rotations = 180° total)
- * 
- * The key insight: we need to find which edge is visually at the bottom after
- * applying BOTH component rotation AND canvas rotation.
- */
-const calculateLabelPosition = (
-  centerX: number,
-  centerY: number,
-  componentRotation: number, // Always 0° or 90°
-  canvasRotation: number,    // Always 0° or 90°
-  zoom: number,
-  isRectangular: boolean,
-  rectWidthPx?: number,
-  rectHeightPx?: number,
-  radiusPx?: number
-): { x: number; y: number; textAngle: number } => {
-  const baseOffset = 15;
-  const zoomedOffset = baseOffset / zoom;
-  
-  if (isRectangular && rectWidthPx !== undefined && rectHeightPx !== undefined) {
-    // Determine visual orientation based on component rotation
-    const visualWidthPx = componentRotation === 0 ? rectWidthPx : rectHeightPx;
-    const visualHeightPx = componentRotation === 0 ? rectHeightPx : rectWidthPx;
-    
-    let labelX = centerX;
-    let labelY = centerY;
-    
-    if (canvasRotation === 0) {
-      // Canvas not rotated: label below rectangle
-      labelX = centerX;
-      labelY = centerY + visualHeightPx / 2 + zoomedOffset;
-    } else { // canvasRotation === 90
-      // Canvas rotated 90°: label to the right of rectangle (which is visual bottom)
-      labelX = centerX + visualWidthPx / 2 + zoomedOffset;
-      labelY = centerY;
-    }
-    
-    // Keep text horizontal (counter-rotate by canvas rotation only)
-    const textAngle = (-canvasRotation * Math.PI) / 180;
-    
-    return { x: labelX, y: labelY, textAngle };
-    
-  } else {
-    // Circles: label position depends only on canvas rotation
-    const circleRadius = radiusPx || 0;
-    
-    if (canvasRotation === 0) {
-      // Canvas not rotated: label below circle
-      return {
-        x: centerX,
-        y: centerY + circleRadius + zoomedOffset,
-        textAngle: 0
-      };
-    } else { // canvasRotation === 90
-      // Canvas rotated 90°: label to the right of circle
-      return {
-        x: centerX + circleRadius + zoomedOffset,
-        y: centerY,
-        textAngle: -Math.PI / 2
-      };
-    }
   }
 };
 
@@ -903,10 +791,11 @@ export default function UnwrappedCanvas({
             centerY,
             component.rotation || 0,  // Component's own rotation (0° or 90°)
             rotation,                  // Canvas rotation (0° or 90°)
-            zoom,
             true,                      // Is rectangular
             rectWidthPx,
-            rectHeightPx
+            rectHeightPx,
+            undefined,
+            15 / zoom
           );
           
           ctx.save();
@@ -1003,11 +892,11 @@ export default function UnwrappedCanvas({
             centerY,
             component.rotation || 0,  // Component's own rotation (0° or 90°)
             rotation,                  // Canvas rotation (0° or 90°)
-            zoom,
             false,                     // Is circular
             undefined,
             undefined,
-            radiusPx
+            radiusPx,
+            15 / zoom
           );
           
           ctx.save();
