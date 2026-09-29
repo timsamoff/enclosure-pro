@@ -781,13 +781,14 @@ ipcMain.handle('test:simulate-update', () => {
                 cancelId: 1
               }).then((restartResult) => {
                 if (restartResult.response === 0) {
-                  // console.log('🔧 User chose to restart (simulation only - no actual restart)');
-                  dialog.showMessageBox(mainWindow, {
-                    type: 'info',
-                    title: 'TEST - Simulation Complete',
-                    message: `In a real update, the app would now restart with version ${nextVersion}.`,
-                    buttons: ['OK']
-                  });
+                  // Stand in for the post-update relaunch: mark an older last-seen version and reload,
+                  // so the renderer's real "Updated to vX" toast (useWhatsNewToast) runs as it would after an update.
+                  if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents
+                      .executeJavaScript("localStorage.setItem('enclosurePro.lastSeenVersion', '0.0.0-simulated')")
+                      .then(() => mainWindow.reload())
+                      .catch((err) => console.error('Simulated relaunch failed:', err));
+                  }
                 }
               });
             }

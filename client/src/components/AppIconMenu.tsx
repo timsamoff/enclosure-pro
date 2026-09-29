@@ -1,5 +1,5 @@
 import { SiInstagram } from "react-icons/si";
-import { Book, HandCoins, Download, RefreshCw, MessageSquare } from "lucide-react";
+import { Book, HandCoins, Download, RefreshCw, MessageSquare, ScrollText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,7 @@ import enclosureProIcon from "@/../../images/EnclosureProIcon.svg";
 import { useEffect, useState } from "react";
 import ProgressDialog from "@/components/ProgressDialog";
 import { useFocusManagement } from "@/hooks/useFocusManagement";
+import { RELEASES_URL } from "@/hooks/useWhatsNewToast";
 
 export default function AppIconMenu() {
   const { releaseFocus } = useFocusManagement();
@@ -182,6 +183,21 @@ export default function AppIconMenu() {
             >
               <Book className="w-4 h-4" />
               <span>Documentation</span>
+            </a>
+          </DropdownMenuItem>
+
+          {/* Release Notes */}
+          <DropdownMenuItem asChild>
+            <a
+              href={RELEASES_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 cursor-pointer"
+              data-testid="link-release-notes"
+              onClick={handleMenuItemClick}
+            >
+              <ScrollText className="w-4 h-4" />
+              <span>Release Notes</span>
             </a>
           </DropdownMenuItem>
 

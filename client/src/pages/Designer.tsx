@@ -29,9 +29,11 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { usePDFExport } from "@/hooks/usePDFExport";
 import { useComponentManagement } from "@/hooks/useComponentManagement";
 import { useConfirmDialogs } from "@/hooks/useConfirmDialogs";
+import { useWhatsNewToast } from "@/hooks/useWhatsNewToast";
 
 export default function Designer() {
   const { toast } = useToast();
+  useWhatsNewToast();
   
   // Debug logging
   const debugLog = (..._args: unknown[]) => {
