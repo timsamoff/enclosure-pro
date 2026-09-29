@@ -1,3 +1,39 @@
 #!/bin/sh
 # Sentinel pre-push: full-repo scan against sentinel-baseline.json. Source: sentinel/check.js
-exec node "$(git rev-parse --show-toplevel)/sentinel/check.js" --full
+# Also prints a loud reminder when a v* tag is pushed: CI creates the GitHub release as a
+# DRAFT, which stays invisible to the website and the auto-updater until published by hand.
+
+remote_url="$2"
+tags=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/tags/v*)
+      # A deleted tag arrives with an all-zero local sha
+      case "$local_sha" in 0000000000000000000000000000000000000000) ;; *) tags="$tags ${remote_ref#refs/tags/}" ;; esac
+      ;;
+  esac
+done
+
+node "$(git rev-parse --show-toplevel)/sentinel/check.js" --full || exit 1
+
+if [ -n "$tags" ]; then
+  releases_url="$(printf '%s' "$remote_url" | sed -e 's#^git@github.com:#https://github.com/#' -e 's#\.git$##')/releases"
+  cat >&2 <<EOF
+
+################################################################################
+##
+##   RELEASE TAG PUSHED:$tags
+##
+##   CI will build it and create a DRAFT release. It is NOT public yet:
+##   the website download buttons and in-app auto-updates still see the
+##   previous version until you publish it.
+##
+##   When the CI run finishes (~10 min), open:
+##     $releases_url
+##   check the files (Setup .exe, .dmg, .zip, .AppImage, latest*.yml),
+##   then click "Publish release".
+##
+################################################################################
+
+EOF
+fi
