@@ -161,6 +161,32 @@ function categoriesFrom(schema) {
   return set;
 }
 
+// COMPONENT-SIZE: every component needs a valid mm size, since all labels (mm and inch) derive from it.
+function componentSizeViolations(schema) {
+  const v = [];
+  const range = blockRange(schema, "COMPONENT_TYPES");
+  if (!range) return [{ rule: "COMPONENT-SIZE", file: "client/src/types/schema.ts", text: "COMPONENT_TYPES", fix: "Couldn't find the COMPONENT_TYPES block to check." }];
+  const block = schema.replace(/\r\n/g, "\n").split("\n").slice(range[0] - 1, range[1]).join("\n");
+  const num = (body, key) => {
+    const m = body.match(new RegExp(`\\b${key}\\s*:\\s*(-?[\\d.]+)`));
+    return m ? parseFloat(m[1]) : NaN;
+  };
+  for (const m of block.matchAll(/["']([\w-]+)["']\s*:\s*\{([^{}]*)\}/g)) {
+    const [, key, body] = m;
+    const shape = (body.match(/shape\s*:\s*["'](\w+)["']/) || [])[1];
+    if (shape === "rectangle" || shape === "square") {
+      const w = num(body, "width"), h = num(body, "height");
+      if (!(w > 0) || !(h > 0)) v.push({ rule: "COMPONENT-SIZE", file: "client/src/types/schema.ts", text: key, fix: `"${key}" is rectangular but needs a positive width and height in mm (has width ${w}, height ${h}).` });
+    } else if (shape === "circle") {
+      const d = num(body, "drillSize");
+      if (!(d > 0)) v.push({ rule: "COMPONENT-SIZE", file: "client/src/types/schema.ts", text: key, fix: `"${key}" is round but needs a positive drillSize in mm (has ${d}).` });
+    } else {
+      v.push({ rule: "COMPONENT-SIZE", file: "client/src/types/schema.ts", text: key, fix: `"${key}" needs shape "circle" or "rectangle" so its size can be checked.` });
+    }
+  }
+  return v;
+}
+
 function preloadKeys(preload) {
   const start = preload.indexOf("exposeInMainWorld");
   const body = start >= 0 ? preload.slice(start) : preload;
@@ -185,6 +211,10 @@ function lineViolations(file, lines, ctx) {
     // COLOR: exempt only inside the MANUFACTURERS data block of schema.ts (brand colors are data, not theme).
     if (COLOR_RE.test(text) && !inRange(mfr, line)) {
       v.push({ rule: "COLOR", file, line, text: t, fix: "Use a Tailwind token class or a shared color constant instead of a hardcoded color (see brand-color-token-design-brief.md)." });
+    }
+    // INCH-LABEL: inch labels are computed from mm (mmToDrillBit); never hand-typed.
+    if (file === "client/src/types/schema.ts" && /\bimperialLabel\b/.test(text)) {
+      v.push({ rule: "INCH-LABEL", file, line, text: t, fix: "Don't hand-type inch labels. Remove imperialLabel; the inch drill bit is computed from the mm size by mmToDrillBit in lib/enclosureGeometry.ts." });
     }
     if (DEBUG_RE.test(text)) {
       v.push({ rule: "DEBUG", file, line, text: t, fix: "Remove console.trace/console.log before committing (comment it out or delete it)." });
@@ -328,6 +358,8 @@ function stagedMode() {
   if (["electron/main.js", "electron/preload.js", "client/src/pages/Designer.tsx"].some(has)) {
     blocking.push(...menuViolations(stagedContent("electron/main.js") || "", preload, stagedContent("client/src/pages/Designer.tsx") || ""));
   }
+
+  if (has("client/src/types/schema.ts")) blocking.push(...componentSizeViolations(schema));
 
   // EXT (Part 0b): first-ever file extension.
   const known = new Set(fs.existsSync(EXT_MANIFEST) ? fs.readFileSync(EXT_MANIFEST, "utf8").split(/\r?\n/).filter(Boolean) : []);
@@ -494,6 +526,7 @@ function fullViolations() {
     v.push(...lineViolations(f, lines, { ...ctx, fullContent: f.endsWith("schema.ts") ? content : null }));
   }
   v.push(...menuViolations(headContent("electron/main.js") || "", preloadSrc, headContent("client/src/pages/Designer.tsx") || ""));
+  v.push(...componentSizeViolations(schema));
 
   // D5: website fallback download links should point at the current version.
   const version = JSON.parse(headContent("package.json")).version;

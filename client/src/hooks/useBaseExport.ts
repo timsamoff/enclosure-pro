@@ -1,6 +1,6 @@
 import { useCallback, type MutableRefObject } from "react";
 import { EnclosureType, EnclosureSide, ENCLOSURE_TYPES, COMPONENT_TYPES, getUnwrappedDimensions } from "@/types/schema";
-import { getRotatedSideLabel, calculateLabelPosition } from "@/lib/enclosureGeometry";
+import { getRotatedSideLabel, calculateLabelPosition, getComponentLabelText } from "@/lib/enclosureGeometry";
 
 interface UseBaseExportProps {
   enclosureTypeRef: React.MutableRefObject<EnclosureType>;
@@ -418,16 +418,7 @@ export function useBaseExport({
                   config.components.labelOffset * dpiScaleFactor
                 );
 
-                // Same rule as the screen: width and height swap when the component and canvas
-                // rotations together turn the part 90°. imperialLabel is written "width × height".
-                const swapped = ((component.rotation || 0) + currentRotation) % 180 === 90;
-                const labelText = currentUnit === "metric"
-                  ? swapped
-                    ? `${compData.height}mm×${compData.width}mm`
-                    : `${compData.width}mm×${compData.height}mm`
-                  : swapped
-                    ? compData.imperialLabel.split(" × ").reverse().join(" × ")
-                    : compData.imperialLabel;
+                const labelText = getComponentLabelText(compData, component.rotation || 0, currentRotation, currentUnit);
 
                 ctx.save();
                 ctx.translate(labelPos.x, labelPos.y);
@@ -508,9 +499,7 @@ export function useBaseExport({
                   config.components.labelOffset * dpiScaleFactor
                 );
 
-                const drillText = currentUnit === "metric"
-                  ? `${compData.drillSize.toFixed(1)}mm`
-                  : compData.imperialLabel;
+                const drillText = getComponentLabelText(compData, component.rotation || 0, currentRotation, currentUnit);
 
                 ctx.save();
                 ctx.translate(labelPos.x, labelPos.y);

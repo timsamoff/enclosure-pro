@@ -1,6 +1,6 @@
 // Geometry shared by the on-screen canvas (UnwrappedCanvas) and the PDF export (useBaseExport),
 // so the two renderers can't drift apart on where things go.
-import type { EnclosureSide } from "@/types/schema";
+import type { ComponentTypeData, EnclosureSide, MeasurementUnit } from "@/types/schema";
 
 // When the canvas is rotated 90° clockwise, enclosures with rotatesLabels show each side under
 // the name of the side that now occupies its screen position.
@@ -64,4 +64,43 @@ export function calculateLabelPosition(
   return canvasRotation === 0
     ? { x: centerX, y: centerY + r + offset, textAngle: 0 }
     : { x: centerX + r + offset, y: centerY, textAngle: -Math.PI / 2 };
+}
+
+/**
+ * Inch drill-bit label for a millimeter size: the standard fractional bit (Starrett chart, 1/64"
+ * steps) at or just below the size. Rounding down is deliberate: a slightly small hole can be
+ * opened up afterward, an oversized one can't (Tim, 2026-09-29). Millimeters are the source of truth.
+ */
+export function mmToDrillBit(mm: number): string {
+  const sixtyFourths = Math.floor((mm / 25.4) * 64 + 1e-9);
+  let num = sixtyFourths;
+  let den = 64;
+  while (num % 2 === 0 && den > 1) {
+    num /= 2;
+    den /= 2;
+  }
+  const whole = Math.floor(num / den);
+  const rest = num % den;
+  if (rest === 0) return `${whole}"`;
+  return whole ? `${whole} ${rest}/${den}"` : `${rest}/${den}"`;
+}
+
+/**
+ * A component's dimension label, identical on the canvas, in the PDF and in the Components menu:
+ * rectangles swap to height×width when component + canvas rotation turns them 90°; inch values
+ * come from mmToDrillBit (never hand-typed); round holes show one decimal in mm.
+ */
+export function getComponentLabelText(
+  compData: ComponentTypeData,
+  componentRotation: number,
+  canvasRotation: number,
+  unit: MeasurementUnit
+): string {
+  if (compData.shape === "rectangle" || compData.shape === "square") {
+    const swapped = (componentRotation + canvasRotation) % 180 === 90;
+    const w = swapped ? compData.height! : compData.width!;
+    const h = swapped ? compData.width! : compData.height!;
+    return unit === "metric" ? `${w}mm×${h}mm` : `${mmToDrillBit(w)}×${mmToDrillBit(h)}`;
+  }
+  return unit === "metric" ? `${compData.drillSize.toFixed(1)}mm` : mmToDrillBit(compData.drillSize);
 }

@@ -1,4 +1,5 @@
 import { ComponentType, COMPONENT_TYPES } from "@/types/schema";
+import { getComponentLabelText } from "@/lib/enclosureGeometry";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, ChevronRight } from "lucide-react";
@@ -109,40 +110,9 @@ export default function ComponentPalette({
     };
   }, [categories]);
 
-  const formatDrillSize = (type: ComponentType) => {
-    const compData = COMPONENT_TYPES[type];
-    
-    // Handle rectangular components (Footprint Guides, Slide Potentiometers, etc.)
-    if (compData.shape === 'rectangle' || compData.shape === 'square') {
-      if (unit === "metric") {
-        // Metric mode for rectangular components
-        return `${compData.width || 0}mm×${compData.height || 0}mm`;
-      } else {
-        // Imperial mode for rectangular components - use imperialLabel if available
-        if (compData.imperialLabel && compData.imperialLabel !== "") {
-          return compData.imperialLabel;
-        }
-        // Fallback: convert mm to inches
-        const widthInches = (compData.width || 0) / 25.4;
-        const heightInches = (compData.height || 0) / 25.4;
-        return `${widthInches.toFixed(3)}"×${heightInches.toFixed(3)}"`;
-      }
-    }
-    
-    // Handle circular components with drill size
-    if (unit === "metric") {
-      // Metric mode for circular components
-      return `${(compData.drillSize || 0).toFixed(1)}mm`;
-    } else {
-      // Imperial mode for circular components - use imperialLabel if available
-      if (compData.imperialLabel && compData.imperialLabel !== "") {
-        return compData.imperialLabel;
-      }
-      // Fallback: convert mm to inches
-      const inches = (compData.drillSize || 0) / 25.4;
-      return `${inches.toFixed(3)}"`;
-    }
-  };
+  // Same label as the canvas and the PDF (unrotated): mm, or the standard drill bit in inches.
+  const formatDrillSize = (type: ComponentType) =>
+    getComponentLabelText(COMPONENT_TYPES[type], 0, 0, unit);
 
   const handleBackToCategories = () => {
     setSelectedCategory(null);

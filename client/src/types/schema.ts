@@ -259,7 +259,6 @@ export function convertLegacyProjectState(projectState: any): any {
 export interface ComponentTypeData {
   name: string;
   drillSize: number;
-  imperialLabel: string;
   category: string;
   shape?: "circle" | "rectangle" | "square";
   width?: number;
@@ -267,44 +266,43 @@ export interface ComponentTypeData {
 }
 
 export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
-  "pot-9mm": { name: "9mm Potentiometer", drillSize: 6.0, imperialLabel: '1/4"', category: "Potentiometers", shape: "circle" },
-  "pot-16mm": { name: "16mm Potentiometer", drillSize: 7.0, imperialLabel: '9/32"', category: "Potentiometers", shape: "circle" },
-  "pot-17mm": { name: "17mm Potentiometer", drillSize: 7.5, imperialLabel: '19/64"', category: "Potentiometers", shape: "circle" },
-  "pot-24mm": { name: "24mm Potentiometer", drillSize: 8.0, imperialLabel: '5/16"', category: "Potentiometers", shape: "circle" },
-  "eighth-jack": { name: '1/8" Jack', drillSize: 6.0, imperialLabel: '1/4"', category: "Jacks", shape: "circle" },
-  "quarter-jack": { name: '1/4" Jack', drillSize: 10.0, imperialLabel: '3/8"', category: "Jacks", shape: "circle" },
-  "dc-jack-2": { name: "2 Pin DC Jack", drillSize: 8.0, imperialLabel: '5/16"', category: "Jacks", shape: "circle" },
-  "dc-jack-3": { name: "3 Pin DC Jack", drillSize: 12.0, imperialLabel: '1/2"', category: "Jacks", shape: "circle" },
-  "xlr-jack": { name: "XLR Jack", drillSize: 15.0, imperialLabel: '5/8"', category: "Jacks", shape: "circle" },
-  "footswitch": { name: "Footswitch", drillSize: 12.0, imperialLabel: '1/2"', category: "Switches", shape: "circle" },
-  "toggle": { name: "Toggle Switch", drillSize: 7.0, imperialLabel: '1/4"', category: "Switches", shape: "circle" },
-  "push-button": { name: "Push Button", drillSize: 8.0, imperialLabel: '5/16"', category: "Switches", shape: "circle" },
-  "rocker-switch": { name: "Rocker Switch", drillSize: 12.0, imperialLabel: '1/2"', category: "Switches", shape: "circle" },
-  "momentary-button": { name: "Momentary Button", drillSize: 6.0, imperialLabel: '1/4"', category: "Switches", shape: "circle" },
-  "rotary": { name: "Rotary Switch", drillSize: 10.0, imperialLabel: '3/8"', category: "Switches", shape: "circle" },
-  "led-3mm-bezel": { name: "3mm LED (bezel)", drillSize: 7.0, imperialLabel: '1/4"', category: "LEDs", shape: "circle" },
-  "led-3mm-no-bezel": { name: "3mm LED (no bezel)", drillSize: 3.0, imperialLabel: '1/8"', category: "LEDs", shape: "circle" },
-  "led-5mm-bezel": { name: "5mm LED (bezel)", drillSize: 8.0, imperialLabel: '5/16"', category: "LEDs", shape: "circle" },
-  "led-5mm-no-bezel": { name: "5mm LED (no bezel)", drillSize: 5.0, imperialLabel: '3/16"', category: "LEDs", shape: "circle" },
-  "jewel-light": { name: "Jewel Light Fixture", drillSize: 16.0, imperialLabel: '5/8"', category: "Fixtures", shape: "circle" },
-  "pilot-light": { name: "Pilot Light Fixture", drillSize: 23.0, imperialLabel: '7/8"', category: "Fixtures", shape: "circle" },
-  "screw-3": { name: "M3 Screw", drillSize: 3, imperialLabel: '1/8"', category: "Screws", shape: "circle" },
-  "screw-6": { name: "#6-32 Screw", drillSize: 3.5, imperialLabel: '5/8"', category: "Screws", shape: "circle" },
-  "screw-4": { name: "M4 Screw", drillSize: 4, imperialLabel: '5/32"', category: "Screws", shape: "circle" },
+  "pot-9mm": { name: "9mm Potentiometer", drillSize: 6.0, category: "Potentiometers", shape: "circle" },
+  "pot-16mm": { name: "16mm Potentiometer", drillSize: 7.0, category: "Potentiometers", shape: "circle" },
+  "pot-17mm": { name: "17mm Potentiometer", drillSize: 7.5, category: "Potentiometers", shape: "circle" },
+  "pot-24mm": { name: "24mm Potentiometer", drillSize: 8.0, category: "Potentiometers", shape: "circle" },
+  "eighth-jack": { name: '1/8" Jack', drillSize: 6.0, category: "Jacks", shape: "circle" },
+  "quarter-jack": { name: '1/4" Jack', drillSize: 10.0, category: "Jacks", shape: "circle" },
+  "dc-jack-2": { name: "2 Pin DC Jack", drillSize: 8.0, category: "Jacks", shape: "circle" },
+  "dc-jack-3": { name: "3 Pin DC Jack", drillSize: 12.0, category: "Jacks", shape: "circle" },
+  "xlr-jack": { name: "XLR Jack", drillSize: 15.0, category: "Jacks", shape: "circle" },
+  "footswitch": { name: "Footswitch", drillSize: 12.0, category: "Switches", shape: "circle" },
+  "toggle": { name: "Toggle Switch", drillSize: 7.0, category: "Switches", shape: "circle" },
+  "push-button": { name: "Push Button", drillSize: 8.0, category: "Switches", shape: "circle" },
+  "rocker-switch": { name: "Rocker Switch", drillSize: 12.0, category: "Switches", shape: "circle" },
+  "momentary-button": { name: "Momentary Button", drillSize: 6.0, category: "Switches", shape: "circle" },
+  "rotary": { name: "Rotary Switch", drillSize: 10.0, category: "Switches", shape: "circle" },
+  "led-3mm-bezel": { name: "3mm LED (bezel)", drillSize: 7.0, category: "LEDs", shape: "circle" },
+  "led-3mm-no-bezel": { name: "3mm LED (no bezel)", drillSize: 3.0, category: "LEDs", shape: "circle" },
+  "led-5mm-bezel": { name: "5mm LED (bezel)", drillSize: 8.0, category: "LEDs", shape: "circle" },
+  "led-5mm-no-bezel": { name: "5mm LED (no bezel)", drillSize: 5.0, category: "LEDs", shape: "circle" },
+  "jewel-light": { name: "Jewel Light Fixture", drillSize: 16.0, category: "Fixtures", shape: "circle" },
+  "pilot-light": { name: "Pilot Light Fixture", drillSize: 23.0, category: "Fixtures", shape: "circle" },
+  "screw-3": { name: "M3 Screw", drillSize: 3, category: "Screws", shape: "circle" },
+  "screw-6": { name: "#6-32 Screw", drillSize: 3.5, category: "Screws", shape: "circle" },
+  "screw-4": { name: "M4 Screw", drillSize: 4, category: "Screws", shape: "circle" },
   
   // Slide Potentiometers - Rectangular components
-  "slide-15": { name: "15mm Slider", drillSize: 0, imperialLabel: '5/32" × 19/32"', category: "Slide Potentiometers", shape: "rectangle", width: 4, height: 15 },
-  "slide-20": { name: "20mm Slider", drillSize: 0, imperialLabel: '5/32" × 25/32"', category: "Slide Potentiometers", shape: "rectangle", width: 4, height: 20 },
-  "slide-30": { name: "30mm Slider", drillSize: 0, imperialLabel: '5/32" × 1 3/16"', category: "Slide Potentiometers", shape: "rectangle", width: 4, height: 30 },
-  "slide-45": { name: "45mm Slider", drillSize: 0, imperialLabel: '5/32" × 1 49/64"', category: "Slide Potentiometers", shape: "rectangle", width: 4, height: 45 },
-  "slide-60": { name: "60mm Slider", drillSize: 0, imperialLabel: '5/32" × 2 23/64"', category: "Slide Potentiometers", shape: "rectangle", width: 4, height: 60 },
-  "slide-100": { name: "100mm Slider", drillSize: 0, imperialLabel: '5/32" × 3 15/16"', category: "Slide Potentiometers", shape: "rectangle", width: 4, height: 100 },
+  "slide-15": { name: "15mm Slider", drillSize: 0, category: "Slide Potentiometers", shape: "rectangle", width: 4, height: 15 },
+  "slide-20": { name: "20mm Slider", drillSize: 0, category: "Slide Potentiometers", shape: "rectangle", width: 4, height: 20 },
+  "slide-30": { name: "30mm Slider", drillSize: 0, category: "Slide Potentiometers", shape: "rectangle", width: 4, height: 30 },
+  "slide-45": { name: "45mm Slider", drillSize: 0, category: "Slide Potentiometers", shape: "rectangle", width: 4, height: 45 },
+  "slide-60": { name: "60mm Slider", drillSize: 0, category: "Slide Potentiometers", shape: "rectangle", width: 4, height: 60 },
+  "slide-100": { name: "100mm Slider", drillSize: 0, category: "Slide Potentiometers", shape: "rectangle", width: 4, height: 100 },
   
   // Footprint Guides
   "spst-toggle": { 
     name: "SPST Toggle",
     drillSize: 0, 
-    imperialLabel: '17/64" × 1/2"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 6.8, 
@@ -313,7 +311,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "spst-mini": { 
     name: "SPST Mini Toggle", 
     drillSize: 0, 
-    imperialLabel: '1/4" × 3/8"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 6.35, 
@@ -322,7 +319,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "spst-slide": { 
     name: "SPDT Slide", 
     drillSize: 0, 
-    imperialLabel: '15/64" × 1/2"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 6, 
@@ -331,7 +327,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "dpdt-toggle": { 
     name: "DPDT Toggle", 
     drillSize: 0, 
-    imperialLabel: '29/64" × 1/2"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 11.43, 
@@ -340,7 +335,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "dpdt-vintage": { 
     name: "Vintage DPDT", 
     drillSize: 0, 
-    imperialLabel: '35/64" × 35/64"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 14, 
@@ -349,7 +343,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "dpdt-slide": { 
     name: "Mini DPDT Slide", 
     drillSize: 0, 
-    imperialLabel: '2/5" x 63/100"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 10, 
@@ -358,7 +351,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "3pdt-generic": { 
     name: "Generic 3PDT", 
     drillSize: 0,
-    imperialLabel: '45/64" × 43/64"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 18, 
@@ -367,7 +359,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "3pdt-gorva": { 
     name: "Gorva 3PDT", 
     drillSize: 0, 
-    imperialLabel: '43/64" × 21/32"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 17, 
@@ -376,7 +367,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "3pdt-toggle": { 
     name: "3PDT Toggle", 
     drillSize: 0, 
-    imperialLabel: '25/64" × 33/64"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 10, 
@@ -385,7 +375,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "4pdt-generic": { 
     name: "Generic 4PDT", 
     drillSize: 0, 
-    imperialLabel: '51/64" × 43/64"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 20, 
@@ -394,7 +383,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "4pdt-vintage": { 
     name: "Vintage 4PDT", 
     drillSize: 0, 
-    imperialLabel: '45/64" × 45/64"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 18, 
@@ -403,7 +391,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "5pdt-generic": { 
     name: "Generic 5PDT", 
     drillSize: 0, 
-    imperialLabel: '57/64" × 43/64"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 22.5, 
@@ -412,7 +399,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "dip-2": { 
     name: "2-Pos DIP", 
     drillSize: 0, 
-    imperialLabel: '25/64" x 13/64"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 10, 
@@ -421,7 +407,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "dip-4": { 
     name: "4-Pos DIP", 
     drillSize: 0, 
-    imperialLabel: '29/64" x 13/64"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 11.6, 
@@ -430,42 +415,36 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "rotary-1": { 
     name: "1P4T Rotary", 
     drillSize: 10, 
-    imperialLabel: '25/64"', 
     category: "Footprint Guides", 
     shape: "circle",
   },
   "rotary-2": { 
     name: "2P6T Rotary", 
     drillSize: 13, 
-    imperialLabel: '33/64"', 
     category: "Footprint Guides", 
     shape: "circle",
   },
   "pushbutton-momentary": { 
     name: "Momentary Pushbutton", 
     drillSize: 6, 
-    imperialLabel: '15/64"', 
     category: "Footprint Guides", 
     shape: "circle",
   },
   "3pdt-washer": { 
     name: "Generic 3PDT Washer", 
     drillSize: 17.2, 
-    imperialLabel: '43/64"', 
     category: "Footprint Guides", 
     shape: "circle",
   },
   "3pdt-nut": { 
     name: "3PDT Aluminum Nut", 
     drillSize: 18.9, 
-    imperialLabel: '3/4"', 
     category: "Footprint Guides", 
     shape: "circle",
   },
   "3pdt-dress": { 
     name: "3PDT Dress Nut", 
     drillSize: 19.6, 
-    imperialLabel: '49/64"', 
     category: "Footprint Guides", 
     shape: "circle",
   },
@@ -474,105 +453,90 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "pot-7": { 
     name: "7mm Potentiometer", 
     drillSize: 7, 
-    imperialLabel: '9/32"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "pot-9": { 
     name: "9mm Potentiometer", 
     drillSize: 9, 
-    imperialLabel: '23/64"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "pot-10": { 
     name: "10mm Potentiometer", 
     drillSize: 10, 
-    imperialLabel: '25/64"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "pot-11": { 
     name: "11mm Potentiometer", 
     drillSize: 11, 
-    imperialLabel: '7/16"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "pot-16": { 
     name: "16mm Potentiometer", 
     drillSize: 16, 
-    imperialLabel: '5/8"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "pot-17": { 
     name: "17mm Potentiometer", 
     drillSize: 17, 
-    imperialLabel: '43/64"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "pot-18": { 
     name: "18mm Potentiometer", 
     drillSize: 18, 
-    imperialLabel: '45/64"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "pot-20": { 
     name: "20mm Potentiometer", 
     drillSize: 20, 
-    imperialLabel: '13/16"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "pot-24": { 
     name: "24mm Potentiometer", 
     drillSize: 24, 
-    imperialLabel: '15/16"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "pot-27": { 
     name: "27mm Potentiometer", 
     drillSize: 27, 
-    imperialLabel: '1 1/16"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "pot-30": { 
     name: "30mm Potentiometer", 
     drillSize: 30, 
-    imperialLabel: '1 3/16"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "pot-35": { 
     name: "35mm Potentiometer", 
     drillSize: 35, 
-    imperialLabel: '1 3/8"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "jack-mono-open": { 
     name: '1/4" Mono Jack (Open)', 
     drillSize: 17.5, 
-    imperialLabel: '11/16"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "jack-stereo-open": { 
     name: '1/4" Stereo Jack (Open)', 
     drillSize: 19.05, 
-    imperialLabel: '3/4"', 
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "jack-mono-enclosed": { 
     name: '1/4" Jack (Enclosed)', 
     drillSize: 0, 
-    imperialLabel: '25/32" x 39/64"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 20, 
@@ -581,7 +545,6 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "jack-mono-lumberg": { 
     name: '1/4" Jack (Lumberg)', 
     drillSize: 0, 
-    imperialLabel: '37/64" x 37/64"', 
     category: "Footprint Guides", 
     shape: "rectangle", 
     width: 14.75, 
@@ -590,107 +553,93 @@ export const COMPONENT_TYPES: Record<string, ComponentTypeData> = {
   "knob-10": { 
     name: '10mm Knob', 
     drillSize: 10, 
-    imperialLabel: '25/64"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-125": { 
     name: '12.5mm Knob', 
     drillSize: 12.5, 
-    imperialLabel: '1/2"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-135": { 
     name: '13.5mm Knob', 
     drillSize: 13.5, 
-    imperialLabel: '17/32"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-16": { 
     name: '16mm Knob', 
     drillSize: 16, 
-    imperialLabel: '5/8"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-19": { 
     name: '19mm Knob', 
     drillSize: 19, 
-    imperialLabel: '3/4"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-20": { 
     name: '20mm Knob', 
     drillSize: 20, 
-    imperialLabel: '13/16"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-22": { 
     name: '22mm Knob', 
     drillSize: 22, 
-    imperialLabel: '7/8"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-25": { 
     name: '25mm Knob', 
     drillSize: 25, 
-    imperialLabel: '1"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-29": { 
     name: '29mm Knob', 
     drillSize: 29, 
-    imperialLabel: '1 1/8"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-32": { 
     name: '32mm Knob', 
     drillSize: 32, 
-    imperialLabel: '1 1/4"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-35": { 
     name: '35mm Knob', 
     drillSize: 35, 
-    imperialLabel: '1 3/8"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-40": { 
     name: '40mm Knob', 
     drillSize: 40, 
-    imperialLabel: '1 9/16"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-52": { 
     name: '52mm Knob', 
     drillSize: 52, 
-    imperialLabel: '2 1/16"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
   "knob-61": { 
     name: '61mm Knob', 
     drillSize: 61, 
-    imperialLabel: '2 3/8"',
     category: "Footprint Guides", 
     shape: "circle" 
   },
-  "slide-guide-15": { name: "15mm Slider", drillSize: 0, imperialLabel: '23/64" × 1 3/16"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 30 },
-  "slide-guide-20": { name: "20mm Slider", drillSize: 0, imperialLabel: '23/64" × 1 3/8"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 35 },
-  "slide-guide-30": { name: "30mm Slider", drillSize: 0, imperialLabel: '23/64" × 1 49/64"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 45 },
-  "slide-guide-45": { name: "45mm Slider", drillSize: 0, imperialLabel: '23/64" × 2 23/64"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 60 },
-  "slide-guide-60": { name: "60mm Slider", drillSize: 0, imperialLabel: '23/64" × 2 61/64"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 75 },
-  "slide-guide-100": { name: "100mm Slider", drillSize: 0, imperialLabel: '23/64" × 4 17/32"', category: "Footprint Guides", shape: "rectangle", width: 9, height: 115 }
+  "slide-guide-15": { name: "15mm Slider", drillSize: 0, category: "Footprint Guides", shape: "rectangle", width: 9, height: 30 },
+  "slide-guide-20": { name: "20mm Slider", drillSize: 0, category: "Footprint Guides", shape: "rectangle", width: 9, height: 35 },
+  "slide-guide-30": { name: "30mm Slider", drillSize: 0, category: "Footprint Guides", shape: "rectangle", width: 9, height: 45 },
+  "slide-guide-45": { name: "45mm Slider", drillSize: 0, category: "Footprint Guides", shape: "rectangle", width: 9, height: 60 },
+  "slide-guide-60": { name: "60mm Slider", drillSize: 0, category: "Footprint Guides", shape: "rectangle", width: 9, height: 75 },
+  "slide-guide-100": { name: "100mm Slider", drillSize: 0, category: "Footprint Guides", shape: "rectangle", width: 9, height: 115 }
 } as const;
 
 export type ComponentType = keyof typeof COMPONENT_TYPES;

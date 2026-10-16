@@ -4,7 +4,7 @@ import { mmToFraction } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { snapZoom } from "@/lib/zoom";
-import { getRotatedSideLabel, getActualSideForDrag, calculateLabelPosition } from "@/lib/enclosureGeometry";
+import { getRotatedSideLabel, getActualSideForDrag, calculateLabelPosition, getComponentLabelText } from "@/lib/enclosureGeometry";
 
 interface UnwrappedCanvasProps {
   enclosureType: EnclosureType;
@@ -57,40 +57,6 @@ const getComponentZOrder = (component: PlacedComponent) => {
   }
   
   return { isUtility, timestamp };
-};
-
-/**
- * Generate label text showing component dimensions.
- * For rectangular components rotated 90° (either component rotation OR canvas rotation),
- * swap width/height in the label since what was width is now height visually.
- */
-const getRotatedLabelText = (
-  compData: any, 
-  componentRotation: number, 
-  canvasRotation: number,
-  unit: MeasurementUnit
-) => {
-  // Rectangular components (both drill holes and footprint guides)
-  if (compData.shape === 'rectangle' || compData.shape === 'square') {
-    // Calculate total visual rotation (component + canvas)
-    const totalVisualRotation = (componentRotation + canvasRotation) % 360;
-    
-    // For 90° or 270° visual rotation, swap width and height
-    if (totalVisualRotation === 90 || totalVisualRotation === 270) {
-      return unit === "metric" 
-        ? `${compData.height}mm×${compData.width}mm`
-        : mmToFraction(compData.height) + "×" + mmToFraction(compData.width);
-    } else { // 0° or 180° visual rotation
-      return unit === "metric" 
-        ? `${compData.width}mm×${compData.height}mm`
-        : mmToFraction(compData.width) + "×" + mmToFraction(compData.height);
-    }
-  } else {
-    // Circular components (both drill holes and footprint guides)
-    return unit === "metric" 
-      ? `${compData.drillSize}mm`
-      : mmToFraction(compData.drillSize);
-  }
 };
 
 /**
@@ -802,7 +768,7 @@ export default function UnwrappedCanvas({
           ctx.translate(labelPos.x, labelPos.y);
           ctx.rotate(labelPos.textAngle);
           
-          const labelText = getRotatedLabelText(compData, component.rotation || 0, rotation, unit);
+          const labelText = getComponentLabelText(compData, component.rotation || 0, rotation, unit);
           ctx.font = `${10 / zoom}px monospace`;
           const textMetrics = ctx.measureText(labelText);
           const textWidth = textMetrics.width;
@@ -903,7 +869,7 @@ export default function UnwrappedCanvas({
           ctx.translate(labelPos.x, labelPos.y);
           ctx.rotate(labelPos.textAngle);
           
-          const labelText = getRotatedLabelText(compData, component.rotation || 0, rotation, unit);
+          const labelText = getComponentLabelText(compData, component.rotation || 0, rotation, unit);
           ctx.font = `${10 / zoom}px monospace`;
           const textMetrics = ctx.measureText(labelText);
           const textWidth = textMetrics.width;
