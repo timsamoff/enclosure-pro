@@ -174,7 +174,7 @@ export default function AppIconMenu() {
           {/* Documentation */}
           <DropdownMenuItem asChild>
             <a
-              href="https://samoff.com/enclosure-pro/documentation.html"
+              href="https://offware.io/enclosure-pro/documentation.html"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 cursor-pointer"
@@ -206,7 +206,7 @@ export default function AppIconMenu() {
           {/* Feedback */}
           <DropdownMenuItem asChild>
             <a
-              href="https://samoff.com/enclosure-pro/feedback.html"
+              href="https://offware.io/enclosure-pro/feedback.html"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 cursor-pointer"

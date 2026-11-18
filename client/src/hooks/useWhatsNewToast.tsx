@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 
-export const RELEASES_URL = "https://samoff.com/enclosure-pro/releases.html";
+export const RELEASES_URL = "https://offware.io/enclosure-pro/releases.html";
 
 const LAST_SEEN_KEY = "enclosurePro.lastSeenVersion";
 
