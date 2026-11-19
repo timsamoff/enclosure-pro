@@ -272,6 +272,12 @@ figure img {
     border-radius: 5px;
 }
 
+/* Google Form frame: the form is 960-990px tall depending on width and fonts. Extra height only adds white space, so keep it generous. */
+.form-embed-container iframe {
+    display: block;
+    height: 1100px;
+}
+
 .ui-image-list i,
 .printing-steps i {
     margin-right: 8px;
@@ -387,9 +393,5 @@ details[open] summary::before {
     .downloads-list a, .doc-link { 
         width: 100%;
         box-sizing: border-box; 
-    }
-    /* The Google Form is about 990px tall at phone widths, so the frame needs more than the 959px set in the HTML */
-    .form-embed-container iframe {
-        height: 1040px;
     }
 }
