@@ -388,4 +388,8 @@ details[open] summary::before {
         width: 100%;
         box-sizing: border-box; 
     }
+    /* The Google Form is about 990px tall at phone widths, so the frame needs more than the 959px set in the HTML */
+    .form-embed-container iframe {
+        height: 1040px;
+    }
 }
