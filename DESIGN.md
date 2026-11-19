@@ -126,4 +126,4 @@ Git hooks in `.githooks/` run the checks in `sentinel/`. These consist of a stag
 
 ## Website
 
-The website is hand-written static HTML with a single stylesheet, a tan, orange and near-black palette defined in `styles.css`, and Font Awesome icons. It's served as `samoff.com/enclosure-pro`. `stats.js` fetches `api.github.com/repos/timsamoff/enclosure-pro/releases` on load, adds the total download count, and replaces the three installer links with the latest release's assets. The links hardcoded in the HTML are only a fallback if that request fails. The feedback page embeds a Google Form.
+The website is hand-written static HTML with a single stylesheet, a tan, orange and near-black palette defined in `styles.css`, and Font Awesome icons. It's served as `offware.io/enclosure-pro`. `stats.js` fetches `api.github.com/repos/timsamoff/enclosure-pro/releases` on load, adds the total download count, and replaces the three installer links with the latest release's assets. The links hardcoded in the HTML are only a fallback if that request fails. The feedback page embeds a Google Form.

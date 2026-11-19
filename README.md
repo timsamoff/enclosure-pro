@@ -24,7 +24,7 @@ Created by Tim Samoff ([@circuitous.fx](https://www.instagram.com/circuitous.fx/
 
 ## Download/Info
 
- - [Official Website](http://samoff.com/enclosure-pro)
+ - [Official Website](https://offware.io/enclosure-pro/)
 
 ## Development
 
